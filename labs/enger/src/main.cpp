@@ -37,9 +37,9 @@ int main()
         vk::KHRSwapchainExtensionName
     };
 
-    auto device = enger::Device{instance.instance(), requiredDeviceExtensions};
-
     auto surface = enger::Surface{window, instance.instance()};
+
+    auto device = enger::Device{instance.instance(), surface.surface(), requiredDeviceExtensions};
 
     while (!glfwWindowShouldClose(window))
     {

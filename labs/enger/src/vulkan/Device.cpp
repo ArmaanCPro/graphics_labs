@@ -60,14 +60,14 @@ namespace enger
         return sortedDevices;
     }
 
-    Device::Device(vk::Instance instance, std::span<const char*> deviceExtensions)
+    Device::Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions)
     {
         // physical device selection
         const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(instance.enumeratePhysicalDevices());
         auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
         if (!sortedDevices.empty() && sortedDevices.rbegin()->first == 0)
         {
-            std::cerr << "No suitable device found!" << std::endl;
+            std::cerr << "No suitable GPU/device found!" << std::endl;
             std::terminate();
         }
         m_PhysicalDevice = sortedDevices.rbegin()->second;
@@ -77,9 +77,12 @@ namespace enger
         auto graphicsQueueFamily = std::ranges::find_if(queueFamilyProperties,
             [&](const auto& qfp)
             {
-                return !!(qfp.queueFlags & vk::QueueFlagBits::eGraphics);
+                return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) &&
+                    vkCheck(m_PhysicalDevice.getSurfaceSupportKHR(qfp.queueCount - 1, surface));
             });
         auto graphicsIndex = static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamily));
+        // TODO replace this assert with something cleaner. In fact, the current cerr + terminate should be cleaner as well.
+        assert(graphicsIndex != queueFamilyProperties.size() && "No graphics queue family found");
 
         float queuePriority = 1.0f;
         vk::DeviceQueueCreateInfo queueCreateInfo{

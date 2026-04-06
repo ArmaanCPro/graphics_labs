@@ -15,7 +15,8 @@ namespace enger
     class Device
     {
     public:
-        explicit Device(vk::Instance instance, std::span<const char*> deviceExtensions);
+        /// Requires surface for presentation. Headless not currently supported.
+        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions);
 
     private:
         vk::PhysicalDevice m_PhysicalDevice;
