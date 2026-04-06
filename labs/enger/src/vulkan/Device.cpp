@@ -133,4 +133,12 @@ namespace enger
         m_GraphicsQueue.queue = m_Device->getQueue(queueIndex, 0);
         m_GraphicsQueue.index = queueIndex;
     }
+
+    void Device::destroyComputePipeline(ComputePipelineHandle handle)
+    {
+        auto pipeline = *m_ComputePipelinePool.get(handle);
+        m_Device->destroyPipeline(pipeline.handle);
+
+        m_ComputePipelinePool.destroy(handle);
+    }
 }
