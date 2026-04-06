@@ -1,0 +1,11 @@
+.cache
+.vs
+.vscode
+.idea
+.DS_Store
+.clangd
+
+/build*
+
+
+
