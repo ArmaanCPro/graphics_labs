@@ -1,6 +1,8 @@
 #include "Device.h"
 
 #include <map>
+#include <array>
+#include <span>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -23,7 +25,7 @@ namespace enger
     }
 
     // returns physical devices sorted from worst to best
-    std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice>& physicalDevices)
+    std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice>& physicalDevices, std::span<const char*> requiredDeviceExtensions)
     {
         std::multimap<int, vk::PhysicalDevice> sortedDevices;
         for (auto& device : physicalDevices)
@@ -47,13 +49,13 @@ namespace enger
                 });
 
             auto availableDeviceExtensions = vkCheck(device.enumerateDeviceExtensionProperties());
-            bool supportsAllRequiredExtensions = std::ranges::all_of(availableDeviceExtensions,
+            bool supportsAllRequiredExtensions = std::ranges::all_of(requiredDeviceExtensions,
                 [&availableDeviceExtensions](const auto& requiredDeviceExtension)
                 {
                     return std::ranges::any_of(availableDeviceExtensions,
                         [requiredDeviceExtension](const auto& availableDeviceExtension)
                         {
-                            return std::strcmp(availableDeviceExtension.extensionName, requiredDeviceExtension.extensionName) == 0;
+                            return std::strcmp(availableDeviceExtension.extensionName, requiredDeviceExtension) == 0;
                         });
                 });
 
@@ -76,7 +78,7 @@ namespace enger
         return sortedDevices;
     }
 
-    Device::Device(std::vector<const char*>& instanceExtensions)
+    Device::Device(std::span<const char*> instanceExtensions, std::span<const char*> deviceExtensions)
     {
         auto vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
         VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
@@ -104,9 +106,10 @@ namespace enger
         // we could enable validation layers here...
         // or just use Vulkan Configurator (vkconfig)
 
+
         // physical device selection
-        auto physicalDevices = vkCheck(m_Instance->enumeratePhysicalDevices());
-        auto sortedDevices = sortPhysicalDevices(physicalDevices);
+        const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(m_Instance->enumeratePhysicalDevices());
+        auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
         if (!sortedDevices.empty() && sortedDevices.rbegin()->first == 0)
         {
             std::cerr << "No suitable device found!" << std::endl;
@@ -137,19 +140,13 @@ namespace enger
             {.extendedDynamicState = true}
         };
 
-        // TODO consider passing this in via a parameter
-        // don't make it vulkan specific, instead maybe map some generic extension names to vuklan specific
-        constexpr std::array<const char*, 1> requiredDeviceExtensions = {
-            vk::KHRSwapchainExtensionName
-        };
-
         vk::DeviceCreateInfo deviceCreateInfo{
             .sType = vk::StructureType::eCommandBufferAllocateInfo,
             .pNext = &featureChain.get(),
             .queueCreateInfoCount = 1,
             .pQueueCreateInfos = &queueCreateInfo,
-            .enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size()),
-            .ppEnabledExtensionNames = requiredDeviceExtensions.data()
+            .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+            .ppEnabledExtensionNames = deviceExtensions.data()
         };
 
         m_Device = vkCheck(m_PhysicalDevice.createDeviceUnique(deviceCreateInfo));

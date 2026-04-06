@@ -1,4 +1,5 @@
-#include <print>
+#include <array>
+#include <span>
 
 #include "vulkan/Device.h"
 
@@ -26,7 +27,12 @@ int main()
     auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     extensions.insert(extensions.end(), glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-    auto device = enger::Device(extensions);
+    // maybe: don't make it vulkan specific, instead maybe map some generic extension names to vulkan specific
+    std::array<const char*, 1> requiredDeviceExtensions = {
+        vk::KHRSwapchainExtensionName
+    };
+
+    auto device = enger::Device{extensions, requiredDeviceExtensions};
 
     while (!glfwWindowShouldClose(window))
     {

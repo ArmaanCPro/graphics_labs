@@ -15,7 +15,7 @@ namespace enger
     class Device
     {
     public:
-        explicit Device(std::vector<const char*>& instanceExtensions);
+        explicit Device(std::span<const char*> instanceExtensions, std::span<const char*> deviceExtensions);
 
     private:
         /// Must be the first member, as dl owns the instance (vulkan-1.dll) and must outlive all Vulkan handles.
