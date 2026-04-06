@@ -7,5 +7,13 @@ target_include_directories(enger PRIVATE src)
 
 target_link_libraries(enger PRIVATE glfw glm::glm Vulkan::Headers GPUOpen::VulkanMemoryAllocator)
 
+target_compile_definitions(enger PRIVATE
+        GLFW_INCLUDE_NONE
+        VK_NO_PROTOTYPES
+        VULKAN_HPP_NO_EXCEPTIONS
+        VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+        VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+)
+
 set_project_warnings(enger)
 #enable_sanitizers(enger)

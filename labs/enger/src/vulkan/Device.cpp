@@ -4,9 +4,6 @@
 #include <array>
 #include <span>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-
 namespace enger
 {
     // make sure our instance has all the required extensions (most likely by the WSI/GLFW)
@@ -141,7 +138,6 @@ namespace enger
         };
 
         vk::DeviceCreateInfo deviceCreateInfo{
-            .sType = vk::StructureType::eCommandBufferAllocateInfo,
             .pNext = &featureChain.get(),
             .queueCreateInfoCount = 1,
             .pQueueCreateInfos = &queueCreateInfo,
@@ -159,5 +155,7 @@ namespace enger
             );
         setDebugName(*m_Device, *m_Device, "Main Logical Device");
 
+        m_GraphicsQueue.queue = m_Device->getQueue(graphicsIndex, 0);
+        m_GraphicsQueue.index = graphicsIndex;
     }
 }

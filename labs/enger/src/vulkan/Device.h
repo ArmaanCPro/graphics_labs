@@ -9,13 +9,15 @@ namespace enger
     struct Queue
     {
         vk::Queue queue;
-        uint32_t queueIndex;
+        uint32_t index;
     };
 
     class Device
     {
     public:
         explicit Device(std::span<const char*> instanceExtensions, std::span<const char*> deviceExtensions);
+
+        vk::Instance instance() { return *m_Instance; }
 
     private:
         /// Must be the first member, as dl owns the instance (vulkan-1.dll) and must outlive all Vulkan handles.
