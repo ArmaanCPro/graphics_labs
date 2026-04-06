@@ -15,8 +15,9 @@ namespace enger
             .subresourceRange = vk::ImageSubresourceRange{
                 .aspectMask = dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal ? vk::ImageAspectFlagBits::eDepth : vk::ImageAspectFlagBits::eColor,
                 .baseMipLevel = 0,
-                .levelCount = 1,
+                .levelCount = vk::RemainingMipLevels,
                 .baseArrayLayer = 0,
+                .layerCount = vk::RemainingArrayLayers,
             }
         };
 
@@ -44,33 +45,43 @@ namespace enger
 
         for (auto i = 0; i < FRAMES_IN_FLIGHT; ++i)
         {
-            m_FrameData[i]._commandPool = vkCheck(device.device().createCommandPoolUnique(commandPoolCI));
+            m_CommandPools[i] = vkCheck(device.device().createCommandPoolUnique(commandPoolCI));
+            setDebugName(m_Device.device(), *m_CommandPools[i], "FrameCommandPool" + std::to_string(i));
 
             vk::CommandBufferAllocateInfo cmdAllocCI{
-                .commandPool = *m_FrameData[i]._commandPool,
+                .commandPool = *m_CommandPools[i],
                 .level = vk::CommandBufferLevel::ePrimary,
                 .commandBufferCount = 1,
             };
 
-            m_FrameData[i]._commandBuffer = vkCheck(device.device().allocateCommandBuffers(cmdAllocCI)).front();
+            m_CommandBuffers[i] = vkCheck(device.device().allocateCommandBuffers(cmdAllocCI)).front();
+            setDebugName(m_Device.device(), m_CommandBuffers[i], "FrameCommandBuffer" + std::to_string(i));
 
-            m_FrameData[i]._inFlightFence = vkCheck(device.device().createFenceUnique(fenceCI));
-            m_FrameData[i]._imageAvailableSemaphore = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
-            m_FrameData[i]._renderFinishedSemaphore = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
+            m_InFlightFences[i] = vkCheck(device.device().createFenceUnique(fenceCI));
+            setDebugName(m_Device.device(), *m_InFlightFences[i], "FrameFence" + std::to_string(i));
+            m_ImageAvailableSemaphores[i] = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
+            setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i], "FrameImageAvailableSemaphore" + std::to_string(i));
+
+        }
+
+        for (uint32_t i = 0; i < m_SwapChain.numSwapChainImages(); ++i)
+        {
+            m_RenderFinishedSemaphores.push_back(vkCheck(device.device().createSemaphoreUnique(semaphoreCI)));
+            setDebugName(m_Device.device(), *m_RenderFinishedSemaphores[i], "FrameRenderFinishedSemaphore" + std::to_string(i));
         }
     }
 
     void Renderer::drawFrame()
     {
-        vkCheck(m_Device.device().waitForFences(1, &*m_FrameData[m_CurrentFrame]._inFlightFence, true, std::numeric_limits<uint64_t>::max()));
-        vkCheck(m_Device.device().resetFences(1, &*m_FrameData[m_CurrentFrame]._inFlightFence));
+        vkCheck(m_Device.device().waitForFences(1, &*m_InFlightFences[m_CurrentFrame], true, std::numeric_limits<uint64_t>::max()));
+        vkCheck(m_Device.device().resetFences(1, &*m_InFlightFences[m_CurrentFrame]));
 
         uint32_t swapchainImageIndex = 0;
         vkCheck(m_Device.device().acquireNextImageKHR(m_SwapChain.swapChain(),
-            std::numeric_limits<uint64_t>::max(), m_FrameData[m_CurrentFrame]._imageAvailableSemaphore.get(),
+            std::numeric_limits<uint64_t>::max(), *m_ImageAvailableSemaphores[m_CurrentFrame],
             nullptr, &swapchainImageIndex));
 
-        vk::CommandBuffer cmd = m_FrameData[m_CurrentFrame]._commandBuffer;
+        vk::CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
 
         vkCheck(cmd.reset());
 
@@ -85,9 +96,9 @@ namespace enger
         vk::ImageSubresourceRange clearRange{
             .aspectMask = vk::ImageAspectFlagBits::eColor,
             .baseMipLevel = 0,
-            .levelCount = 1,
+            .levelCount = vk::RemainingMipLevels,
             .baseArrayLayer = 0,
-            .layerCount = 1,
+            .layerCount = vk::RemainingArrayLayers,
         };
 
         float flash = std::abs(std::sin(m_FrameNumber / 240.0f));
@@ -100,12 +111,12 @@ namespace enger
         vkCheck(cmd.end());
 
         vk::SemaphoreSubmitInfo waitInfo{
-            .semaphore = m_FrameData[m_CurrentFrame]._imageAvailableSemaphore.get(),
+            .semaphore = *m_ImageAvailableSemaphores[m_CurrentFrame],
             .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
         };
 
         vk::SemaphoreSubmitInfo signalInfo{
-            .semaphore = m_FrameData[m_CurrentFrame]._renderFinishedSemaphore.get(),
+            .semaphore = *m_RenderFinishedSemaphores[swapchainImageIndex],
             .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
         };
 
@@ -122,12 +133,12 @@ namespace enger
             .pSignalSemaphoreInfos = &signalInfo,
         };
 
-        vkCheck(m_Device.graphicsQueue().queue.submit2(1, &submitInfo, m_FrameData[m_CurrentFrame]._inFlightFence.get()));
+        vkCheck(m_Device.graphicsQueue().queue.submit2(1, &submitInfo, *m_InFlightFences[m_CurrentFrame]));
 
         auto swapchain = m_SwapChain.swapChain();
         vk::PresentInfoKHR presentInfo{
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores = &m_FrameData[m_CurrentFrame]._renderFinishedSemaphore.get(),
+            .pWaitSemaphores = &*m_RenderFinishedSemaphores[swapchainImageIndex],
             .swapchainCount = 1,
             .pSwapchains = &swapchain,
             .pImageIndices = &swapchainImageIndex,

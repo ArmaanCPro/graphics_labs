@@ -5,6 +5,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include "Renderer.h"
 #include "vulkan/Device.h"
 #include "vulkan/Instance.h"
 #include "vulkan/Surface.h"
@@ -44,10 +45,16 @@ int main()
 
     auto swapchain = enger::SwapChain{device.physicalDevice(), device.device(), surface.surface(), window, vk::PresentModeKHR::eMailbox};
 
+    enger::Renderer renderer{device, swapchain};
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+
+        renderer.drawFrame();
     }
+
+    enger::vkCheck(device.device().waitIdle());
 
     glfwDestroyWindow(window);
     glfwTerminate();

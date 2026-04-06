@@ -74,7 +74,7 @@ namespace enger
             .imageColorSpace = surfaceFormat.colorSpace,
             .imageExtent = m_SwapExtent,
             .imageArrayLayers = 1,
-            .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+            .imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst, // TODO need to check that it actually supports eTransferDst
             .imageSharingMode = vk::SharingMode::eExclusive,
             .preTransform = surfaceCaps.currentTransform,
             .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
@@ -84,6 +84,7 @@ namespace enger
         };
 
         m_SwapChain = vkCheck(device.createSwapchainKHRUnique(swapchainCI));
+        setDebugName(device, *m_SwapChain, "SwapChain");
         m_SwapChainImages = vkCheck(device.getSwapchainImagesKHR(*m_SwapChain));
         for (size_t i = 0; i < m_SwapChainImages.size(); ++i)
         {

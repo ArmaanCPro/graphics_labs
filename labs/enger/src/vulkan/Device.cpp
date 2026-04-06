@@ -57,6 +57,7 @@ namespace enger
                 vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 
             bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering
+                                            && features.get<vk::PhysicalDeviceVulkan13Features>().synchronization2
                                             && features.get<vk::PhysicalDeviceVulkan12Features>().bufferDeviceAddress
                                             && features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().
                                             extendedDynamicState;
@@ -112,7 +113,7 @@ namespace enger
                            vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
             {},
             {.bufferDeviceAddress = true},
-            {.dynamicRendering = true},
+            {.synchronization2 = true, .dynamicRendering = true},
             {},
             {.extendedDynamicState = true}
         };
@@ -131,6 +132,7 @@ namespace enger
         setDebugName(*m_Device, *m_Device, "Main Logical Device");
 
         m_GraphicsQueue.queue = m_Device->getQueue(queueIndex, 0);
+        setDebugName(*m_Device, m_GraphicsQueue.queue, "Graphics Queue");
         m_GraphicsQueue.index = queueIndex;
     }
 
