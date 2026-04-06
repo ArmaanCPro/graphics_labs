@@ -8,6 +8,7 @@
 #include "vulkan/Device.h"
 #include "vulkan/Instance.h"
 #include "vulkan/Surface.h"
+#include "vulkan/SwapChain.h"
 
 constexpr auto WIDTH = 800;
 constexpr auto HEIGHT = 600;
@@ -33,13 +34,15 @@ int main()
     enger::Instance instance{instanceExtensions};
 
     // maybe: don't make it vulkan specific, instead maybe map some generic extension names to vulkan specific
-    std::array<const char*, 1> requiredDeviceExtensions = {
-        vk::KHRSwapchainExtensionName
+    std::array requiredDeviceExtensions = {
+        vk::KHRSwapchainExtensionName,
     };
 
     auto surface = enger::Surface{window, instance.instance()};
 
     auto device = enger::Device{instance.instance(), surface.surface(), requiredDeviceExtensions};
+
+    auto swapchain = enger::SwapChain{device.physicalDevice(), device.device(), surface.surface(), window, vk::PresentModeKHR::eMailbox};
 
     while (!glfwWindowShouldClose(window))
     {

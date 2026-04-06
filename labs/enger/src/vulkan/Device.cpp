@@ -74,19 +74,23 @@ namespace enger
 
         // logical device creation
         std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_PhysicalDevice.getQueueFamilyProperties();
-        auto graphicsQueueFamily = std::ranges::find_if(queueFamilyProperties,
-            [&](const auto& qfp)
+        uint32_t queueIndex = ~0u;
+        for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); ++qfpIndex)
+        {
+            auto& qfp = queueFamilyProperties[qfpIndex];
+            if ((qfp.queueFlags & vk::QueueFlagBits::eGraphics)
+                && vkCheck(m_PhysicalDevice.getSurfaceSupportKHR(qfpIndex, surface)))
             {
-                return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) &&
-                    vkCheck(m_PhysicalDevice.getSurfaceSupportKHR(qfp.queueCount - 1, surface));
-            });
-        auto graphicsIndex = static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamily));
+                queueIndex = qfpIndex;
+                break;
+            }
+        }
         // TODO replace this assert with something cleaner. In fact, the current cerr + terminate should be cleaner as well.
-        assert(graphicsIndex != queueFamilyProperties.size() && "No graphics queue family found");
+        assert(queueIndex != ~0 && "No graphics queue family found");
 
         float queuePriority = 1.0f;
         vk::DeviceQueueCreateInfo queueCreateInfo{
-            .queueFamilyIndex = graphicsIndex,
+            .queueFamilyIndex = queueIndex,
             .queueCount = 1,
             .pQueuePriorities = &queuePriority
         };
@@ -111,7 +115,7 @@ namespace enger
 
         setDebugName(*m_Device, *m_Device, "Main Logical Device");
 
-        m_GraphicsQueue.queue = m_Device->getQueue(graphicsIndex, 0);
-        m_GraphicsQueue.index = graphicsIndex;
+        m_GraphicsQueue.queue = m_Device->getQueue(queueIndex, 0);
+        m_GraphicsQueue.index = queueIndex;
     }
 }
