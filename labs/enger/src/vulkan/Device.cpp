@@ -6,21 +6,6 @@
 
 namespace enger
 {
-    // make sure our instance has all the required extensions (most likely by the WSI/GLFW)
-    void checkRequiredInstanceExtensions(const std::vector<vk::ExtensionProperties>& availableInstExt, std::span<const char*> reqInstExtensions)
-    {
-        for (auto reqInstExtension : reqInstExtensions)
-        {
-            if (std::ranges::none_of(availableInstExt,
-                [instanceExtension = reqInstExtension](const auto& extension)
-                { return std::strcmp(extension.extensionName, instanceExtension) == 0; }))
-            {
-                std::cerr << "Missing instance extension: " << reqInstExtension << std::endl;
-                std::terminate();
-            }
-        }
-    }
-
     // returns physical devices sorted from worst to best
     std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice>& physicalDevices, std::span<const char*> requiredDeviceExtensions)
     {
@@ -75,37 +60,10 @@ namespace enger
         return sortedDevices;
     }
 
-    Device::Device(std::span<const char*> instanceExtensions, std::span<const char*> deviceExtensions)
+    Device::Device(vk::Instance instance, std::span<const char*> deviceExtensions)
     {
-        auto vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-        VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
-
-        constexpr vk::ApplicationInfo appInfo{
-            .pApplicationName = "Enger",
-            .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-            .pEngineName = "No Engine",
-            .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-            .apiVersion = vk::ApiVersion14
-        };
-        vk::InstanceCreateInfo info{
-            .pApplicationInfo = &appInfo,
-            .enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size()),
-            .ppEnabledExtensionNames = instanceExtensions.data(),
-        };
-
-        m_Instance = vkCheck(vk::createInstanceUnique(info));
-
-        VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_Instance);
-
-        auto extensionProps = vkCheck(vk::enumerateInstanceExtensionProperties());
-        checkRequiredInstanceExtensions(extensionProps, instanceExtensions);
-
-        // we could enable validation layers here...
-        // or just use Vulkan Configurator (vkconfig)
-
-
         // physical device selection
-        const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(m_Instance->enumeratePhysicalDevices());
+        const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(instance.enumeratePhysicalDevices());
         auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
         if (!sortedDevices.empty() && sortedDevices.rbegin()->first == 0)
         {
@@ -117,7 +75,7 @@ namespace enger
         // logical device creation
         std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_PhysicalDevice.getQueueFamilyProperties();
         auto graphicsQueueFamily = std::ranges::find_if(queueFamilyProperties,
-            [](const auto& qfp)
+            [&](const auto& qfp)
             {
                 return !!(qfp.queueFlags & vk::QueueFlagBits::eGraphics);
             });
@@ -148,11 +106,6 @@ namespace enger
         m_Device = vkCheck(m_PhysicalDevice.createDeviceUnique(deviceCreateInfo));
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_Device);
 
-        // load debug utils (it is an instance extension, not device extension, so it doesn't get picked up by the dispatcher)
-        VULKAN_HPP_DEFAULT_DISPATCHER.vkSetDebugUtilsObjectNameEXT =
-            reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
-                m_Instance->getProcAddr("vkSetDebugUtilsObjectNameEXT")
-            );
         setDebugName(*m_Device, *m_Device, "Main Logical Device");
 
         m_GraphicsQueue.queue = m_Device->getQueue(graphicsIndex, 0);

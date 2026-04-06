@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include "vulkan/Device.h"
+#include "vulkan/Instance.h"
 #include "vulkan/Surface.h"
 
 constexpr auto WIDTH = 800;
@@ -29,14 +30,16 @@ int main()
     auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     instanceExtensions.insert(instanceExtensions.end(), glfwExtensions, glfwExtensions + glfwExtensionCount);
 
+    enger::Instance instance{instanceExtensions};
+
     // maybe: don't make it vulkan specific, instead maybe map some generic extension names to vulkan specific
     std::array<const char*, 1> requiredDeviceExtensions = {
         vk::KHRSwapchainExtensionName
     };
 
-    auto device = enger::Device{instanceExtensions, requiredDeviceExtensions};
+    auto device = enger::Device{instance.instance(), requiredDeviceExtensions};
 
-    auto surface = enger::Surface{window, device.instance()};
+    auto surface = enger::Surface{window, instance.instance()};
 
     while (!glfwWindowShouldClose(window))
     {

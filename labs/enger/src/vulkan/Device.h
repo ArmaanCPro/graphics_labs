@@ -15,16 +15,9 @@ namespace enger
     class Device
     {
     public:
-        explicit Device(std::span<const char*> instanceExtensions, std::span<const char*> deviceExtensions);
-
-        vk::Instance instance() { return *m_Instance; }
+        explicit Device(vk::Instance instance, std::span<const char*> deviceExtensions);
 
     private:
-        /// Must be the first member, as dl owns the instance (vulkan-1.dll) and must outlive all Vulkan handles.
-        /// Also, the instance functions are rarely used, as once the dispatcher is initialized with the device, it goes straight to the driver.
-        vk::detail::DynamicLoader dl;
-
-        vk::UniqueInstance m_Instance;
         vk::PhysicalDevice m_PhysicalDevice;
         vk::UniqueDevice m_Device;
 
