@@ -7,10 +7,11 @@
 namespace enger
 {
     // returns physical devices sorted from worst to best
-    std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice>& physicalDevices, std::span<const char*> requiredDeviceExtensions)
+    std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice> &physicalDevices,
+                                                               std::span<const char *> requiredDeviceExtensions)
     {
         std::multimap<int, vk::PhysicalDevice> sortedDevices;
-        for (auto& device : physicalDevices)
+        for (auto &device: physicalDevices)
         {
             auto deviceProps = device.getProperties();
             auto deviceFeatures = device.getFeatures();
@@ -25,32 +26,43 @@ namespace enger
 
             auto queueFamilies = device.getQueueFamilyProperties();
             bool supportsDesiredQueues = std::ranges::any_of(queueFamilies,
-                [](const auto& qfp)
-                {
-                    return !!(qfp.queueFlags & vk::QueueFlagBits::eGraphics);
-                });
+                                                             [](const auto &qfp)
+                                                             {
+                                                                 return !!(qfp.queueFlags &
+                                                                           vk::QueueFlagBits::eGraphics);
+                                                             });
 
             auto availableDeviceExtensions = vkCheck(device.enumerateDeviceExtensionProperties());
             bool supportsAllRequiredExtensions = std::ranges::all_of(requiredDeviceExtensions,
-                [&availableDeviceExtensions](const auto& requiredDeviceExtension)
-                {
-                    return std::ranges::any_of(availableDeviceExtensions,
-                        [requiredDeviceExtension](const auto& availableDeviceExtension)
-                        {
-                            return std::strcmp(availableDeviceExtension.extensionName, requiredDeviceExtension) == 0;
-                        });
-                });
+                                                                     [&availableDeviceExtensions](
+                                                                     const auto &requiredDeviceExtension)
+                                                                     {
+                                                                         return std::ranges::any_of(
+                                                                             availableDeviceExtensions,
+                                                                             [requiredDeviceExtension](
+                                                                             const auto &availableDeviceExtension)
+                                                                             {
+                                                                                 return std::strcmp(
+                                                                                     availableDeviceExtension.
+                                                                                     extensionName,
+                                                                                     requiredDeviceExtension) == 0;
+                                                                             });
+                                                                     });
 
             auto features = device.getFeatures2<
                 vk::PhysicalDeviceFeatures2,
+                vk::PhysicalDeviceVulkan12Features,
                 vk::PhysicalDeviceVulkan13Features,
                 vk::PhysicalDeviceVulkan14Features,
                 vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 
             bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering
-                && features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+                                            && features.get<vk::PhysicalDeviceVulkan12Features>().bufferDeviceAddress
+                                            && features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().
+                                            extendedDynamicState;
 
-            if (!supportsVulkan14 || !supportsDesiredQueues || !supportsAllRequiredExtensions || !supportsRequiredFeatures)
+            if (!supportsVulkan14 || !supportsDesiredQueues || !supportsAllRequiredExtensions || !
+                supportsRequiredFeatures)
             {
                 continue;
             }
@@ -60,7 +72,7 @@ namespace enger
         return sortedDevices;
     }
 
-    Device::Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions)
+    Device::Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char *> deviceExtensions)
     {
         // physical device selection
         const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(instance.enumeratePhysicalDevices());
@@ -77,7 +89,7 @@ namespace enger
         uint32_t queueIndex = ~0u;
         for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); ++qfpIndex)
         {
-            auto& qfp = queueFamilyProperties[qfpIndex];
+            auto &qfp = queueFamilyProperties[qfpIndex];
             if ((qfp.queueFlags & vk::QueueFlagBits::eGraphics)
                 && vkCheck(m_PhysicalDevice.getSurfaceSupportKHR(qfpIndex, surface)))
             {
@@ -95,8 +107,11 @@ namespace enger
             .pQueuePriorities = &queuePriority
         };
 
-        vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain {
+        vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features,
+                           vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features,
+                           vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
             {},
+            {.bufferDeviceAddress = true},
             {.dynamicRendering = true},
             {},
             {.extendedDynamicState = true}

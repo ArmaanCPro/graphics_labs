@@ -2,8 +2,6 @@
 
 #include "vk.h"
 
-#include <string_view>
-
 namespace enger
 {
     struct Queue

@@ -11,6 +11,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include <vk_mem_alloc.h>
+
 #include <source_location>
 #include <iostream>
 
