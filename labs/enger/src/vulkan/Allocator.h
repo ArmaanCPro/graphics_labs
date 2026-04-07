@@ -10,6 +10,7 @@ namespace enger
     {
     public:
         Allocator(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
+        ~Allocator();
 
         VmaAllocation allocateBuffer() { return {}; }
         VmaAllocation allocateImage() { return {}; }
