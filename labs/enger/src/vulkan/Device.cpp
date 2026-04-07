@@ -59,6 +59,7 @@ namespace enger
             bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering
                                             && features.get<vk::PhysicalDeviceVulkan13Features>().synchronization2
                                             && features.get<vk::PhysicalDeviceVulkan12Features>().bufferDeviceAddress
+                                            && features.get<vk::PhysicalDeviceVulkan12Features>().timelineSemaphore
                                             && features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().
                                             extendedDynamicState;
 
@@ -112,7 +113,7 @@ namespace enger
                            vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features,
                            vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
             {},
-            {.bufferDeviceAddress = true},
+            {.timelineSemaphore = true, .bufferDeviceAddress = true },
             {.synchronization2 = true, .dynamicRendering = true},
             {},
             {.extendedDynamicState = true}
