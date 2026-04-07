@@ -135,13 +135,49 @@ namespace enger
         m_GraphicsQueue.queue = m_Device->getQueue(queueIndex, 0);
         setDebugName(*m_Device, m_GraphicsQueue.queue, "Graphics Queue");
         m_GraphicsQueue.index = queueIndex;
+
+        vk::SemaphoreTypeCreateInfo semaphoreTypeCI{
+            .semaphoreType = vk::SemaphoreType::eTimeline,
+            .initialValue = 0,
+        };
+        vk::SemaphoreCreateInfo semaphoreCI{
+            .pNext = &semaphoreTypeCI,
+        };
+
+        m_TimelineSemaphore = vkCheck(m_Device->createSemaphoreUnique(semaphoreCI));
+        setDebugName(*m_Device, *m_TimelineSemaphore, "Main Timeline Semaphore");
     }
 
     void Device::destroyComputePipeline(ComputePipelineHandle handle)
     {
         auto pipeline = *m_ComputePipelinePool.get(handle);
-        m_Device->destroyPipeline(pipeline.handle);
+
+        m_DeletionQueue.emplace_back([&]()
+        {
+            m_Device->destroyPipeline(pipeline.handle);
+        }, m_CurrentSubmitCounter);
 
         m_ComputePipelinePool.destroy(handle);
+    }
+
+    void Device::submitGraphics(vk::SubmitInfo2 submitInfo)
+    {
+        m_CurrentSubmitCounter++;
+        vkCheck(m_GraphicsQueue.queue.submit2(1, &submitInfo, nullptr));
+    }
+
+    void Device::flushDeletionQueue()
+    {
+        uint64_t gpuSubmitValue = vkCheck(m_Device->getSemaphoreCounterValue(*m_TimelineSemaphore));
+
+        std::erase_if(m_DeletionQueue, [&](const auto &task)
+        {
+            if (task.submitValue <= gpuSubmitValue)
+            {
+                task.func();
+                return true;
+            }
+            return false;
+        });
     }
 }

@@ -37,10 +37,6 @@ namespace enger
             .queueFamilyIndex = device.graphicsQueue().index,
         };
 
-        vk::FenceCreateInfo fenceCI{
-            .flags = vk::FenceCreateFlagBits::eSignaled,
-        };
-
         vk::SemaphoreCreateInfo semaphoreCI{};
 
         for (auto i = 0; i < FRAMES_IN_FLIGHT; ++i)
@@ -57,8 +53,6 @@ namespace enger
             m_CommandBuffers[i] = vkCheck(device.device().allocateCommandBuffers(cmdAllocCI)).front();
             setDebugName(m_Device.device(), m_CommandBuffers[i], "FrameCommandBuffer" + std::to_string(i));
 
-            m_InFlightFences[i] = vkCheck(device.device().createFenceUnique(fenceCI));
-            setDebugName(m_Device.device(), *m_InFlightFences[i], "FrameFence" + std::to_string(i));
             m_ImageAvailableSemaphores[i] = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
             setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i], "FrameImageAvailableSemaphore" + std::to_string(i));
 
@@ -73,8 +67,14 @@ namespace enger
 
     void Renderer::drawFrame()
     {
-        vkCheck(m_Device.device().waitForFences(1, &*m_InFlightFences[m_CurrentFrame], true, std::numeric_limits<uint64_t>::max()));
-        vkCheck(m_Device.device().resetFences(1, &*m_InFlightFences[m_CurrentFrame]));
+        uint64_t waitValue = m_FrameNumber >= FRAMES_IN_FLIGHT ? m_FrameNumber - FRAMES_IN_FLIGHT + 1 : 0;
+        auto timelineSemaphore = m_Device.timelineSemaphore();
+        vk::SemaphoreWaitInfo waitInfo{
+            .semaphoreCount = 1,
+            .pSemaphores = &timelineSemaphore,
+            .pValues = &waitValue,
+        };
+        vkCheck(m_Device.device().waitSemaphores(waitInfo, std::numeric_limits<uint64_t>::max()));
 
         uint32_t swapchainImageIndex = 0;
         vkCheck(m_Device.device().acquireNextImageKHR(m_SwapChain.swapChain(),
@@ -101,7 +101,7 @@ namespace enger
             .layerCount = vk::RemainingArrayLayers,
         };
 
-        float flash = std::abs(std::sin(m_FrameNumber / 240.0f));
+        float flash = std::abs(std::sin((float)m_FrameNumber / 240.0f));
         vk::ClearColorValue clearValue = vk::ClearColorValue{0.0f, 0.0f, flash, 1.0f};
 
         cmd.clearColorImage(m_SwapChain.swapChainImage(swapchainImageIndex), vk::ImageLayout::eGeneral, &clearValue, 1, &clearRange);
@@ -110,14 +110,21 @@ namespace enger
 
         vkCheck(cmd.end());
 
-        vk::SemaphoreSubmitInfo waitInfo{
+        vk::SemaphoreSubmitInfo submitWaitInfo{
             .semaphore = *m_ImageAvailableSemaphores[m_CurrentFrame],
             .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
         };
 
-        vk::SemaphoreSubmitInfo signalInfo{
-            .semaphore = *m_RenderFinishedSemaphores[swapchainImageIndex],
-            .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        std::array<vk::SemaphoreSubmitInfo, 2> submitSignalInfo = {
+            vk::SemaphoreSubmitInfo{
+                .semaphore = *m_RenderFinishedSemaphores[swapchainImageIndex],
+                .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            },
+            vk::SemaphoreSubmitInfo{
+                .semaphore = timelineSemaphore,
+                .value = m_FrameNumber + 1,
+                .stageMask = vk::PipelineStageFlagBits2::eAllGraphics,
+            },
         };
 
         vk::CommandBufferSubmitInfo cmdSubmitInfo{
@@ -126,14 +133,14 @@ namespace enger
 
         vk::SubmitInfo2 submitInfo{
             .waitSemaphoreInfoCount = 1,
-            .pWaitSemaphoreInfos = &waitInfo,
+            .pWaitSemaphoreInfos = &submitWaitInfo,
             .commandBufferInfoCount = 1,
             .pCommandBufferInfos = &cmdSubmitInfo,
-            .signalSemaphoreInfoCount = 1,
-            .pSignalSemaphoreInfos = &signalInfo,
+            .signalSemaphoreInfoCount = static_cast<uint32_t>(submitSignalInfo.size()),
+            .pSignalSemaphoreInfos = submitSignalInfo.data(),
         };
 
-        vkCheck(m_Device.graphicsQueue().queue.submit2(1, &submitInfo, *m_InFlightFences[m_CurrentFrame]));
+        m_Device.submitGraphics(submitInfo);
 
         auto swapchain = m_SwapChain.swapChain();
         vk::PresentInfoKHR presentInfo{
