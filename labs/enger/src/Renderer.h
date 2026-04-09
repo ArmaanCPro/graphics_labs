@@ -32,5 +32,7 @@ namespace enger
         std::array<vk::UniqueSemaphore, FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
         // this has as many elements as there are swapchain images
         std::vector<vk::UniqueSemaphore> m_RenderFinishedSemaphores;
+
+        Holder<TextureHandle> m_RenderTarget;
     };
 }

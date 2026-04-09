@@ -13,6 +13,8 @@ target_compile_definitions(enger PRIVATE
         VULKAN_HPP_NO_EXCEPTIONS
         VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
         VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+        VMA_STATIC_VULKAN_FUNCTIONS=0
+        VMA_DYNAMIC_VULKAN_FUNCTIONS=1
 )
 
 set_project_warnings(enger)

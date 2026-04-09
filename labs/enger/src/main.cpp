@@ -21,9 +21,9 @@ int main()
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Enger", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Enger", nullptr, nullptr);
 
-    std::vector<const char*> instanceExtensions;
+    std::vector<const char *> instanceExtensions;
 #ifndef NDEBUG
     instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
@@ -43,7 +43,8 @@ int main()
 
     auto device = enger::Device{instance.instance(), surface.surface(), requiredDeviceExtensions};
 
-    auto swapchain = enger::SwapChain{device.physicalDevice(), device.device(), surface.surface(), window, vk::PresentModeKHR::eMailbox};
+    auto swapchain = enger::SwapChain{device.physicalDevice(), device.device(), surface.surface(), window,
+                                      vk::PresentModeKHR::eMailbox};
 
     enger::Renderer renderer{device, swapchain};
 
@@ -53,6 +54,8 @@ int main()
 
         renderer.drawFrame();
     }
+
+    enger::vkCheck(device.device().waitIdle());
 
     glfwDestroyWindow(window);
     glfwTerminate();

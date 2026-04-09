@@ -14,7 +14,8 @@ namespace enger
         [[nodiscard]] vk::SwapchainKHR swapChain() { return *m_SwapChain; }
 
         [[nodiscard]] vk::Image swapChainImage(uint32_t index) { return m_SwapChainImages[index]; }
-        [[nodiscard]] uint32_t numSwapChainImages() { return static_cast<uint32_t>(m_SwapChainImages.size()); }
+        [[nodiscard]] uint32_t numSwapChainImages() const { return static_cast<uint32_t>(m_SwapChainImages.size()); }
+        [[nodiscard]] vk::Extent2D swapChainExtent() const { return m_SwapExtent; }
 
     private:
         vk::Extent2D m_SwapExtent;

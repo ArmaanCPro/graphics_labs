@@ -146,23 +146,82 @@ namespace enger
 
         m_TimelineSemaphore = vkCheck(m_Device->createSemaphoreUnique(semaphoreCI));
         setDebugName(*m_Device, *m_TimelineSemaphore, "Main Timeline Semaphore");
+
+        m_Allocator.init(instance, m_PhysicalDevice, *m_Device);
     }
 
     Device::~Device()
     {
         vkCheck(m_Device->waitIdle());
+        forceDeletionQueueFlush();
+    }
+
+    Holder<TextureHandle> Device::createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName)
+    {
+        VulkanImage image;
+        image.extent_ = extent;
+        image.format_ = format;
+        image.usage_ = usage;
+
+        vk::ImageCreateInfo imageCI{
+            .imageType = vk::ImageType::e2D,
+            .format = format,
+            .extent = extent,
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = vk::SampleCountFlagBits::e1, // TODO parameterize (for MSAA)
+            .tiling = vk::ImageTiling::eOptimal,
+            .usage = usage,
+            .sharingMode = vk::SharingMode::eExclusive,
+            .initialLayout = vk::ImageLayout::eUndefined,
+        };
+
+        vkCheck(m_Device->createImage(&imageCI, nullptr, &image.image_));
+        image.allocation_ = m_Allocator.allocateImage(imageCI, image.image_);
+
+        vk::ImageViewCreateInfo viewCI{
+            .image = image.image_,
+            .viewType = vk::ImageViewType::e2D,
+            .format = format,
+            .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 },
+        };
+
+        vkCheck(m_Device->createImageView(&viewCI, nullptr, &image.view_));
+
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, image.image_, debugName);
+        }
+
+        TextureHandle handle = m_TexturePool.create(std::move(image));
+
+        return {this, handle};
     }
 
     void Device::destroyComputePipeline(ComputePipelineHandle handle)
     {
         auto pipeline = *m_ComputePipelinePool.get(handle);
 
-        m_DeletionQueue.emplace_back([&]()
+        m_DeletionQueue.emplace_back([=, this]()
         {
             m_Device->destroyPipeline(pipeline.handle);
         }, m_CurrentSubmitCounter);
 
         m_ComputePipelinePool.destroy(handle);
+    }
+
+    void Device::destroyTexture(TextureHandle handle)
+    {
+        auto& texture = *m_TexturePool.get(handle);
+
+        m_DeletionQueue.emplace_back([=, this, image = texture.image_, view = texture.view_, allocation = texture.allocation_]()
+        {
+            m_Device->destroyImageView(view);
+            m_Device->destroyImage(image);
+            m_Allocator.freeImage(allocation);
+        }, m_CurrentSubmitCounter);
+
+        m_TexturePool.destroy(handle);
     }
 
     void Device::submitGraphics(vk::SubmitInfo2 submitInfo)
@@ -184,5 +243,14 @@ namespace enger
             }
             return false;
         });
+    }
+
+    void Device::forceDeletionQueueFlush()
+    {
+        for (auto &task : m_DeletionQueue)
+        {
+            task.func();
+        }
+        m_DeletionQueue.clear();
     }
 }

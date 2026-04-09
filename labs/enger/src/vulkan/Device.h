@@ -2,10 +2,13 @@
 
 #include <functional>
 
+#include "GpuResourceTypes.h"
 #include "vk.h"
 
 #include "Resources.h"
 #include "Pipeline.h"
+
+#include "Allocator.h"
 
 namespace enger
 {
@@ -37,13 +40,18 @@ namespace enger
         [[nodiscard]] SubmitHandle currentSubmitCounter() const { return m_CurrentSubmitCounter; }
         [[nodiscard]] vk::Semaphore timelineSemaphore() const { return *m_TimelineSemaphore; }
 
+        Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName = "");
+
         void destroyComputePipeline(ComputePipelineHandle handle);
+        void destroyTexture(TextureHandle handle);
 
         /// TODO change type of submitInfo to be RHI agnostic
         void submitGraphics(vk::SubmitInfo2 submitInfo);
 
         // Should be called once per frame.
         void flushDeletionQueue();
+        // for debugging
+        void forceDeletionQueueFlush();
 
     private:
         vk::PhysicalDevice m_PhysicalDevice;
@@ -56,9 +64,13 @@ namespace enger
         /// then I would need to pass in a vk::Timeline handle to a DeferredDeletionTask and a destroy(device, handle) and holder<>
         vk::UniqueSemaphore m_TimelineSemaphore;
         /// Tracks the current submit handle (CPU side, not the actual GPU state)
-        SubmitHandle m_CurrentSubmitCounter;
+        SubmitHandle m_CurrentSubmitCounter = {0};
+
+        // TODO: dependency inject this via polymorphism in ctor, maybe
+        Allocator m_Allocator;
 
         Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
+        Pool<TextureTag, VulkanImage> m_TexturePool;
 
         struct DeferredDeletionTask
         {

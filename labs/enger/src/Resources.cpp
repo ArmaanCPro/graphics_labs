@@ -11,4 +11,12 @@ namespace enger
             device->destroyComputePipeline(handle);
         }
     }
+
+    void destroy(Device *device, TextureHandle handle)
+    {
+        if (device)
+        {
+            device->destroyTexture(handle);
+        }
+    }
 }

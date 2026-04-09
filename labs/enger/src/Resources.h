@@ -68,9 +68,11 @@ namespace enger
     /// These are just tags, they don't mean anything but are useful to differentiate different Handle types.
     /// When you create a Pool, you use the Tag type and the Impl type.
     using ComputePipelineHandle = Handle<struct ComputePipelineTag>;
+    using TextureHandle = Handle<struct TextureTag>;
 
     /// These functions indirect deletion so that the Holder can directly call deletors
     void destroy(Device* device, ComputePipelineHandle handle);
+    void destroy(Device* device, TextureHandle handle);
 
     /// This is an RAII class that actually owns the lifetime of an object that a Handle Points to.
     /// This is an optional type, useful for when lexical scope (RAII) matches actual resource lifetime.
@@ -105,12 +107,8 @@ namespace enger
 
         Holder &operator=(Holder &&rhs) noexcept
         {
-            if (this != &rhs)
-            {
-                destroy(m_Device, m_Handle);
-                m_Device = rhs.m_Device;
-                m_Handle = rhs.m_Handle;
-            }
+            std::swap(m_Device, rhs.m_Device);
+            std::swap(m_Handle, rhs.m_Handle);
             return *this;
         }
 
@@ -176,14 +174,14 @@ namespace enger
         struct PoolEntry
         {
             explicit PoolEntry(ImplObjectType& obj)
-                : _obj(obj)
+                : _obj(std::move(obj))
             {}
-            ImplObjectType& _obj;
+            ImplObjectType _obj;
             uint32_t _gen = 1;
             /// This maintains the "Linked List" design
             uint32_t _nextFree = kListEndSentinel;
         };
-        uint32_t m_FreeListHead = 0;
+        uint32_t m_FreeListHead = kListEndSentinel;
     public:
         std::vector<PoolEntry> m_Objects;
         uint32_t m_NumObjects = 0;
@@ -202,7 +200,7 @@ namespace enger
             {
                 // create a new entry into the pool
                 index = static_cast<uint32_t>(m_Objects.size());
-                m_Objects.push_back(std::move(obj));
+                m_Objects.emplace_back(obj);
             }
 
             m_NumObjects++;
