@@ -27,6 +27,7 @@ namespace enger
     public:
         /// Requires surface for presentation. Headless is not currently supported.
         explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions);
+        ~Device();
 
         [[nodiscard]] vk::PhysicalDevice physicalDevice() { return m_PhysicalDevice; }
         [[nodiscard]] vk::Device device() { return *m_Device; }

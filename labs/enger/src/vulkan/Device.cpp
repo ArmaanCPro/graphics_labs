@@ -148,6 +148,11 @@ namespace enger
         setDebugName(*m_Device, *m_TimelineSemaphore, "Main Timeline Semaphore");
     }
 
+    Device::~Device()
+    {
+        vkCheck(m_Device->waitIdle());
+    }
+
     void Device::destroyComputePipeline(ComputePipelineHandle handle)
     {
         auto pipeline = *m_ComputePipelinePool.get(handle);

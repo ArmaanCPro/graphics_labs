@@ -54,8 +54,6 @@ int main()
         renderer.drawFrame();
     }
 
-    enger::vkCheck(device.device().waitIdle());
-
     glfwDestroyWindow(window);
     glfwTerminate();
 }
