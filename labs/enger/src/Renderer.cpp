@@ -133,16 +133,9 @@ namespace enger
 
         m_Device.submitGraphics(submitInfo);
 
-        auto swapchain = m_SwapChain.swapChain();
-        vk::PresentInfoKHR presentInfo{
-            .waitSemaphoreCount = 1,
-            .pWaitSemaphores = &*m_RenderFinishedSemaphores[swapchainImageIndex],
-            .swapchainCount = 1,
-            .pSwapchains = &swapchain,
-            .pImageIndices = &swapchainImageIndex,
-        };
-
-        vkCheck(m_Device.graphicsQueue().queue.presentKHR(presentInfo));
+        std::array<vk::Semaphore, 1> presentWaitSemaphores = { *m_RenderFinishedSemaphores[swapchainImageIndex] };
+        m_SwapChain.present(presentWaitSemaphores, swapchainImageIndex,
+            m_Device.graphicsQueue().queue);
 
         m_FrameNumber++;
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;

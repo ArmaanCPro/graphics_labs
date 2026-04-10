@@ -130,4 +130,16 @@ namespace enger
             m_Device.removeTextureFromPool(m_SwapchainImageHandles[i]);
         }
     }
+
+    void SwapChain::present(std::span<vk::Semaphore> waitSemaphores, uint32_t imageIndex, vk::Queue queue)
+    {
+        vk::PresentInfoKHR presentInfo{
+            .waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
+            .pWaitSemaphores = waitSemaphores.data(),
+            .swapchainCount = 1,
+            .pSwapchains = &*m_SwapChain,
+            .pImageIndices = &imageIndex,
+        };
+        vkCheck(queue.presentKHR(presentInfo));
+    }
 }
