@@ -42,6 +42,8 @@ namespace enger
         [[nodiscard]] SubmitHandle currentSubmitCounter() const { return m_CurrentSubmitCounter; }
         [[nodiscard]] vk::Semaphore timelineSemaphore() const { return *m_TimelineSemaphore; }
 
+        void waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues, uint64_t timeout);
+
         Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName = "");
 
         void destroyComputePipeline(ComputePipelineHandle handle);

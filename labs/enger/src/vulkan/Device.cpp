@@ -156,6 +156,18 @@ namespace enger
         forceDeletionQueueFlush();
     }
 
+    void Device::waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues, uint64_t timeout)
+    {
+        assert(semaphores.size() == waitValues.size());
+
+        vk::SemaphoreWaitInfo waitSemInfo{
+            .semaphoreCount = static_cast<uint32_t>(semaphores.size()),
+            .pSemaphores = semaphores.data(),
+            .pValues = waitValues.data(),
+        };
+        vkCheck(m_Device->waitSemaphores(waitSemInfo, timeout));
+    }
+
     Holder<TextureHandle> Device::createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName)
     {
         VulkanImage image;

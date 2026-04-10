@@ -64,13 +64,9 @@ namespace enger
     void Renderer::drawFrame()
     {
         uint64_t waitValue = m_FrameNumber >= FRAMES_IN_FLIGHT ? m_FrameNumber - FRAMES_IN_FLIGHT + 1 : 0;
-        auto timelineSemaphore = m_Device.timelineSemaphore();
-        vk::SemaphoreWaitInfo waitInfo{
-            .semaphoreCount = 1,
-            .pSemaphores = &timelineSemaphore,
-            .pValues = &waitValue,
-        };
-        vkCheck(m_Device.device().waitSemaphores(waitInfo, std::numeric_limits<uint64_t>::max()));
+        std::array timelineSemaphores = { m_Device.timelineSemaphore() };
+        std::array<uint64_t, 1> waitValues = { waitValue };
+        m_Device.waitSemaphores(timelineSemaphores, waitValues, std::numeric_limits<uint64_t>::max());
 
         uint32_t swapchainImageIndex = 0;
         vkCheck(m_Device.device().acquireNextImageKHR(m_SwapChain.swapChain(),
