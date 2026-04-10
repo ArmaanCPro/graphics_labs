@@ -230,6 +230,89 @@ namespace enger
         vkCheck(m_GraphicsQueue.queue.submit2(1, &submitInfo, nullptr));
     }
 
+    UniqueCommandPool Device::createUniqueCommandPool(CommandPoolFlags flags, uint32_t queueFamilyIndex, std::string_view debugName)
+    {
+        vk::CommandPoolCreateInfo commandPoolCI{
+            .flags = flags == CommandPoolFlags::ResetCommandBuffer
+                ? vk::CommandPoolCreateFlagBits::eResetCommandBuffer : vk::CommandPoolCreateFlagBits::eTransient,
+            .queueFamilyIndex = queueFamilyIndex,
+        };
+
+        auto commandPool = vkCheck(m_Device->createCommandPoolUnique(commandPoolCI));
+
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, *commandPool, debugName.data());
+        }
+
+        return UniqueCommandPool{std::move(commandPool),
+            queueFamilyIndex};
+    }
+
+    std::vector<UniqueCommandPool> Device::createUniqueCommandPools(CommandPoolFlags flags, uint32_t queueFamilyIndex,
+        uint32_t count, std::string_view debugName)
+    {
+        vk::CommandPoolCreateInfo commandPoolCI{
+            .flags = flags == CommandPoolFlags::ResetCommandBuffer
+                ? vk::CommandPoolCreateFlagBits::eResetCommandBuffer : vk::CommandPoolCreateFlagBits::eTransient,
+            .queueFamilyIndex = queueFamilyIndex,
+        };
+
+        std::vector<UniqueCommandPool> result;
+        result.reserve(count);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            auto commandPool = vkCheck(m_Device->createCommandPoolUnique(commandPoolCI));
+            if (!debugName.empty())
+            {
+                setDebugName(*m_Device, *commandPool, debugName.data() + std::to_string(i));
+            }
+            result.push_back(UniqueCommandPool{std::move(commandPool),
+                queueFamilyIndex});
+        }
+
+        return result;
+    }
+
+    CommandBuffer Device::allocateCommandBuffer(UniqueCommandPool &commandPool, CommandBufferLevel level, std::string_view debugName)
+    {
+        vk::CommandBufferAllocateInfo cmdAllocCI{
+            .commandPool = *commandPool.m_CommandPool,
+            .level = level == CommandBufferLevel::Primary ? vk::CommandBufferLevel::ePrimary : vk::CommandBufferLevel::eSecondary,
+            .commandBufferCount = 1,
+        };
+        auto cmdBuffer = vkCheck(m_Device->allocateCommandBuffers(cmdAllocCI)).front();
+
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, cmdBuffer, debugName.data());
+        }
+
+        return {this, cmdBuffer};
+    }
+
+    std::vector<CommandBuffer> Device::allocateCommandBuffers(UniqueCommandPool &commandPool, CommandBufferLevel level,
+                                                              uint32_t count, std::string_view debugName)
+    {
+        vk::CommandBufferAllocateInfo cmdAllocCI{
+            .commandPool = *commandPool.m_CommandPool,
+            .level = level == CommandBufferLevel::Primary ? vk::CommandBufferLevel::ePrimary : vk::CommandBufferLevel::eSecondary,
+            .commandBufferCount = count,
+        };
+        auto cmdBuffers = vkCheck(m_Device->allocateCommandBuffers(cmdAllocCI));
+        std::vector<CommandBuffer> result;
+        result.reserve(count);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            if (!debugName.empty())
+            {
+                setDebugName(*m_Device, cmdBuffers[i], debugName.data() + std::to_string(i));
+            }
+            result.push_back({this, cmdBuffers[i]});
+        }
+        return result;
+    }
+
     void Device::flushDeletionQueue()
     {
         uint64_t gpuSubmitValue = vkCheck(m_Device->getSemaphoreCounterValue(*m_TimelineSemaphore));
@@ -252,5 +335,15 @@ namespace enger
             task.func();
         }
         m_DeletionQueue.clear();
+    }
+
+    TextureHandle Device::addTextureToPool(VulkanImage&& image)
+    {
+        return m_TexturePool.create(std::move(image));
+    }
+
+    void Device::removeTextureFromPool(TextureHandle handle)
+    {
+        m_TexturePool.destroy(handle);
     }
 }

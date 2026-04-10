@@ -43,7 +43,7 @@ int main()
 
     auto device = enger::Device{instance.instance(), surface.surface(), requiredDeviceExtensions};
 
-    auto swapchain = enger::SwapChain{device.physicalDevice(), device.device(), surface.surface(), window,
+    auto swapchain = enger::SwapChain{device, surface.surface(), window,
                                       vk::PresentModeKHR::eMailbox};
 
     enger::Renderer renderer{device, swapchain};

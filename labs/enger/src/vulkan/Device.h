@@ -9,6 +9,8 @@
 #include "Pipeline.h"
 
 #include "Allocator.h"
+#include "Commands.h"
+
 
 namespace enger
 {
@@ -48,10 +50,23 @@ namespace enger
         /// TODO change type of submitInfo to be RHI agnostic
         void submitGraphics(vk::SubmitInfo2 submitInfo);
 
+        UniqueCommandPool createUniqueCommandPool(CommandPoolFlags flags, uint32_t queueFamilyIndex, std::string_view debugName = "");
+        std::vector<UniqueCommandPool> createUniqueCommandPools(CommandPoolFlags flags, uint32_t queueFamilyIndex, uint32_t count, std::string_view debugName = "");
+        CommandBuffer allocateCommandBuffer(UniqueCommandPool& commandPool, CommandBufferLevel level, std::string_view debugName = "");
+        std::vector<CommandBuffer> allocateCommandBuffers(UniqueCommandPool& commandPool, CommandBufferLevel level, uint32_t count, std::string_view debugName = "");
+
         // Should be called once per frame.
         void flushDeletionQueue();
         // for debugging
         void forceDeletionQueueFlush();
+
+        // useful for swapchain. Resource deallocation is not automatic.
+        [[nodiscard]] TextureHandle addTextureToPool(VulkanImage&& image);
+        void removeTextureFromPool(TextureHandle handle);
+
+        // TODO consider a better API to get raw objects from Pools
+        [[nodiscard]] VulkanImage* getImage(TextureHandle handle) { return m_TexturePool.get(handle); };
+
 
     private:
         vk::PhysicalDevice m_PhysicalDevice;
@@ -69,14 +84,17 @@ namespace enger
         // TODO: dependency inject this via polymorphism in ctor, maybe
         Allocator m_Allocator;
 
-        Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
-        Pool<TextureTag, VulkanImage> m_TexturePool;
-
         struct DeferredDeletionTask
         {
             std::function<void()> func;
             SubmitHandle submitValue;
         };
         std::vector<DeferredDeletionTask> m_DeletionQueue;
+
+    public:
+        Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
+        Pool<TextureTag, VulkanImage> m_TexturePool;
+
+
     };
 }

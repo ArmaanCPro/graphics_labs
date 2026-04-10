@@ -25,9 +25,9 @@ namespace enger
         uint32_t m_CurrentFrame = 0;
         uint64_t m_FrameNumber = 0;
 
-        std::array<vk::UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;
+        std::array<UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;
         // the cmdbuf will be destroyed when its parent pool is destroyed, so it doesn't need to be unique
-        std::array<vk::CommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
+        std::array<CommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
         std::array<vk::UniqueSemaphore, FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
         // this has as many elements as there are swapchain images

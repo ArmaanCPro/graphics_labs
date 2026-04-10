@@ -32,30 +32,20 @@ namespace enger
     Renderer::Renderer(Device &device, SwapChain& swapchain)
         : m_Device(device), m_SwapChain(swapchain)
     {
-        vk::CommandPoolCreateInfo commandPoolCI{
-            .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            .queueFamilyIndex = device.graphicsQueue().index,
-        };
-
         vk::SemaphoreCreateInfo semaphoreCI{};
+
+        auto commandPoolsVec = m_Device.createUniqueCommandPools(CommandPoolFlags::ResetCommandBuffer,
+            device.graphicsQueue().index, FRAMES_IN_FLIGHT, "FrameCommandPools");
+
+        std::ranges::move(commandPoolsVec, m_CommandPools.begin());
 
         for (auto i = 0; i < FRAMES_IN_FLIGHT; ++i)
         {
-            m_CommandPools[i] = vkCheck(device.device().createCommandPoolUnique(commandPoolCI));
-            setDebugName(m_Device.device(), *m_CommandPools[i], "FrameCommandPool" + std::to_string(i));
-
-            vk::CommandBufferAllocateInfo cmdAllocCI{
-                .commandPool = *m_CommandPools[i],
-                .level = vk::CommandBufferLevel::ePrimary,
-                .commandBufferCount = 1,
-            };
-
-            m_CommandBuffers[i] = vkCheck(device.device().allocateCommandBuffers(cmdAllocCI)).front();
-            setDebugName(m_Device.device(), m_CommandBuffers[i], "FrameCommandBuffer" + std::to_string(i));
+            m_CommandBuffers[i] = m_Device.allocateCommandBuffer(m_CommandPools[i],
+                CommandBufferLevel::Primary, "FrameCommandBuffer" + std::to_string(i));
 
             m_ImageAvailableSemaphores[i] = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
             setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i], "FrameImageAvailableSemaphore" + std::to_string(i));
-
         }
 
         for (uint32_t i = 0; i < m_SwapChain.numSwapChainImages(); ++i)
@@ -87,34 +77,29 @@ namespace enger
             std::numeric_limits<uint64_t>::max(), *m_ImageAvailableSemaphores[m_CurrentFrame],
             nullptr, &swapchainImageIndex));
 
-        vk::CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
+        CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
 
-        vkCheck(cmd.reset());
+        cmd.reset();
 
-        vk::CommandBufferBeginInfo beginInfo{
-            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
-        };
+        cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-        vkCheck(cmd.begin(beginInfo));
-
-        transitionImage(cmd, m_SwapChain.swapChainImage(swapchainImageIndex), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
-
-        vk::ImageSubresourceRange clearRange{
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .baseMipLevel = 0,
-            .levelCount = vk::RemainingMipLevels,
-            .baseArrayLayer = 0,
-            .layerCount = vk::RemainingArrayLayers,
-        };
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 
         float flash = std::abs(std::sin((float)m_FrameNumber / 240.0f));
         vk::ClearColorValue clearValue = vk::ClearColorValue{0.0f, 0.0f, flash, 1.0f};
 
-        cmd.clearColorImage(m_SwapChain.swapChainImage(swapchainImageIndex), vk::ImageLayout::eGeneral, &clearValue, 1, &clearRange);
+        cmd.clearColorImage(m_RenderTarget, clearValue, vk::ImageAspectFlagBits::eColor);
 
-        transitionImage(cmd, m_SwapChain.swapChainImage(swapchainImageIndex), vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR);
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
+        cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
+            vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
-        vkCheck(cmd.end());
+        cmd.blitImage(m_RenderTarget, m_SwapChain.swapChainImageHandle(swapchainImageIndex));
+
+        cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
+            vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR);
+
+        cmd.end();
 
         vk::SemaphoreSubmitInfo submitWaitInfo{
             .semaphore = *m_ImageAvailableSemaphores[m_CurrentFrame],
@@ -134,7 +119,7 @@ namespace enger
         };
 
         vk::CommandBufferSubmitInfo cmdSubmitInfo{
-            .commandBuffer = cmd,
+            .commandBuffer = cmd.get(),
         };
 
         vk::SubmitInfo2 submitInfo{

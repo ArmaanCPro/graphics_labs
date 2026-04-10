@@ -52,8 +52,13 @@ namespace enger
         return minImageCount;
     }
 
-    SwapChain::SwapChain(vk::PhysicalDevice physicalDevice, vk::Device device, vk::SurfaceKHR surface, GLFWwindow* window, vk::PresentModeKHR desiredPresentMode)
+    SwapChain::SwapChain(Device& device, vk::SurfaceKHR surface, GLFWwindow* window, vk::PresentModeKHR desiredPresentMode)
+        :
+        m_Device(device)
     {
+        auto physicalDevice = device.physicalDevice();
+        auto logicalDevice = device.device();
+
         auto surfaceCaps = vkCheck(physicalDevice.getSurfaceCapabilitiesKHR(surface));
 
         m_SwapExtent = chooseSwapExtent(surfaceCaps, window);
@@ -83,12 +88,12 @@ namespace enger
             .oldSwapchain = nullptr,
         };
 
-        m_SwapChain = vkCheck(device.createSwapchainKHRUnique(swapchainCI));
-        setDebugName(device, *m_SwapChain, "SwapChain");
-        m_SwapChainImages = vkCheck(device.getSwapchainImagesKHR(*m_SwapChain));
+        m_SwapChain = vkCheck(logicalDevice.createSwapchainKHRUnique(swapchainCI));
+        setDebugName(logicalDevice, *m_SwapChain, "SwapChain");
+        m_SwapChainImages = vkCheck(logicalDevice.getSwapchainImagesKHR(*m_SwapChain));
         for (size_t i = 0; i < m_SwapChainImages.size(); ++i)
         {
-            setDebugName(device, m_SwapChainImages[i], "SwapChainImage" + std::to_string(i));
+            setDebugName(logicalDevice, m_SwapChainImages[i], "SwapChainImage" + std::to_string(i));
         }
 
         vk::ImageViewCreateInfo viewCI{
@@ -101,8 +106,28 @@ namespace enger
         for (uint32_t i = 0; i < m_SwapChainImages.size(); ++i)
         {
             viewCI.image = m_SwapChainImages[i];
-            m_SwapChainImageViews.push_back(std::move(vkCheck(device.createImageViewUnique(viewCI))));
-            setDebugName(device, *m_SwapChainImageViews[i], "SwapChainImageView" + std::to_string(i));
+            m_SwapChainImageViews.push_back(std::move(vkCheck(logicalDevice.createImageViewUnique(viewCI))));
+            setDebugName(logicalDevice, *m_SwapChainImageViews[i], "SwapChainImageView" + std::to_string(i));
+        }
+
+        for (uint32_t i = 0; i < m_SwapChainImages.size(); ++i)
+        {
+            VulkanImage img{
+                .image_ = m_SwapChainImages[i],
+                .view_ = *m_SwapChainImageViews[i],
+                .extent_ = {m_SwapExtent.width, m_SwapExtent.height, 1},
+                .usage_ = vk::ImageUsageFlagBits::eColorAttachment,
+                .format_ = surfaceFormat.format,
+            };
+            m_SwapchainImageHandles.push_back(device.addTextureToPool(std::move(img)));
+        }
+    }
+
+    SwapChain::~SwapChain()
+    {
+        for (auto i = 0; i < m_SwapChainImages.size(); ++i)
+        {
+            m_Device.removeTextureFromPool(m_SwapchainImageHandles[i]);
         }
     }
 }

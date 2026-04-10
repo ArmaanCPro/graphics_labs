@@ -64,26 +64,6 @@ namespace enger
             .vkGetInstanceProcAddr = dld.vkGetInstanceProcAddr,
             .vkGetDeviceProcAddr   = dld.vkGetDeviceProcAddr,
 
-            /*
-            .vkGetPhysicalDeviceProperties       = dld.vkGetPhysicalDeviceProperties,
-            .vkGetPhysicalDeviceMemoryProperties = dld.vkGetPhysicalDeviceMemoryProperties,
-            .vkAllocateMemory = dld.vkAllocateMemory,
-            .vkFreeMemory = dld.vkFreeMemory,
-            .vkMapMemory = dld.vkMapMemory,
-            .vkUnmapMemory = dld.vkUnmapMemory,
-            .vkFlushMappedMemoryRanges = dld.vkFlushMappedMemoryRanges,
-            .vkInvalidateMappedMemoryRanges = dld.vkInvalidateMappedMemoryRanges,
-            .vkBindBufferMemory = dld.vkBindBufferMemory,
-            .vkBindImageMemory = dld.vkBindImageMemory,
-            .vkGetBufferMemoryRequirements = dld.vkGetBufferMemoryRequirements,
-            .vkGetImageMemoryRequirements = dld.vkGetImageMemoryRequirements,
-            .vkCreateBuffer = dld.vkCreateBuffer,
-            .vkDestroyBuffer = dld.vkDestroyBuffer,
-            .vkCreateImage = dld.vkCreateImage,
-            .vkDestroyImage = dld.vkDestroyImage,
-            .vkCmdCopyBuffer = dld.vkCmdCopyBuffer,
-            */
-
             .vkGetBufferMemoryRequirements2KHR = dld.vkGetBufferMemoryRequirements2,
             .vkGetImageMemoryRequirements2KHR  = dld.vkGetImageMemoryRequirements2,
             .vkBindBufferMemory2KHR = dld.vkBindBufferMemory2,
