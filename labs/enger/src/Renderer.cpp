@@ -108,7 +108,7 @@ namespace enger
                 .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             },
             vk::SemaphoreSubmitInfo{
-                .semaphore = timelineSemaphore,
+                .semaphore = timelineSemaphores.front(),
                 .value = m_FrameNumber + 1,
                 .stageMask = vk::PipelineStageFlagBits2::eAllGraphics,
             },
