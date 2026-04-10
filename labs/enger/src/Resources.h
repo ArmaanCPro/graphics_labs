@@ -16,12 +16,12 @@ namespace enger
     class Handle final
     {
     private:
-        uint32_t _index = 0;
-        uint32_t _gen = 0;
+        uint32_t index_ = 0;
+        uint32_t gen_ = 0;
 
         Handle(uint32_t index, uint32_t gen) :
-            _index(index),
-            _gen(gen)
+            index_(index),
+            gen_(gen)
         {}
 
         template<typename ObjectType, typename ImplObjectType>
@@ -32,27 +32,27 @@ namespace enger
 
         [[nodiscard]] bool empty() const
         {
-            return _gen == 0;
+            return gen_ == 0;
         }
 
         [[nodiscard]] bool valid() const
         {
-            return _gen != 0;
+            return gen_ != 0;
         }
 
         [[nodiscard]] uint32_t index() const
         {
-            return _index;
+            return index_;
         }
 
         [[nodiscard]] uint32_t gen() const
         {
-            return _gen;
+            return gen_;
         }
 
         [[nodiscard]] void* indexAsVoid() const
         {
-            return reinterpret_cast<void*>(static_cast<ptrdiff_t>(_index));
+            return reinterpret_cast<void*>(static_cast<ptrdiff_t>(index_));
         }
 
         auto operator<=>(const Handle &other) const = default;
@@ -174,10 +174,10 @@ namespace enger
         struct PoolEntry
         {
             explicit PoolEntry(ImplObjectType& obj)
-                : _obj(std::move(obj))
+                : obj_(std::move(obj))
             {}
-            ImplObjectType _obj;
-            uint32_t _gen = 1;
+            ImplObjectType obj_;
+            uint32_t gen_ = 1;
             /// This maintains the "Linked List" design
             uint32_t _nextFree = kListEndSentinel;
         };
@@ -194,7 +194,7 @@ namespace enger
                 // the pool is not full -> use an existing entry
                 index = m_FreeListHead;
                 m_FreeListHead = m_Objects[index]._nextFree;
-                m_Objects[index]._obj = std::move(obj);
+                m_Objects[index].obj_ = std::move(obj);
             }
             else
             {
@@ -204,7 +204,7 @@ namespace enger
             }
 
             m_NumObjects++;
-            return Handle<ObjectType>{index, m_Objects[index]._gen};
+            return Handle<ObjectType>{index, m_Objects[index].gen_};
         }
 
         void destroy(Handle<ObjectType> handle) noexcept
@@ -220,11 +220,11 @@ namespace enger
             assert(index < m_Objects.size());
 
             // double deletion
-            assert(handle.gen() == m_Objects[index]._gen);
+            assert(handle.gen() == m_Objects[index].gen_);
 
             // places the array element at the front of the free list
-            m_Objects[index]._obj = ImplObjectType{};
-            ++m_Objects[index]._gen;
+            m_Objects[index].obj_ = ImplObjectType{};
+            ++m_Objects[index].gen_;
             m_Objects[index]._nextFree = m_FreeListHead;
             m_FreeListHead = index;
             m_NumObjects--;
@@ -239,9 +239,9 @@ namespace enger
             const auto index = handle.index();
             assert(index < m_Objects.size());
             // accessing a deleted object
-            assert(handle.gen() == m_Objects[index]._gen);
+            assert(handle.gen() == m_Objects[index].gen_);
 
-            return &m_Objects[index]._obj;
+            return &m_Objects[index].obj_;
         }
 
         void clear()
@@ -260,16 +260,16 @@ namespace enger
             {
                 return {};
             }
-            return Handle<ObjectType>{index, m_Objects[index]._gen};
+            return Handle<ObjectType>{index, m_Objects[index].gen_};
         }
 
         [[nodiscard]] Handle<ObjectType> findObject(const ImplObjectType& obj)
         {
             for (size_t i = 0; i < m_Objects.size(); ++i)
             {
-                if (m_Objects[i]._obj == obj)
+                if (m_Objects[i].obj_ == obj)
                 {
-                    return Handle<ObjectType>{static_cast<uint32_t>(i), m_Objects[i]._gen};
+                    return Handle<ObjectType>{static_cast<uint32_t>(i), m_Objects[i].gen_};
                 }
             }
 
