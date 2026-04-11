@@ -46,7 +46,7 @@ int main()
     auto swapchain = enger::SwapChain{device, surface.surface(), window,
                                       vk::PresentModeKHR::eMailbox};
 
-    enger::Renderer renderer{device, swapchain};
+    enger::Renderer renderer{instance, device, swapchain, window};
 
     while (!glfwWindowShouldClose(window))
     {

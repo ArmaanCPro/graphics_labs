@@ -31,7 +31,7 @@ namespace enger
 
         vk::DescriptorPool pool_;
 
-        void initPool(vk::Device device, uint32_t maxSets, std::span<PoolSizeRatio> poolSizeRatios);
+        void initPool(vk::Device device, uint32_t maxSets, std::span<PoolSizeRatio> poolSizeRatios, vk::DescriptorPoolCreateFlags flags = {});
         void clearDescriptors(vk::Device device);
         void destroyPool(vk::Device device);
 

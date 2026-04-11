@@ -22,8 +22,10 @@ namespace enger
         [[nodiscard]] TextureHandle swapChainImageHandle(uint32_t index) { return m_SwapchainImageHandles[index]; }
 
         [[nodiscard]] vk::Image swapChainImage(uint32_t index) { return m_SwapChainImages[index]; }
+        [[nodiscard]] vk::ImageView swapChainImageView(uint32_t index) { return *m_SwapChainImageViews[index]; }
         [[nodiscard]] uint32_t numSwapChainImages() const { return static_cast<uint32_t>(m_SwapChainImages.size()); }
         [[nodiscard]] vk::Extent2D swapChainExtent() const { return m_SwapExtent; }
+        [[nodiscard]] vk::Format swapChainFormat() const { return m_SwapFormat.format; }
 
     private:
         Device& m_Device;

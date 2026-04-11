@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 
+#include "Imgui.h"
 #include "vulkan/Descriptors.h"
 #include "vulkan/Device.h"
 #include "vulkan/SwapChain.h"
@@ -15,7 +16,7 @@ namespace enger
     class Renderer
     {
     public:
-        Renderer(Device& device, SwapChain& swapchain);
+        Renderer(Instance& instance, Device& device, SwapChain& swapchain, GLFWwindow* window);
         ~Renderer();
 
         void drawFrame();
@@ -24,6 +25,8 @@ namespace enger
         Device& m_Device;
         SwapChain& m_SwapChain;
         Queue& m_GraphicsQueue;
+
+        ImguiLayer m_ImguiLayer;
 
         uint32_t m_CurrentFrame = 0;
         uint64_t m_FrameNumber = 0;

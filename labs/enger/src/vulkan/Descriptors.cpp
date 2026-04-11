@@ -4,7 +4,7 @@
 
 namespace enger
 {
-    void DescriptorAllocator::initPool(vk::Device device, uint32_t maxSets, std::span<PoolSizeRatio> poolSizeRatios)
+    void DescriptorAllocator::initPool(vk::Device device, uint32_t maxSets, std::span<PoolSizeRatio> poolSizeRatios, vk::DescriptorPoolCreateFlags flags)
     {
         std::vector<vk::DescriptorPoolSize> poolSizes;
         for (auto ratio : poolSizeRatios)
@@ -16,7 +16,7 @@ namespace enger
         }
 
         vk::DescriptorPoolCreateInfo poolCI{
-            .flags = {},
+            .flags = flags,
             .maxSets = maxSets,
             .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
             .pPoolSizes = poolSizes.data(),

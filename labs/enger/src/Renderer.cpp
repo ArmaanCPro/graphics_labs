@@ -27,8 +27,9 @@ namespace enger
         return data;
     }
 
-    Renderer::Renderer(Device &device, SwapChain& swapchain)
-        : m_Device(device), m_SwapChain(swapchain), m_GraphicsQueue(device.graphicsQueue())
+    Renderer::Renderer(Instance& instance, Device &device, SwapChain& swapchain, GLFWwindow* window)
+        : m_Device(device), m_SwapChain(swapchain), m_GraphicsQueue(device.graphicsQueue()),
+        m_ImguiLayer(instance, device, window, swapchain)
     {
         vk::SemaphoreCreateInfo semaphoreCI{};
 
@@ -157,7 +158,12 @@ namespace enger
         cmd.blitImage(m_RenderTarget, m_SwapChain.swapChainImageHandle(swapchainImageIndex));
 
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
-            vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR);
+            vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+
+        m_ImguiLayer.draw(cmd.get(), m_SwapChain.swapChainImageView(swapchainImageIndex));
+
+        cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
+            vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
 
         cmd.end();
 
