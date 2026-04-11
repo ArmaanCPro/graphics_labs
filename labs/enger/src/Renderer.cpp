@@ -4,6 +4,8 @@
 #include <fstream>
 #include <filesystem>
 
+#include "vulkan/QueueSubmitBuilder.h"
+
 namespace enger
 {
     std::expected<std::vector<uint32_t>, std::string> loadSpirvFromFile(std::filesystem::path path)
@@ -119,7 +121,7 @@ namespace enger
         uint64_t waitValue = m_FrameNumber >= FRAMES_IN_FLIGHT ? m_FrameNumber - FRAMES_IN_FLIGHT + 1 : 0;
         std::array timelineSemaphores = { m_Device.timelineSemaphore() };
         std::array<uint64_t, 1> waitValues = { waitValue };
-        m_Device.waitSemaphores(timelineSemaphores, waitValues, std::numeric_limits<uint64_t>::max());
+        m_Device.waitSemaphores(timelineSemaphores, waitValues);
 
         uint32_t swapchainImageIndex = 0;
         vkCheck(m_Device.device().acquireNextImageKHR(m_SwapChain.swapChain(),
@@ -159,37 +161,13 @@ namespace enger
 
         cmd.end();
 
-        vk::SemaphoreSubmitInfo submitWaitInfo{
-            .semaphore = *m_ImageAvailableSemaphores[m_CurrentFrame],
-            .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        };
+        QueueSubmitBuilder submission{};
+        submission.waitBinary(*m_ImageAvailableSemaphores[m_CurrentFrame], vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+        submission.signalBinary(*m_RenderFinishedSemaphores[swapchainImageIndex], vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+        submission.signalTimeline(timelineSemaphores.front(), m_FrameNumber + 1, vk::PipelineStageFlagBits2::eAllGraphics);
+        submission.addCmd(cmd);
 
-        std::array<vk::SemaphoreSubmitInfo, 2> submitSignalInfo = {
-            vk::SemaphoreSubmitInfo{
-                .semaphore = *m_RenderFinishedSemaphores[swapchainImageIndex],
-                .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            },
-            vk::SemaphoreSubmitInfo{
-                .semaphore = timelineSemaphores.front(),
-                .value = m_FrameNumber + 1,
-                .stageMask = vk::PipelineStageFlagBits2::eAllGraphics,
-            },
-        };
-
-        vk::CommandBufferSubmitInfo cmdSubmitInfo{
-            .commandBuffer = cmd.get(),
-        };
-
-        vk::SubmitInfo2 submitInfo{
-            .waitSemaphoreInfoCount = 1,
-            .pWaitSemaphoreInfos = &submitWaitInfo,
-            .commandBufferInfoCount = 1,
-            .pCommandBufferInfos = &cmdSubmitInfo,
-            .signalSemaphoreInfoCount = static_cast<uint32_t>(submitSignalInfo.size()),
-            .pSignalSemaphoreInfos = submitSignalInfo.data(),
-        };
-
-        m_Device.submitGraphics(submitInfo);
+        m_Device.submitGraphics(submission.build());
 
         std::array<vk::Semaphore, 1> presentWaitSemaphores = { *m_RenderFinishedSemaphores[swapchainImageIndex] };
         m_SwapChain.present(presentWaitSemaphores, swapchainImageIndex,
