@@ -78,7 +78,7 @@ namespace enger
         return m_CurrentSubmitCounter;
     }
 
-    void Queue::submitImmediate(std::function<void(CommandBuffer &)> func)
+    SubmitHandle Queue::submitImmediateAsync(std::function<void(CommandBuffer &)> func)
     {
         m_ImmediateCmdBuffer.reset();
         m_ImmediateCmdBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -93,8 +93,12 @@ namespace enger
             .pCommandBufferInfos = &cmdInfo,
         };
 
-        auto handle = submit(submitInfo);
-        wait(handle);
+        return submit(submitInfo);
+    }
+
+    void Queue::submitImmediate(std::function<void(CommandBuffer &)> func)
+    {
+        wait(submitImmediateAsync(std::move(func)));
     }
 
     void Queue::flushDeletionQueue()

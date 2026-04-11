@@ -53,6 +53,10 @@ namespace enger
 
         [[nodiscard]] SubmitHandle submit(vk::SubmitInfo2 submitInfo);
 
+        /// The CPU does not block after this. Manual sync is needed.
+        /// This is helpful for inter-Queue (GPU<->GPU) sync, or for manual GPU<->CPU sync.
+        [[nodiscard]] SubmitHandle submitImmediateAsync(std::function<void(CommandBuffer&)> func);
+        /// This is a helper that blocks the CPU until SubmitImmediateAsync completes on the GPU.
         void submitImmediate(std::function<void(CommandBuffer&)> func);
 
         void flushDeletionQueue();
