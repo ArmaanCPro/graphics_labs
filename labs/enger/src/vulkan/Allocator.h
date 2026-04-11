@@ -15,9 +15,15 @@ namespace enger
         void init(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
 
         VmaAllocation allocateBuffer() { return {}; }
-        VmaAllocation allocateImage(vk::ImageCreateInfo& imageCI, vk::Image& image);
+        /// This function handles the Vulkan creation of an image AND allocation.
+        VmaAllocation createImage(vk::ImageCreateInfo& imageCI, vk::Image& image);
 
-        void freeImage(VmaAllocation alloc);
+        /// This function solely deallocates an allocation.
+        void free(VmaAllocation alloc);
+
+        /// This function calls vmaDestroyImage() internally.
+        /// Does both Vulkan destruction AND deallocation of the image.
+        void destroyImage(VmaAllocation alloc, vk::Image image);
 
     private:
         VmaAllocator m_Allocator{};

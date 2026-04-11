@@ -28,7 +28,7 @@ namespace enger
         uint32_t m_CurrentFrame = 0;
         uint64_t m_FrameNumber = 0;
 
-        std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits;
+        std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits = {0};
 
         std::array<UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;
         // the cmdbuf will be destroyed when its parent pool is destroyed, so it doesn't need to be unique

@@ -81,7 +81,7 @@ namespace enger
         vkCheck(vk::Result{vmaCreateAllocator(&allocatorCI, &m_Allocator)});
     }
 
-    VmaAllocation Allocator::allocateImage(vk::ImageCreateInfo& imageCI, vk::Image& image)
+    VmaAllocation Allocator::createImage(vk::ImageCreateInfo& imageCI, vk::Image& image)
     {
         VmaAllocationCreateInfo allocCI{
             .usage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -90,7 +90,7 @@ namespace enger
 
         VmaAllocation alloc{};
 
-        VkImageCreateInfo& ici = static_cast<VkImageCreateInfo&>(imageCI);
+        auto& ici = static_cast<VkImageCreateInfo&>(imageCI);
         VkImage rawImage{};
 
         vkCheck(vk::Result{vmaCreateImage(m_Allocator, &ici, &allocCI,
@@ -101,10 +101,14 @@ namespace enger
         return alloc;
     }
 
-    void Allocator::freeImage(VmaAllocation alloc)
+    void Allocator::free(VmaAllocation alloc)
     {
-        //assert(image != VK_NULL_HANDLE);
-        //vmaDestroyImage(m_Allocator, static_cast<VkImage>(image), alloc);
         vmaFreeMemory(m_Allocator, alloc);
+    }
+
+    void Allocator::destroyImage(VmaAllocation alloc, vk::Image image)
+    {
+        assert(image != VK_NULL_HANDLE);
+        vmaDestroyImage(m_Allocator, static_cast<VkImage>(image), alloc);
     }
 }

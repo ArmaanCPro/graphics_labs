@@ -114,6 +114,9 @@ namespace enger
     Renderer::~Renderer()
     {
         m_DescriptorAllocator.destroyPool(m_Device.device());
+        m_GraphicsQueue.waitIdle();
+        m_GraphicsQueue.forceDeletionQueueFlush();
+        vkCheck(m_Device.device().waitIdle());
     }
 
     void Renderer::drawFrame()

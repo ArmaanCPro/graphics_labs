@@ -232,8 +232,7 @@ namespace enger
             .initialLayout = vk::ImageLayout::eUndefined,
         };
 
-        vkCheck(m_Device->createImage(&imageCI, nullptr, &image.image_));
-        image.allocation_ = m_Allocator.allocateImage(imageCI, image.image_);
+        image.allocation_ = m_Allocator.createImage(imageCI, image.image_);
 
         vk::ImageViewCreateInfo viewCI{
             .image = image.image_,
@@ -344,8 +343,7 @@ namespace enger
         queue->deferredDestroy([=, device = *m_Device, allocator = &m_Allocator, image = texture.image_, view = texture.view_, allocation = texture.allocation_]()
         {
             device.destroyImageView(view);
-            device.destroyImage(image);
-            allocator->freeImage(allocation);
+            allocator->destroyImage(allocation, image);
         });
 
         m_TexturePool.destroy(handle);
