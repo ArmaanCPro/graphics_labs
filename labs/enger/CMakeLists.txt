@@ -5,7 +5,7 @@ add_executable(enger ${ENGER_SOURCES} ${ENGER_HEADERS})
 
 target_include_directories(enger PRIVATE src)
 
-target_link_libraries(enger PRIVATE glfw glm::glm Vulkan::Headers GPUOpen::VulkanMemoryAllocator)
+target_link_libraries(enger PRIVATE glfw glm::glm Vulkan::Headers GPUOpen::VulkanMemoryAllocator imgui::imgui)
 
 target_compile_definitions(enger PRIVATE
         GLFW_INCLUDE_NONE

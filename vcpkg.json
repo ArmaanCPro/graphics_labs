@@ -5,6 +5,14 @@
     "glfw3",
     "glm",
     "vulkan-headers",
-    "vulkan-memory-allocator"
+    "vulkan-memory-allocator",
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "vulkan-headers-binding",
+        "docking-experimental"
+      ]
+    }
   ]
 }

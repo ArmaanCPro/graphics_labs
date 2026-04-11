@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.31)
 
 # set toolchain file in command line
 #set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/overlay-ports")
 
 project(
         graphics_labs
@@ -28,5 +29,6 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(VulkanHeaders CONFIG)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
 
 add_subdirectory(labs)
