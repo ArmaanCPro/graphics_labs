@@ -42,6 +42,11 @@ namespace enger
         void blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle);
         void clearColorImage(TextureHandle texHandle, vk::ClearColorValue color, vk::ImageAspectFlags aspectMask);
 
+        void bindComputePipeline(ComputePipelineHandle pipelineHandle);
+        void bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout, uint32_t firstSet, std::span<vk::DescriptorSet> descriptorSets);
+
+        void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
+
     private:
         CommandBuffer(Device* device, vk::CommandBuffer commandBuffer);
         Device* m_Device;

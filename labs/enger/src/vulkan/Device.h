@@ -78,6 +78,8 @@ namespace enger
         // TODO consider a better API to get raw objects from Pools
         [[nodiscard]] VulkanImage* getImage(TextureHandle handle) { return m_TexturePool.get(handle); };
         [[nodiscard]] vk::DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetLayoutHandle handle) { return m_DescriptorSetLayoutPool.get(handle); };
+        [[nodiscard]] Pipeline* getComputePipeline(ComputePipelineHandle handle) { return m_ComputePipelinePool.get(handle); };
+        [[nodiscard]] PipelineLayout* getPipelineLayout(PipelineLayoutHandle handle) { return m_PipelineLayoutPool.get(handle); };
 
     private:
         vk::PhysicalDevice m_PhysicalDevice;

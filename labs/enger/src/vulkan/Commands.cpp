@@ -112,6 +112,32 @@ namespace enger
         m_CommandBuffer.clearColorImage(image->image_, vk::ImageLayout::eGeneral, &color, 1, &clearRange);
     }
 
+    void CommandBuffer::bindComputePipeline(ComputePipelineHandle pipelineHandle)
+    {
+        assert(m_Device != nullptr);
+        auto* pipeline = m_Device->getComputePipeline(pipelineHandle);
+        assert(pipeline != nullptr);
+
+        m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline->handle);
+    }
+
+    void CommandBuffer::bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout,
+        uint32_t firstSet, std::span<vk::DescriptorSet> descriptorSets)
+    {
+        assert(m_Device != nullptr);
+        auto* layout = m_Device->getPipelineLayout(pipelineLayout);
+        assert(layout != nullptr);
+
+        m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, firstSet,
+            static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data(),
+            0, nullptr);
+    }
+
+    void CommandBuffer::dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+    {
+        m_CommandBuffer.dispatch(groupCountX, groupCountY, groupCountZ);
+    }
+
     CommandBuffer::CommandBuffer(Device *device, vk::CommandBuffer commandBuffer)
         :
         m_Device(device), m_CommandBuffer(commandBuffer)

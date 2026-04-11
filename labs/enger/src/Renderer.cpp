@@ -132,12 +132,21 @@ namespace enger
 
         cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
+        cmd.bindComputePipeline(m_GradientPipeline);
+
+        std::array<vk::DescriptorSet, 1> descriptorSets = { m_RenderTargetDescriptor };
+        cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_GradientPipelineLayout, 0, descriptorSets);
+
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 
-        float flash = std::abs(std::sin((float)m_FrameNumber / 240.0f));
-        vk::ClearColorValue clearValue = vk::ClearColorValue{0.0f, 0.0f, flash, 1.0f};
+        vk::ClearColorValue clearValue = vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f};
 
         cmd.clearColorImage(m_RenderTarget, clearValue, vk::ImageAspectFlagBits::eColor);
+
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral);
+
+        cmd.dispatch(static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().width / 16.0f)),
+            static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().height / 16.0f)), 1);
 
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
