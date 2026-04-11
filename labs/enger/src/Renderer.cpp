@@ -46,6 +46,7 @@ namespace enger
 
             m_ImageAvailableSemaphores[i] = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
             setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i], "FrameImageAvailableSemaphore" + std::to_string(i));
+
         }
 
         for (uint32_t i = 0; i < m_SwapChain.numSwapChainImages(); ++i)
@@ -54,11 +55,47 @@ namespace enger
             setDebugName(m_Device.device(), *m_RenderFinishedSemaphores[i], "FrameRenderFinishedSemaphore" + std::to_string(i));
         }
 
+        std::array<DescriptorAllocator::PoolSizeRatio, 1> sizes = {
+            { vk::DescriptorType::eStorageImage, 1.0f }
+        };
+        m_DescriptorAllocator.initPool(m_Device.device(), 10, sizes);
+
+        std::array<uint32_t, 1> bindIndices = { 0 };
+        std::array<vk::DescriptorType, 1> types = { vk::DescriptorType::eStorageImage };
+        m_RenderTargetDescriptorLayout = m_Device.createDescriptorSetLayout({
+            .bindIndices = bindIndices,
+            .types = types,
+            .shaderStages = vk::ShaderStageFlagBits::eCompute,
+        }, "RenderTargetDescriptorSetLayout");
+
         m_RenderTarget = device.createTexture({ m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1 },
             vk::Format::eR16G16B16A16Sfloat,
             vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
             vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
             "RenderTarget");
+
+        m_RenderTargetDescriptor = m_DescriptorAllocator.allocate(m_Device,
+            m_RenderTargetDescriptorLayout
+        );
+
+        // TODO very temporary, introduce descriptor writer helper later
+        vk::DescriptorImageInfo imgInfo{
+            .imageView = m_Device.getImage(m_RenderTarget)->view_,
+            .imageLayout = vk::ImageLayout::eGeneral,
+        };
+        vk::WriteDescriptorSet writeInfo{
+            .dstSet = m_RenderTargetDescriptor,
+            .dstBinding = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eStorageImage,
+            .pImageInfo = &imgInfo,
+        };
+        m_Device.device().updateDescriptorSets(1, &writeInfo, 0, nullptr);
+    }
+
+    Renderer::~Renderer()
+    {
+        m_DescriptorAllocator.destroyPool(m_Device.device());
     }
 
     void Renderer::drawFrame()

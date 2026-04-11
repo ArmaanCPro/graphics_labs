@@ -19,4 +19,12 @@ namespace enger
             device->destroyTexture(handle);
         }
     }
+
+    void destroy(Device *device, DescriptorSetLayoutHandle handle)
+    {
+        if (device)
+        {
+            device->destroyDescriptorSetLayout(handle);
+        }
+    }
 }

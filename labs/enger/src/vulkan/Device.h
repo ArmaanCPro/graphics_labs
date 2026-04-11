@@ -14,6 +14,8 @@
 
 namespace enger
 {
+    struct DescriptorSetLayoutDesc;
+
     /// Represents a GPU moment.
     /// Easily defined using timeline semaphores:
     ///     | A timeline semaphore value maps directly onto a SubmitHandle value.
@@ -46,8 +48,11 @@ namespace enger
 
         Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName = "");
 
+        Holder<DescriptorSetLayoutHandle> createDescriptorSetLayout(DescriptorSetLayoutDesc desc, std::string_view debugName = "");
+
         void destroyComputePipeline(ComputePipelineHandle handle);
         void destroyTexture(TextureHandle handle);
+        void destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle);
 
         /// TODO change type of submitInfo to be RHI agnostic
         void submitGraphics(vk::SubmitInfo2 submitInfo);
@@ -68,7 +73,7 @@ namespace enger
 
         // TODO consider a better API to get raw objects from Pools
         [[nodiscard]] VulkanImage* getImage(TextureHandle handle) { return m_TexturePool.get(handle); };
-
+        [[nodiscard]] vk::DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetLayoutHandle handle) { return m_DescriptorSetLayoutPool.get(handle); };
 
     private:
         vk::PhysicalDevice m_PhysicalDevice;
@@ -93,10 +98,8 @@ namespace enger
         };
         std::vector<DeferredDeletionTask> m_DeletionQueue;
 
-    public:
         Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
         Pool<TextureTag, VulkanImage> m_TexturePool;
-
-
+        Pool<DescriptorSetLayoutTag, vk::DescriptorSetLayout> m_DescriptorSetLayoutPool;
     };
 }

@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 
+#include "vulkan/Descriptors.h"
 #include "vulkan/Device.h"
 #include "vulkan/SwapChain.h"
 
@@ -14,7 +15,8 @@ namespace enger
     class Renderer
     {
     public:
-        explicit Renderer(Device& device, SwapChain& swapchain);
+        Renderer(Device& device, SwapChain& swapchain);
+        ~Renderer();
 
         void drawFrame();
 
@@ -33,6 +35,10 @@ namespace enger
         // this has as many elements as there are swapchain images
         std::vector<vk::UniqueSemaphore> m_RenderFinishedSemaphores;
 
+        DescriptorAllocator m_DescriptorAllocator;
+        vk::DescriptorSet m_RenderTargetDescriptor;
+
+        Holder<DescriptorSetLayoutHandle> m_RenderTargetDescriptorLayout;
         Holder<TextureHandle> m_RenderTarget;
     };
 }

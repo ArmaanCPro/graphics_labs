@@ -4,6 +4,8 @@
 #include <array>
 #include <span>
 
+#include "Descriptors.h"
+
 namespace enger
 {
     // returns physical devices sorted from worst to best
@@ -210,6 +212,44 @@ namespace enger
         return {this, handle};
     }
 
+    Holder<DescriptorSetLayoutHandle> Device::createDescriptorSetLayout(DescriptorSetLayoutDesc desc,
+        std::string_view debugName)
+    {
+        assert(desc.bindIndices.size() == desc.types.size());
+
+        std::vector<vk::DescriptorSetLayoutBinding> bindings;
+        bindings.reserve(desc.bindIndices.size());
+
+        for (uint32_t i = 0; i < desc.bindIndices.size(); ++i)
+        {
+            bindings.push_back(vk::DescriptorSetLayoutBinding{
+                .binding = desc.bindIndices[i],
+                .descriptorType = desc.types[i],
+                .descriptorCount = 1,
+                .stageFlags = desc.shaderStages,
+            });
+        }
+
+        vk::DescriptorSetLayoutCreateInfo layoutCI{
+            .pNext = desc.pNext,
+            .flags = desc.flags,
+            .bindingCount = static_cast<uint32_t>(bindings.size()),
+            .pBindings = bindings.data(),
+        };
+
+        vk::DescriptorSetLayout set{};
+        vkCheck(m_Device->createDescriptorSetLayout(&layoutCI, nullptr, &set));
+        
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, set, debugName);
+        }
+
+        auto handle = m_DescriptorSetLayoutPool.create(std::move(set));
+
+        return {this, handle};
+    }
+
     void Device::destroyComputePipeline(ComputePipelineHandle handle)
     {
         auto pipeline = *m_ComputePipelinePool.get(handle);
@@ -234,6 +274,18 @@ namespace enger
         }, m_CurrentSubmitCounter);
 
         m_TexturePool.destroy(handle);
+    }
+
+    void Device::destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle)
+    {
+        auto& layout = *m_DescriptorSetLayoutPool.get(handle);
+
+        m_DeletionQueue.emplace_back([=, device = *m_Device, layout = layout]()
+        {
+            device.destroyDescriptorSetLayout(layout);
+        }, m_CurrentSubmitCounter);
+
+        m_DescriptorSetLayoutPool.destroy(handle);
     }
 
     void Device::submitGraphics(vk::SubmitInfo2 submitInfo)
