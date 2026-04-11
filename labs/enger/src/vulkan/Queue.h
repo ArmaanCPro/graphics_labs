@@ -57,7 +57,7 @@ namespace enger
         /// This is helpful for inter-Queue (GPU<->GPU) sync, or for manual GPU<->CPU sync.
         [[nodiscard]] SubmitHandle submitImmediateAsync(std::function<void(CommandBuffer&)> func);
         /// This is a helper that blocks the CPU until SubmitImmediateAsync completes on the GPU.
-        void submitImmediate(std::function<void(CommandBuffer&)> func);
+        void submitImmediate(std::function<void(CommandBuffer&)> func, uint64_t timeout = std::numeric_limits<uint64_t>::max());
 
         void flushDeletionQueue();
         void wait(SubmitHandle handle, uint64_t timeout = std::numeric_limits<uint64_t>::max());

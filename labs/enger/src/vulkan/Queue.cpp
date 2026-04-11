@@ -96,9 +96,9 @@ namespace enger
         return submit(submitInfo);
     }
 
-    void Queue::submitImmediate(std::function<void(CommandBuffer &)> func)
+    void Queue::submitImmediate(std::function<void(CommandBuffer &)> func, uint64_t timeout)
     {
-        wait(submitImmediateAsync(std::move(func)));
+        wait(submitImmediateAsync(std::move(func)), timeout);
     }
 
     void Queue::flushDeletionQueue()

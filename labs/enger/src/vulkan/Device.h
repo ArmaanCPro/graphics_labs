@@ -67,6 +67,9 @@ namespace enger
         // TODO: dependency inject this via polymorphism in ctor, maybe
         Allocator m_Allocator;
 
+        /// As of now, the Graphics Queue is the only one guaranteed to exist for our program.
+        /// Therefore, whenever a Queue is not specified, it defaults to this queue for any operations such as
+        /// resource creation or destruction synchronization.
         Queue m_GraphicsQueue;
 
         Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
