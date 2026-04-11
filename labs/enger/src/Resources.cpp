@@ -12,6 +12,14 @@ namespace enger
         }
     }
 
+    void destroy(Device *device, PipelineLayoutHandle handle)
+    {
+        if (device)
+        {
+            device->destroyPipelineLayout(handle);
+        }
+    }
+
     void destroy(Device *device, TextureHandle handle)
     {
         if (device)
@@ -25,6 +33,14 @@ namespace enger
         if (device)
         {
             device->destroyDescriptorSetLayout(handle);
+        }
+    }
+
+    void destroy(Device *device, ShaderModuleHandle handle)
+    {
+        if (device)
+        {
+            device->destroyShaderModule(handle);
         }
     }
 }

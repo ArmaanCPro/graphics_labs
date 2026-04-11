@@ -68,13 +68,17 @@ namespace enger
     /// These are just tags, they don't mean anything but are useful to differentiate different Handle types.
     /// When you create a Pool, you use the Tag type and the Impl type.
     using ComputePipelineHandle = Handle<struct ComputePipelineTag>;
+    using PipelineLayoutHandle = Handle<struct PipelineLayoutTag>;
     using TextureHandle = Handle<struct TextureTag>;
     using DescriptorSetLayoutHandle = Handle<struct DescriptorSetLayoutTag>;
+    using ShaderModuleHandle = Handle<struct ShaderModuleTag>;
 
     /// These functions indirect deletion so that the Holder can directly call deletors
     void destroy(Device* device, ComputePipelineHandle handle);
+    void destroy(Device* device, PipelineLayoutHandle handle);
     void destroy(Device* device, TextureHandle handle);
     void destroy(Device* device, DescriptorSetLayoutHandle handle);
+    void destroy(Device* device, ShaderModuleHandle handle);
 
     /// This is an RAII class that actually owns the lifetime of an object that a Handle Points to.
     /// This is an optional type, useful for when lexical scope (RAII) matches actual resource lifetime.

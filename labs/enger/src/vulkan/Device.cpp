@@ -170,6 +170,62 @@ namespace enger
         vkCheck(m_Device->waitSemaphores(waitSemInfo, timeout));
     }
 
+    Holder<ComputePipelineHandle> Device::createComputePipeline(ComputePipelineDesc desc, std::string_view debugName)
+    {
+        auto* shaderModule = m_ShaderModulePool.get(desc.shaderModule);
+        auto* layout = m_PipelineLayoutPool.get(desc.pipelineLayout);
+
+        vk::PipelineShaderStageCreateInfo shaderStageCI{
+            .stage = vk::ShaderStageFlagBits::eCompute,
+            .module = *shaderModule,
+            .pName = "computeMain",
+        };
+
+        vk::ComputePipelineCreateInfo pipelineCI{
+            .stage = shaderStageCI,
+            .layout = layout->layout,
+        };
+
+        vk::Pipeline pipeline = vkCheck(m_Device->createComputePipeline(nullptr, pipelineCI));
+
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, pipeline, debugName);
+        }
+
+        auto handle = m_ComputePipelinePool.create({
+            .handle = pipeline,
+        });
+
+        return {this, handle};
+    }
+
+    Holder<PipelineLayoutHandle> Device::createPipelineLayout(PipelineLayoutDesc desc, std::string_view debugName)
+    {
+        std::vector<vk::DescriptorSetLayout> descriptorLayouts;
+        descriptorLayouts.reserve(desc.descriptorLayouts.size());
+        for (auto& dLayoutHandle : desc.descriptorLayouts)
+        {
+            descriptorLayouts.push_back(*m_DescriptorSetLayoutPool.get(dLayoutHandle));
+        }
+
+        vk::PipelineLayoutCreateInfo pipelineLayoutCI{
+            .flags = {},
+            .setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size()),
+            .pSetLayouts = descriptorLayouts.data(),
+        };
+        vk::PipelineLayout layout = vkCheck(m_Device->createPipelineLayout(pipelineLayoutCI));
+
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, layout, debugName);
+        }
+
+        auto handle = m_PipelineLayoutPool.create({.layout = std::move(layout)});
+
+        return {this, handle};
+    }
+
     Holder<TextureHandle> Device::createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName)
     {
         VulkanImage image;
@@ -250,6 +306,24 @@ namespace enger
         return {this, handle};
     }
 
+    Holder<ShaderModuleHandle> Device::createShaderModule(std::span<const uint32_t> code, std::string_view debugName)
+    {
+        vk::ShaderModuleCreateInfo shaderCI{
+            .codeSize = code.size() * sizeof(uint32_t),
+            .pCode = code.data(),
+        };
+
+        vk::ShaderModule shader = vkCheck(m_Device->createShaderModule(shaderCI));
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, shader, debugName);
+        }
+
+        auto handle = m_ShaderModulePool.create(std::move(shader));
+
+        return {this, handle};
+    }
+
     void Device::destroyComputePipeline(ComputePipelineHandle handle)
     {
         auto pipeline = *m_ComputePipelinePool.get(handle);
@@ -260,6 +334,18 @@ namespace enger
         }, m_CurrentSubmitCounter);
 
         m_ComputePipelinePool.destroy(handle);
+    }
+
+    void Device::destroyPipelineLayout(PipelineLayoutHandle handle)
+    {
+        auto layout = *m_PipelineLayoutPool.get(handle);
+
+        m_DeletionQueue.emplace_back([=, this]()
+        {
+            m_Device->destroyPipelineLayout(layout.layout);
+        }, m_CurrentSubmitCounter);
+
+        m_PipelineLayoutPool.destroy(handle);
     }
 
     void Device::destroyTexture(TextureHandle handle)
@@ -286,6 +372,18 @@ namespace enger
         }, m_CurrentSubmitCounter);
 
         m_DescriptorSetLayoutPool.destroy(handle);
+    }
+
+    void Device::destroyShaderModule(ShaderModuleHandle handle)
+    {
+        auto& shader = *m_ShaderModulePool.get(handle);
+
+        m_DeletionQueue.emplace_back([=, device = *m_Device, shader = shader]()
+        {
+            device.destroyShaderModule(shader);
+        }, m_CurrentSubmitCounter);
+
+        m_ShaderModulePool.destroy(handle);
     }
 
     void Device::submitGraphics(vk::SubmitInfo2 submitInfo)

@@ -46,13 +46,17 @@ namespace enger
 
         void waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues, uint64_t timeout);
 
+        Holder<ComputePipelineHandle> createComputePipeline(ComputePipelineDesc desc, std::string_view debugName = "");
+        Holder<PipelineLayoutHandle> createPipelineLayout(PipelineLayoutDesc desc, std::string_view debugName = "");
         Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName = "");
-
         Holder<DescriptorSetLayoutHandle> createDescriptorSetLayout(DescriptorSetLayoutDesc desc, std::string_view debugName = "");
+        Holder<ShaderModuleHandle> createShaderModule(std::span<const uint32_t> code, std::string_view debugName = "");
 
         void destroyComputePipeline(ComputePipelineHandle handle);
+        void destroyPipelineLayout(PipelineLayoutHandle handle);
         void destroyTexture(TextureHandle handle);
         void destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle);
+        void destroyShaderModule(ShaderModuleHandle handle);
 
         /// TODO change type of submitInfo to be RHI agnostic
         void submitGraphics(vk::SubmitInfo2 submitInfo);
@@ -99,7 +103,9 @@ namespace enger
         std::vector<DeferredDeletionTask> m_DeletionQueue;
 
         Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
+        Pool<PipelineLayoutTag, PipelineLayout> m_PipelineLayoutPool;
         Pool<TextureTag, VulkanImage> m_TexturePool;
         Pool<DescriptorSetLayoutTag, vk::DescriptorSetLayout> m_DescriptorSetLayoutPool;
+        Pool<ShaderModuleTag, vk::ShaderModule> m_ShaderModulePool;
     };
 }
