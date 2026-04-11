@@ -6,9 +6,13 @@
 #include <utility>
 #include <vector>
 
+// unfortunate we have to include Vulkan here, but it is what it is. Maybe refactor later by seperating Holder<>?
+//#include "vulkan/Queue.h"
+
 namespace enger
 {
     class Device;
+    class Queue;
 
     /// Handles are non-owning, non-reference counted pointers.
     /// They should be used in conjunction with a corresponding Pool to manage the actual resources.
@@ -74,11 +78,11 @@ namespace enger
     using ShaderModuleHandle = Handle<struct ShaderModuleTag>;
 
     /// These functions indirect deletion so that the Holder can directly call deletors
-    void destroy(Device* device, ComputePipelineHandle handle);
-    void destroy(Device* device, PipelineLayoutHandle handle);
-    void destroy(Device* device, TextureHandle handle);
-    void destroy(Device* device, DescriptorSetLayoutHandle handle);
-    void destroy(Device* device, ShaderModuleHandle handle);
+    void destroy(Device* device, Queue* queue, ComputePipelineHandle handle);
+    void destroy(Device* device, Queue* queue, PipelineLayoutHandle handle);
+    void destroy(Device* device, Queue* queue, TextureHandle handle);
+    void destroy(Device* device, Queue* queue, DescriptorSetLayoutHandle handle);
+    void destroy(Device* device, Queue* queue, ShaderModuleHandle handle);
 
     /// This is an RAII class that actually owns the lifetime of an object that a Handle Points to.
     /// This is an optional type, useful for when lexical scope (RAII) matches actual resource lifetime.
@@ -89,23 +93,26 @@ namespace enger
     public:
         Holder() = default;
 
-        Holder(Device *device, HandleType handle) :
+        Holder(Device *device, Queue* queue, HandleType handle) :
             m_Device(device),
+            m_Queue(queue),
             m_Handle(handle)
         {}
 
         ~Holder()
         {
-            destroy(m_Device, m_Handle);
+            destroy(m_Device, m_Queue, m_Handle);
         }
 
         Holder(const Holder &) = delete;
 
         Holder(Holder &&rhs) noexcept :
             m_Device(rhs.m_Device),
+            m_Queue(rhs.m_Queue),
             m_Handle(rhs.m_Handle)
         {
             rhs.m_Device = nullptr;
+            rhs.m_Queue = nullptr;
             rhs.m_Handle = {};
         }
 
@@ -114,6 +121,7 @@ namespace enger
         Holder &operator=(Holder &&rhs) noexcept
         {
             std::swap(m_Device, rhs.m_Device);
+            std::swap(m_Queue, rhs.m_Queue);
             std::swap(m_Handle, rhs.m_Handle);
             return *this;
         }
@@ -164,6 +172,7 @@ namespace enger
 
     private:
         Device* m_Device = nullptr;
+        Queue* m_Queue = nullptr;
         HandleType m_Handle;
     };
 

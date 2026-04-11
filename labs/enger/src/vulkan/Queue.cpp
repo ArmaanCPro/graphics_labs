@@ -1,0 +1,126 @@
+#include "Queue.h"
+
+#include "Device.h"
+#include "Commands.h"
+
+#include <format>
+
+namespace enger
+{
+    void DeferredDeletionQueue::push(std::function<void()> func, SubmitHandle submitValue)
+    {
+        m_Tasks.push_back({std::move(func), submitValue});
+    }
+
+    void DeferredDeletionQueue::flush(vk::Device device, vk::Semaphore timeline)
+    {
+        uint64_t gpuSubmitValue = vkCheck(device.getSemaphoreCounterValue(timeline));
+        std::erase_if(m_Tasks, [&](const auto &task)
+        {
+            if (task.submitValue <= gpuSubmitValue)
+            {
+                task.func();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    void DeferredDeletionQueue::forceFlush()
+    {
+        for (auto &task : m_Tasks)
+        {
+            task.func();
+        }
+        m_Tasks.clear();
+    }
+
+    Queue::Queue(Device* device, uint32_t familyIndex, std::string_view debugName)
+        :
+        m_Device(device),
+        m_FamilyIndex(familyIndex),
+        m_Queue(device->device().getQueue(familyIndex, 0)),
+        m_ImmediateCmdPool(device->createUniqueCommandPool(CommandPoolFlags::ResetCommandBuffer, familyIndex,
+            debugName.empty() ? "" : std::format("{}_{}", debugName, "_ImmediateCmdPool")))
+    {
+        vk::SemaphoreTypeCreateInfo semaphoreTypeCI{
+            .semaphoreType = vk::SemaphoreType::eTimeline,
+            .initialValue = 0,
+        };
+        vk::SemaphoreCreateInfo semaphoreCI{
+            .pNext = &semaphoreTypeCI,
+        };
+
+        m_TimelineSemaphore = vkCheck(m_Device->device().createSemaphoreUnique(semaphoreCI));
+
+        if (!debugName.empty())
+        {
+            setDebugName(device->device(), m_Queue, debugName);
+            setDebugName(device->device(), *m_TimelineSemaphore,
+                std::format("{}_{}", debugName, "TimelineSemaphore"));
+        }
+
+        m_ImmediateCmdBuffer = m_Device->allocateCommandBuffer(m_ImmediateCmdPool,
+            CommandBufferLevel::Primary,
+            debugName.empty() ? "" : std::format("{}_{}", debugName, "ImmediateCommandBuffer"));
+    }
+
+    Queue::~Queue()
+    {
+        vkCheck(m_Device->device().waitIdle());
+        forceDeletionQueueFlush();
+    }
+
+    SubmitHandle Queue::submit(vk::SubmitInfo2 submitInfo)
+    {
+        m_CurrentSubmitCounter++;
+        vkCheck(m_Queue.submit2(1, &submitInfo, nullptr));
+        return m_CurrentSubmitCounter;
+    }
+
+    void Queue::submitImmediate(std::function<void(CommandBuffer &)> func)
+    {
+        m_ImmediateCmdBuffer.reset();
+        m_ImmediateCmdBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+        func(m_ImmediateCmdBuffer);
+        m_ImmediateCmdBuffer.end();
+
+        vk::CommandBufferSubmitInfo cmdInfo{
+            .commandBuffer = m_ImmediateCmdBuffer.get(),
+        };
+        vk::SubmitInfo2 submitInfo{
+            .commandBufferInfoCount = 1,
+            .pCommandBufferInfos = &cmdInfo,
+        };
+
+        auto handle = submit(submitInfo);
+        wait(handle);
+    }
+
+    void Queue::flushDeletionQueue()
+    {
+        m_DeletionQueue.flush(m_Device->device(), *m_TimelineSemaphore);
+    }
+
+    void Queue::forceDeletionQueueFlush()
+    {
+        m_DeletionQueue.forceFlush();
+    }
+
+    void Queue::waitIdle()
+    {
+        vkCheck(m_Queue.waitIdle());
+    }
+
+    void Queue::wait(SubmitHandle handle, uint64_t timeout)
+    {
+        std::array<vk::Semaphore, 1> semaphores{*m_TimelineSemaphore};
+        std::array<uint64_t, 1> values{handle};
+        m_Device->waitSemaphores(semaphores, values, timeout);
+    }
+
+    void Queue::deferredDestroy(std::function<void()> func)
+    {
+        m_DeletionQueue.push(std::move(func), m_CurrentSubmitCounter);
+    }
+}

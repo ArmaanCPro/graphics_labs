@@ -2,45 +2,48 @@
 
 #include "vulkan/Device.h"
 
+// unfortunate we have to include Vulkan here, but it is what it is. Maybe refactor later by seperating Holder<>?
+#include "vulkan/Queue.h"
+
 namespace enger
 {
-    void destroy(Device* device, ComputePipelineHandle handle)
+    void destroy(Device *device, Queue *queue, ComputePipelineHandle handle)
     {
         if (device)
         {
-            device->destroyComputePipeline(handle);
+            device->destroyComputePipeline(handle, queue);
         }
     }
 
-    void destroy(Device *device, PipelineLayoutHandle handle)
+    void destroy(Device *device, Queue *queue, PipelineLayoutHandle handle)
     {
         if (device)
         {
-            device->destroyPipelineLayout(handle);
+            device->destroyPipelineLayout(handle, queue);
         }
     }
 
-    void destroy(Device *device, TextureHandle handle)
+    void destroy(Device *device, Queue *queue, TextureHandle handle)
     {
         if (device)
         {
-            device->destroyTexture(handle);
+            device->destroyTexture(handle, queue);
         }
     }
 
-    void destroy(Device *device, DescriptorSetLayoutHandle handle)
+    void destroy(Device *device, Queue *queue, DescriptorSetLayoutHandle handle)
     {
         if (device)
         {
-            device->destroyDescriptorSetLayout(handle);
+            device->destroyDescriptorSetLayout(handle, queue);
         }
     }
 
-    void destroy(Device *device, ShaderModuleHandle handle)
+    void destroy(Device *device, Queue *queue, ShaderModuleHandle handle)
     {
         if (device)
         {
-            device->destroyShaderModule(handle);
+            device->destroyShaderModule(handle, queue);
         }
     }
 }

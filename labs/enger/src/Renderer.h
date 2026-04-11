@@ -23,9 +23,12 @@ namespace enger
     private:
         Device& m_Device;
         SwapChain& m_SwapChain;
+        Queue& m_GraphicsQueue;
 
         uint32_t m_CurrentFrame = 0;
         uint64_t m_FrameNumber = 0;
+
+        std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits;
 
         std::array<UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;
         // the cmdbuf will be destroyed when its parent pool is destroyed, so it doesn't need to be unique

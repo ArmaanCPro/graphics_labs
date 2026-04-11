@@ -28,12 +28,12 @@ namespace enger
     }
 
     Renderer::Renderer(Device &device, SwapChain& swapchain)
-        : m_Device(device), m_SwapChain(swapchain)
+        : m_Device(device), m_SwapChain(swapchain), m_GraphicsQueue(device.graphicsQueue())
     {
         vk::SemaphoreCreateInfo semaphoreCI{};
 
         auto commandPoolsVec = m_Device.createUniqueCommandPools(CommandPoolFlags::ResetCommandBuffer,
-            device.graphicsQueue().index, FRAMES_IN_FLIGHT, "FrameCommandPools");
+            m_GraphicsQueue.familyIndex(), FRAMES_IN_FLIGHT, "FrameCommandPools");
 
         std::ranges::move(commandPoolsVec, m_CommandPools.begin());
 
@@ -61,16 +61,16 @@ namespace enger
         std::array<uint32_t, 1> bindIndices = { 0 };
         std::array<vk::DescriptorType, 1> types = { vk::DescriptorType::eStorageImage };
         m_RenderTargetDescriptorLayout = m_Device.createDescriptorSetLayout({
-            .bindIndices = bindIndices,
-            .types = types,
-            .shaderStages = vk::ShaderStageFlagBits::eCompute,
-        }, "RenderTargetDescriptorSetLayout");
+                                                                                .bindIndices = bindIndices,
+                                                                                .types = types,
+                                                                                .shaderStages = vk::ShaderStageFlagBits::eCompute,
+                                                                            }, &m_GraphicsQueue, "RenderTargetDescriptorSetLayout");
 
         m_RenderTarget = device.createTexture({ m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1 },
-            vk::Format::eR16G16B16A16Sfloat,
-            vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
-            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
-            "RenderTarget");
+                                              vk::Format::eR16G16B16A16Sfloat,
+                                              vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
+                                              vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
+                                              &m_GraphicsQueue, "RenderTarget");
 
         m_RenderTargetDescriptor = m_DescriptorAllocator.allocate(m_Device,
             m_RenderTargetDescriptorLayout
@@ -98,17 +98,17 @@ namespace enger
             std::terminate();
         }
 
-        auto shaderModule = m_Device.createShaderModule(shaderData.value(), "GradientShaderModule");
+        auto shaderModule = m_Device.createShaderModule(shaderData.value(), &m_GraphicsQueue, "GradientShaderModule");
 
         std::array<DescriptorSetLayoutHandle, 1> setLayouts = { m_RenderTargetDescriptorLayout };
         m_GradientPipelineLayout = m_Device.createPipelineLayout({
-            .descriptorLayouts = setLayouts,
-        }, "GradientPipelineLayout");
+                                                                     .descriptorLayouts = setLayouts,
+                                                                 }, &m_GraphicsQueue, "GradientPipelineLayout");
 
         m_GradientPipeline = m_Device.createComputePipeline(ComputePipelineDesc{
-            .shaderModule = shaderModule,
-            .pipelineLayout = m_GradientPipelineLayout,
-        }, "GradientPipeline");
+                                                                .shaderModule = shaderModule,
+                                                                .pipelineLayout = m_GradientPipelineLayout,
+                                                            }, &m_GraphicsQueue, "GradientPipeline");
     }
 
     Renderer::~Renderer()
@@ -118,10 +118,7 @@ namespace enger
 
     void Renderer::drawFrame()
     {
-        uint64_t waitValue = m_FrameNumber >= FRAMES_IN_FLIGHT ? m_FrameNumber - FRAMES_IN_FLIGHT + 1 : 0;
-        std::array timelineSemaphores = { m_Device.timelineSemaphore() };
-        std::array<uint64_t, 1> waitValues = { waitValue };
-        m_Device.waitSemaphores(timelineSemaphores, waitValues);
+        m_GraphicsQueue.flushDeletionQueue();
 
         uint32_t swapchainImageIndex = 0;
         vkCheck(m_Device.device().acquireNextImageKHR(m_SwapChain.swapChain(),
@@ -164,15 +161,17 @@ namespace enger
         QueueSubmitBuilder submission{};
         submission.waitBinary(*m_ImageAvailableSemaphores[m_CurrentFrame], vk::PipelineStageFlagBits2::eColorAttachmentOutput);
         submission.signalBinary(*m_RenderFinishedSemaphores[swapchainImageIndex], vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-        submission.signalTimeline(timelineSemaphores.front(), m_FrameNumber + 1, vk::PipelineStageFlagBits2::eAllGraphics);
+        submission.signalTimeline(m_GraphicsQueue.timelineSemaphore(), m_FrameNumber + 1, vk::PipelineStageFlagBits2::eAllGraphics);
         submission.addCmd(cmd);
 
-        m_Device.submitGraphics(submission.build());
+        m_LastFrameSubmits[m_CurrentFrame] = m_GraphicsQueue.submit(submission.build());
 
         std::array<vk::Semaphore, 1> presentWaitSemaphores = { *m_RenderFinishedSemaphores[swapchainImageIndex] };
         m_SwapChain.present(presentWaitSemaphores, swapchainImageIndex,
-            m_Device.graphicsQueue().queue);
+            m_Device.graphicsQueue().queue());
 
+
+        m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
         m_FrameNumber++;
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }

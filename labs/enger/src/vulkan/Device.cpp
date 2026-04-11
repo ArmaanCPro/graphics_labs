@@ -134,28 +134,14 @@ namespace enger
 
         setDebugName(*m_Device, *m_Device, "Main Logical Device");
 
-        m_GraphicsQueue.queue = m_Device->getQueue(queueIndex, 0);
-        setDebugName(*m_Device, m_GraphicsQueue.queue, "Graphics Queue");
-        m_GraphicsQueue.index = queueIndex;
-
-        vk::SemaphoreTypeCreateInfo semaphoreTypeCI{
-            .semaphoreType = vk::SemaphoreType::eTimeline,
-            .initialValue = 0,
-        };
-        vk::SemaphoreCreateInfo semaphoreCI{
-            .pNext = &semaphoreTypeCI,
-        };
-
-        m_TimelineSemaphore = vkCheck(m_Device->createSemaphoreUnique(semaphoreCI));
-        setDebugName(*m_Device, *m_TimelineSemaphore, "Main Timeline Semaphore");
-
         m_Allocator.init(instance, m_PhysicalDevice, *m_Device);
+
+        m_GraphicsQueue = Queue(this, queueIndex, "Graphics Queue");
     }
 
     Device::~Device()
     {
         vkCheck(m_Device->waitIdle());
-        forceDeletionQueueFlush();
     }
 
     void Device::waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues, uint64_t timeout)
@@ -170,7 +156,7 @@ namespace enger
         vkCheck(m_Device->waitSemaphores(waitSemInfo, timeout));
     }
 
-    Holder<ComputePipelineHandle> Device::createComputePipeline(ComputePipelineDesc desc, std::string_view debugName)
+    Holder<ComputePipelineHandle> Device::createComputePipeline(ComputePipelineDesc desc, Queue* queue, std::string_view debugName)
     {
         auto* shaderModule = m_ShaderModulePool.get(desc.shaderModule);
         auto* layout = m_PipelineLayoutPool.get(desc.pipelineLayout);
@@ -197,10 +183,10 @@ namespace enger
             .handle = pipeline,
         });
 
-        return {this, handle};
+        return {this, queue, handle};
     }
 
-    Holder<PipelineLayoutHandle> Device::createPipelineLayout(PipelineLayoutDesc desc, std::string_view debugName)
+    Holder<PipelineLayoutHandle> Device::createPipelineLayout(PipelineLayoutDesc desc, Queue* queue, std::string_view debugName)
     {
         std::vector<vk::DescriptorSetLayout> descriptorLayouts;
         descriptorLayouts.reserve(desc.descriptorLayouts.size());
@@ -223,10 +209,10 @@ namespace enger
 
         auto handle = m_PipelineLayoutPool.create({.layout = std::move(layout)});
 
-        return {this, handle};
+        return {this, queue, handle};
     }
 
-    Holder<TextureHandle> Device::createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, std::string_view debugName)
+    Holder<TextureHandle> Device::createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, Queue* queue, std::string_view debugName)
     {
         VulkanImage image;
         image.extent_ = extent;
@@ -265,11 +251,11 @@ namespace enger
 
         TextureHandle handle = m_TexturePool.create(std::move(image));
 
-        return {this, handle};
+        return {this, queue, handle};
     }
 
     Holder<DescriptorSetLayoutHandle> Device::createDescriptorSetLayout(DescriptorSetLayoutDesc desc,
-        std::string_view debugName)
+                                                                        Queue* queue, std::string_view debugName)
     {
         assert(desc.bindIndices.size() == desc.types.size());
 
@@ -303,10 +289,10 @@ namespace enger
 
         auto handle = m_DescriptorSetLayoutPool.create(std::move(set));
 
-        return {this, handle};
+        return {this, queue, handle};
     }
 
-    Holder<ShaderModuleHandle> Device::createShaderModule(std::span<const uint32_t> code, std::string_view debugName)
+    Holder<ShaderModuleHandle> Device::createShaderModule(std::span<const uint32_t> code, Queue* queue, std::string_view debugName)
     {
         vk::ShaderModuleCreateInfo shaderCI{
             .codeSize = code.size() * sizeof(uint32_t),
@@ -321,75 +307,74 @@ namespace enger
 
         auto handle = m_ShaderModulePool.create(std::move(shader));
 
-        return {this, handle};
+        return {this, queue, handle};
     }
 
-    void Device::destroyComputePipeline(ComputePipelineHandle handle)
+    void Device::destroyComputePipeline(ComputePipelineHandle handle, Queue* queue)
     {
         auto pipeline = *m_ComputePipelinePool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
 
-        m_DeletionQueue.emplace_back([=, this]()
+        queue->deferredDestroy([=, device = *m_Device]()
         {
-            m_Device->destroyPipeline(pipeline.handle);
-        }, m_CurrentSubmitCounter);
+            device.destroyPipeline(pipeline.handle);
+        });
 
         m_ComputePipelinePool.destroy(handle);
     }
 
-    void Device::destroyPipelineLayout(PipelineLayoutHandle handle)
+    void Device::destroyPipelineLayout(PipelineLayoutHandle handle, Queue* queue)
     {
         auto layout = *m_PipelineLayoutPool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
 
-        m_DeletionQueue.emplace_back([=, this]()
+        queue->deferredDestroy([=, device = *m_Device, layout = layout]()
         {
-            m_Device->destroyPipelineLayout(layout.layout);
-        }, m_CurrentSubmitCounter);
+            device.destroyPipelineLayout(layout.layout);
+        });
 
         m_PipelineLayoutPool.destroy(handle);
     }
 
-    void Device::destroyTexture(TextureHandle handle)
+    void Device::destroyTexture(TextureHandle handle, Queue* queue)
     {
         auto& texture = *m_TexturePool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
 
-        m_DeletionQueue.emplace_back([=, this, image = texture.image_, view = texture.view_, allocation = texture.allocation_]()
+        queue->deferredDestroy([=, device = *m_Device, allocator = &m_Allocator, image = texture.image_, view = texture.view_, allocation = texture.allocation_]()
         {
-            m_Device->destroyImageView(view);
-            m_Device->destroyImage(image);
-            m_Allocator.freeImage(allocation);
-        }, m_CurrentSubmitCounter);
+            device.destroyImageView(view);
+            device.destroyImage(image);
+            allocator->freeImage(allocation);
+        });
 
         m_TexturePool.destroy(handle);
     }
 
-    void Device::destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle)
+    void Device::destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle, Queue* queue)
     {
         auto& layout = *m_DescriptorSetLayoutPool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
 
-        m_DeletionQueue.emplace_back([=, device = *m_Device, layout = layout]()
+        queue->deferredDestroy([=, device = *m_Device, layout = layout]()
         {
             device.destroyDescriptorSetLayout(layout);
-        }, m_CurrentSubmitCounter);
+        });
 
         m_DescriptorSetLayoutPool.destroy(handle);
     }
 
-    void Device::destroyShaderModule(ShaderModuleHandle handle)
+    void Device::destroyShaderModule(ShaderModuleHandle handle, Queue* queue)
     {
         auto& shader = *m_ShaderModulePool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
 
-        m_DeletionQueue.emplace_back([=, device = *m_Device, shader = shader]()
+        queue->deferredDestroy([=, device = *m_Device, shader = shader]()
         {
             device.destroyShaderModule(shader);
-        }, m_CurrentSubmitCounter);
+        });
 
         m_ShaderModulePool.destroy(handle);
-    }
-
-    void Device::submitGraphics(vk::SubmitInfo2 submitInfo)
-    {
-        m_CurrentSubmitCounter++;
-        vkCheck(m_GraphicsQueue.queue.submit2(1, &submitInfo, nullptr));
     }
 
     UniqueCommandPool Device::createUniqueCommandPool(CommandPoolFlags flags, uint32_t queueFamilyIndex, std::string_view debugName)
@@ -473,30 +458,6 @@ namespace enger
             result.push_back({this, cmdBuffers[i]});
         }
         return result;
-    }
-
-    void Device::flushDeletionQueue()
-    {
-        uint64_t gpuSubmitValue = vkCheck(m_Device->getSemaphoreCounterValue(*m_TimelineSemaphore));
-
-        std::erase_if(m_DeletionQueue, [&](const auto &task)
-        {
-            if (task.submitValue <= gpuSubmitValue)
-            {
-                task.func();
-                return true;
-            }
-            return false;
-        });
-    }
-
-    void Device::forceDeletionQueueFlush()
-    {
-        for (auto &task : m_DeletionQueue)
-        {
-            task.func();
-        }
-        m_DeletionQueue.clear();
     }
 
     TextureHandle Device::addTextureToPool(VulkanImage&& image)
