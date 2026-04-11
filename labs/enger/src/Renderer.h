@@ -40,5 +40,8 @@ namespace enger
 
         Holder<DescriptorSetLayoutHandle> m_RenderTargetDescriptorLayout;
         Holder<TextureHandle> m_RenderTarget;
+
+        Holder<PipelineLayoutHandle> m_GradientPipelineLayout;
+        Holder<ComputePipelineHandle> m_GradientPipeline;
     };
 }

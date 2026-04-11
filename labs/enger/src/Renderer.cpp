@@ -1,32 +1,28 @@
 #include "Renderer.h"
 
+#include <expected>
+#include <fstream>
+#include <filesystem>
+
 namespace enger
 {
-    void transitionImage(vk::CommandBuffer cmd, vk::Image image, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout)
+    std::expected<std::vector<uint32_t>, std::string> loadSpirvFromFile(std::filesystem::path path)
     {
-        vk::ImageMemoryBarrier2 barrier{
-            .srcStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-            .srcAccessMask = vk::AccessFlagBits2::eMemoryWrite,
-            .dstStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-            .dstAccessMask = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite,
-            .oldLayout = srcLayout,
-            .newLayout = dstLayout,
-            .image = image,
-            .subresourceRange = vk::ImageSubresourceRange{
-                .aspectMask = dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal ? vk::ImageAspectFlagBits::eDepth : vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = vk::RemainingMipLevels,
-                .baseArrayLayer = 0,
-                .layerCount = vk::RemainingArrayLayers,
-            }
-        };
+        std::ifstream file(path, std::ios::ate | std::ios::binary);
 
-        vk::DependencyInfo dependencyInfo{
-            .imageMemoryBarrierCount = 1,
-            .pImageMemoryBarriers = &barrier,
-        };
+        if (!file)
+        {
+            return std::unexpected("Failed to open file");
+        }
 
-        cmd.pipelineBarrier2(dependencyInfo);
+        const auto size = file.tellg();
+        std::vector<uint32_t> data(size / sizeof(uint32_t));
+        file.seekg(0);
+
+        file.read(reinterpret_cast<char*>(data.data()), size);
+        file.close();
+
+        return data;
     }
 
     Renderer::Renderer(Device &device, SwapChain& swapchain)
@@ -91,6 +87,26 @@ namespace enger
             .pImageInfo = &imgInfo,
         };
         m_Device.device().updateDescriptorSets(1, &writeInfo, 0, nullptr);
+
+        // Load shader from file
+        auto shaderData = loadSpirvFromFile("shaders/gradient.spv");
+        if (!shaderData.has_value())
+        {
+            std::cerr << "Failed to load shader: shaders/gradient.spv" << std::endl;
+            std::terminate();
+        }
+
+        auto shaderModule = m_Device.createShaderModule(shaderData.value(), "GradientShaderModule");
+
+        std::array<DescriptorSetLayoutHandle, 1> setLayouts = { m_RenderTargetDescriptorLayout };
+        m_GradientPipelineLayout = m_Device.createPipelineLayout({
+            .descriptorLayouts = setLayouts,
+        }, "GradientPipelineLayout");
+
+        m_GradientPipeline = m_Device.createComputePipeline(ComputePipelineDesc{
+            .shaderModule = shaderModule,
+            .pipelineLayout = m_GradientPipelineLayout,
+        }, "GradientPipeline");
     }
 
     Renderer::~Renderer()
