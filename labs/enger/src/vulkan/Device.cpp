@@ -195,10 +195,24 @@ namespace enger
             descriptorLayouts.push_back(*m_DescriptorSetLayoutPool.get(dLayoutHandle));
         }
 
+        // TODO think of a cleaner way to do this...
+        std::vector<vk::PushConstantRange> pushConstantRanges;
+        pushConstantRanges.reserve(desc.pushConstantRanges.size());
+        for (auto& range : desc.pushConstantRanges)
+        {
+            pushConstantRanges.push_back(vk::PushConstantRange{
+                .stageFlags = range.stages,
+                .offset = range.offset,
+                .size = range.size,
+            });
+        }
+
         vk::PipelineLayoutCreateInfo pipelineLayoutCI{
             .flags = {},
             .setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size()),
             .pSetLayouts = descriptorLayouts.data(),
+            .pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size()),
+            .pPushConstantRanges = pushConstantRanges.data(),
         };
         vk::PipelineLayout layout = vkCheck(m_Device->createPipelineLayout(pipelineLayoutCI));
 

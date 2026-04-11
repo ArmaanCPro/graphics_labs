@@ -133,6 +133,16 @@ namespace enger
             0, nullptr);
     }
 
+    void CommandBuffer::pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages,
+                                      uint32_t offset, uint32_t size, const void *data)
+    {
+        assert(m_Device != nullptr);
+        auto* layout = m_Device->getPipelineLayout(pipelineLayout);
+        assert(layout != nullptr);
+
+        m_CommandBuffer.pushConstants(layout->layout, stages, offset, size, data);
+    }
+
     void CommandBuffer::dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
     {
         m_CommandBuffer.dispatch(groupCountX, groupCountY, groupCountZ);

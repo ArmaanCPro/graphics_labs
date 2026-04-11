@@ -15,6 +15,9 @@ target_compile_definitions(enger PRIVATE
         VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
         VMA_STATIC_VULKAN_FUNCTIONS=0
         VMA_DYNAMIC_VULKAN_FUNCTIONS=1
+
+        GLM_FORCE_RADIANS
+        GLM_FORCE_DEPTH_ZERO_TO_ONE
 )
 
 set_project_warnings(enger)

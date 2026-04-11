@@ -1,4 +1,13 @@
 
+struct PushConstants
+{
+    float4 data1;
+    float4 data2;
+    float4 data3;
+    float4 data4;
+};
+[[push_constant]] PushConstants pc;
+
 [format("rgba16f")]
 RWTexture2D<float4> texture;
 
@@ -12,16 +21,13 @@ void computeMain(uint3 threadId : SV_DispatchThreadID, uint3 localInvocationId :
     int2 texelCoord = int2(threadId.xy);
     int2 size = int2(width, height);
 
+    float4 topColor = pc.data1;
+    float4 bottomColor = pc.data2;
+
     if (texelCoord.x < size.x && texelCoord.y < size.y)
     {
-        float4 color = float4(0.0, 0.0, 0.0, 1.0);
+        float blend = float(texelCoord.y) / float(size.y);
 
-        if (threadId.x != 0 && threadId.y != 0)
-        {
-            color.x = float(texelCoord.x) / float(size.x);
-            color.y = float(texelCoord.y) / float(size.y);
-        }
-
-        texture[texelCoord] = color;
+        texture[texelCoord] = lerp(topColor, bottomColor, blend);
     }
 };

@@ -21,61 +21,70 @@ namespace enger
         std::vector<uint32_t> data(size / sizeof(uint32_t));
         file.seekg(0);
 
-        file.read(reinterpret_cast<char*>(data.data()), size);
+        file.read(reinterpret_cast<char *>(data.data()), size);
         file.close();
 
         return data;
     }
 
-    Renderer::Renderer(Instance& instance, Device &device, SwapChain& swapchain, GLFWwindow* window)
-        : m_Device(device), m_SwapChain(swapchain), m_GraphicsQueue(device.graphicsQueue()),
+    Renderer::Renderer(Instance &instance, Device &device, SwapChain &swapchain, GLFWwindow *window) :
+        m_Device(device),
+        m_SwapChain(swapchain),
+        m_GraphicsQueue(device.graphicsQueue()),
         m_ImguiLayer(instance, device, window, swapchain)
     {
         vk::SemaphoreCreateInfo semaphoreCI{};
 
         auto commandPoolsVec = m_Device.createUniqueCommandPools(CommandPoolFlags::ResetCommandBuffer,
-            m_GraphicsQueue.familyIndex(), FRAMES_IN_FLIGHT, "FrameCommandPools");
+                                                                 m_GraphicsQueue.familyIndex(), FRAMES_IN_FLIGHT,
+                                                                 "FrameCommandPools");
 
         std::ranges::move(commandPoolsVec, m_CommandPools.begin());
 
         for (auto i = 0; i < FRAMES_IN_FLIGHT; ++i)
         {
             m_CommandBuffers[i] = m_Device.allocateCommandBuffer(m_CommandPools[i],
-                CommandBufferLevel::Primary, "FrameCommandBuffer" + std::to_string(i));
+                                                                 CommandBufferLevel::Primary,
+                                                                 "FrameCommandBuffer" + std::to_string(i));
 
             m_ImageAvailableSemaphores[i] = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
-            setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i], "FrameImageAvailableSemaphore" + std::to_string(i));
+            setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i],
+                         "FrameImageAvailableSemaphore" + std::to_string(i));
 
         }
 
         for (uint32_t i = 0; i < m_SwapChain.numSwapChainImages(); ++i)
         {
             m_RenderFinishedSemaphores.push_back(vkCheck(device.device().createSemaphoreUnique(semaphoreCI)));
-            setDebugName(m_Device.device(), *m_RenderFinishedSemaphores[i], "FrameRenderFinishedSemaphore" + std::to_string(i));
+            setDebugName(m_Device.device(), *m_RenderFinishedSemaphores[i],
+                         "FrameRenderFinishedSemaphore" + std::to_string(i));
         }
 
         std::array<DescriptorAllocator::PoolSizeRatio, 1> sizes = {
-            { vk::DescriptorType::eStorageImage, 1.0f }
+            {vk::DescriptorType::eStorageImage, 1.0f}
         };
         m_DescriptorAllocator.initPool(m_Device.device(), 10, sizes);
 
-        std::array<uint32_t, 1> bindIndices = { 0 };
-        std::array<vk::DescriptorType, 1> types = { vk::DescriptorType::eStorageImage };
+        std::array<uint32_t, 1> bindIndices = {0};
+        std::array<vk::DescriptorType, 1> types = {vk::DescriptorType::eStorageImage};
         m_RenderTargetDescriptorLayout = m_Device.createDescriptorSetLayout({
                                                                                 .bindIndices = bindIndices,
                                                                                 .types = types,
-                                                                                .shaderStages = vk::ShaderStageFlagBits::eCompute,
-                                                                            }, &m_GraphicsQueue, "RenderTargetDescriptorSetLayout");
+                                                                                .shaderStages =
+                                                                                vk::ShaderStageFlagBits::eCompute,
+                                                                            }, &m_GraphicsQueue,
+                                                                            "RenderTargetDescriptorSetLayout");
 
-        m_RenderTarget = device.createTexture({ m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1 },
-                                              vk::Format::eR16G16B16A16Sfloat,
-                                              vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
-                                              vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
-                                              &m_GraphicsQueue, "RenderTarget");
+        m_RenderTarget = device.createTexture(
+            {m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1},
+            vk::Format::eR16G16B16A16Sfloat,
+            vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
+            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
+            &m_GraphicsQueue, "RenderTarget");
 
         m_RenderTargetDescriptor = m_DescriptorAllocator.allocate(m_Device,
-            m_RenderTargetDescriptorLayout
-        );
+                                                                  m_RenderTargetDescriptorLayout
+            );
 
         // TODO very temporary, introduce descriptor writer helper later
         vk::DescriptorImageInfo imgInfo{
@@ -101,9 +110,12 @@ namespace enger
 
         auto shaderModule = m_Device.createShaderModule(shaderData.value(), &m_GraphicsQueue, "GradientShaderModule");
 
-        std::array<DescriptorSetLayoutHandle, 1> setLayouts = { m_RenderTargetDescriptorLayout };
+        std::array<DescriptorSetLayoutHandle, 1> setLayouts = {m_RenderTargetDescriptorLayout};
+        std::array<PushConstantsInfo, 1> pushConstantRanges = {
+            PushConstantsInfo{.offset = 0, .size = sizeof(ComputePushConstants), .stages = vk::ShaderStageFlagBits::eCompute}};
         m_GradientPipelineLayout = m_Device.createPipelineLayout({
                                                                      .descriptorLayouts = setLayouts,
+                                                                     .pushConstantRanges = pushConstantRanges
                                                                  }, &m_GraphicsQueue, "GradientPipelineLayout");
 
         m_GradientPipeline = m_Device.createComputePipeline(ComputePipelineDesc{
@@ -126,8 +138,9 @@ namespace enger
 
         uint32_t swapchainImageIndex = 0;
         vkCheck(m_Device.device().acquireNextImageKHR(m_SwapChain.swapChain(),
-            std::numeric_limits<uint64_t>::max(), *m_ImageAvailableSemaphores[m_CurrentFrame],
-            nullptr, &swapchainImageIndex));
+                                                      std::numeric_limits<uint64_t>::max(),
+                                                      *m_ImageAvailableSemaphores[m_CurrentFrame],
+                                                      nullptr, &swapchainImageIndex));
 
         CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
 
@@ -137,8 +150,14 @@ namespace enger
 
         cmd.bindComputePipeline(m_GradientPipeline);
 
-        std::array<vk::DescriptorSet, 1> descriptorSets = { m_RenderTargetDescriptor };
+        std::array<vk::DescriptorSet, 1> descriptorSets = {m_RenderTargetDescriptor};
         cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_GradientPipelineLayout, 0, descriptorSets);
+
+        ComputePushConstants pc{};
+        pc.data1 = {1, 0, 0, 1};
+        pc.data2 = {0, 0, 1, 1};
+
+        cmd.pushConstants(m_GradientPipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(ComputePushConstants), &pc);
 
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 
@@ -149,35 +168,38 @@ namespace enger
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral);
 
         cmd.dispatch(static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().width / 16.0f)),
-            static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().height / 16.0f)), 1);
+                     static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().height / 16.0f)), 1);
 
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
-            vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+                            vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
         cmd.blitImage(m_RenderTarget, m_SwapChain.swapChainImageHandle(swapchainImageIndex));
 
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
-            vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+                            vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
 
         m_ImguiLayer.draw(cmd.get(), m_SwapChain.swapChainImageView(swapchainImageIndex));
 
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
-            vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+                            vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
 
         cmd.end();
 
         QueueSubmitBuilder submission{};
-        submission.waitBinary(*m_ImageAvailableSemaphores[m_CurrentFrame], vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-        submission.signalBinary(*m_RenderFinishedSemaphores[swapchainImageIndex], vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-        submission.signalTimeline(m_GraphicsQueue.timelineSemaphore(), m_FrameNumber + 1, vk::PipelineStageFlagBits2::eAllGraphics);
+        submission.waitBinary(*m_ImageAvailableSemaphores[m_CurrentFrame],
+                              vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+        submission.signalBinary(*m_RenderFinishedSemaphores[swapchainImageIndex],
+                                vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+        submission.signalTimeline(m_GraphicsQueue.timelineSemaphore(), m_FrameNumber + 1,
+                                  vk::PipelineStageFlagBits2::eAllGraphics);
         submission.addCmd(cmd);
 
         m_LastFrameSubmits[m_CurrentFrame] = m_GraphicsQueue.submit(submission.build());
 
-        std::array<vk::Semaphore, 1> presentWaitSemaphores = { *m_RenderFinishedSemaphores[swapchainImageIndex] };
+        std::array<vk::Semaphore, 1> presentWaitSemaphores = {*m_RenderFinishedSemaphores[swapchainImageIndex]};
         m_SwapChain.present(presentWaitSemaphores, swapchainImageIndex,
-            m_Device.graphicsQueue().queue());
+                            m_Device.graphicsQueue().queue());
 
 
         m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);

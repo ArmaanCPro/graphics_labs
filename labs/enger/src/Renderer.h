@@ -9,9 +9,19 @@
 #include "vulkan/Device.h"
 #include "vulkan/SwapChain.h"
 
+#include <glm/glm.hpp>
+
 namespace enger
 {
     constexpr uint32_t FRAMES_IN_FLIGHT = 2;
+
+    struct ComputePushConstants
+    {
+        alignas(16) glm::vec4 data1;
+        alignas(16) glm::vec4 data2;
+        alignas(16) glm::vec4 data3;
+        alignas(16) glm::vec4 data4;
+    };
 
     class Renderer
     {

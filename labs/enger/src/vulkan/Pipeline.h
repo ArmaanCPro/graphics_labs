@@ -2,6 +2,8 @@
 
 #include "vk.h"
 
+#include "Resources.h"
+
 namespace enger
 {
     struct ComputePipelineDesc
@@ -17,9 +19,22 @@ namespace enger
         //vk::PipelineBindPoint bindPoint;
     };
 
+    struct PushConstantsInfo
+    {
+        uint32_t offset;
+        uint32_t size;
+        vk::ShaderStageFlags stages;
+
+        explicit operator vk::PushConstantRange() const
+        {
+            return vk::PushConstantRange{ stages, offset, size };
+        }
+    };
+
     struct PipelineLayoutDesc
     {
         std::span<DescriptorSetLayoutHandle> descriptorLayouts;
+        std::span<PushConstantsInfo> pushConstantRanges;
     };
 
     struct PipelineLayout

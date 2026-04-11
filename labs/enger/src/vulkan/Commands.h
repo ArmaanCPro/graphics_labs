@@ -44,6 +44,7 @@ namespace enger
 
         void bindComputePipeline(ComputePipelineHandle pipelineHandle);
         void bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout, uint32_t firstSet, std::span<vk::DescriptorSet> descriptorSets);
+        void pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages, uint32_t offset, uint32_t size, const void* data);
 
         void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 
