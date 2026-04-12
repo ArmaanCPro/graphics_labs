@@ -112,6 +112,26 @@ namespace enger
         m_CommandBuffer.clearColorImage(image->image_, vk::ImageLayout::eGeneral, &color, 1, &clearRange);
     }
 
+    void CommandBuffer::setViewport(vk::Viewport& viewport)
+    {
+        m_CommandBuffer.setViewport(0, 1, &viewport);
+    }
+
+    void CommandBuffer::setScissor(vk::Rect2D& scissor)
+    {
+        m_CommandBuffer.setScissor(0, 1, &scissor);
+    }
+
+    void CommandBuffer::beginRendering(vk::RenderingInfo &renderingInfo)
+    {
+        m_CommandBuffer.beginRendering(renderingInfo);
+    }
+
+    void CommandBuffer::endRendering()
+    {
+        m_CommandBuffer.endRendering();
+    }
+
     void CommandBuffer::bindComputePipeline(ComputePipelineHandle pipelineHandle)
     {
         assert(m_Device != nullptr);
@@ -121,8 +141,17 @@ namespace enger
         m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline->handle);
     }
 
+    void CommandBuffer::bindGraphicsPipeline(GraphicsPipelineHandle pipelineHandle)
+    {
+        assert(m_Device != nullptr);
+        auto* pipeline = m_Device->getGraphicsPipeline(pipelineHandle);
+        assert(pipeline != nullptr);
+
+        m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->handle);
+    }
+
     void CommandBuffer::bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout,
-        uint32_t firstSet, std::span<vk::DescriptorSet> descriptorSets)
+                                           uint32_t firstSet, std::span<vk::DescriptorSet> descriptorSets)
     {
         assert(m_Device != nullptr);
         auto* layout = m_Device->getPipelineLayout(pipelineLayout);
@@ -146,6 +175,11 @@ namespace enger
     void CommandBuffer::dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
     {
         m_CommandBuffer.dispatch(groupCountX, groupCountY, groupCountZ);
+    }
+
+    void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+    {
+        m_CommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
     CommandBuffer::CommandBuffer(Device *device, vk::CommandBuffer commandBuffer)

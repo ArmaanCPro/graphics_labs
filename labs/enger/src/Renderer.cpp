@@ -119,9 +119,22 @@ namespace enger
                                                                  }, &m_GraphicsQueue, "GradientPipelineLayout");
 
         m_GradientPipeline = m_Device.createComputePipeline(ComputePipelineDesc{
-                                                                .shaderModule = shaderModule,
                                                                 .pipelineLayout = m_GradientPipelineLayout,
+                                                                .shaderModule = shaderModule,
                                                             }, &m_GraphicsQueue, "GradientPipeline");
+
+        // Colored Triangle Graphics Pipeline
+        std::vector<uint32_t> triShaderData = std::move(loadSpirvFromFile("shaders/colored_triangle.spv").value());
+        auto triShaderModule = m_Device.createShaderModule(triShaderData, &m_GraphicsQueue, "TriangleShaderModule");
+        m_TrianglePipelineLayout = m_Device.createPipelineLayout({}, &m_GraphicsQueue, "TrianglePipelineLayout");
+        m_TrianglePipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
+            .pipelineLayout = m_TrianglePipelineLayout,
+            .vertexShaderModule = triShaderModule,
+            .fragmentShaderModule = triShaderModule,
+            .colorAttachment = { .format = m_Device.getImage(m_RenderTarget)->format_ },
+            .cullMode = vk::CullModeFlagBits::eNone,
+            .frontFace = vk::FrontFace::eCounterClockwise,
+        }, &m_GraphicsQueue, "TrianglePipeline");
     }
 
     Renderer::~Renderer()
@@ -148,6 +161,7 @@ namespace enger
 
         cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
+        // Compute Drawing
         cmd.bindComputePipeline(m_GradientPipeline);
 
         std::array<vk::DescriptorSet, 1> descriptorSets = {m_RenderTargetDescriptor};
@@ -161,26 +175,51 @@ namespace enger
 
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 
-        vk::ClearColorValue clearValue = vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f};
-
-        cmd.clearColorImage(m_RenderTarget, clearValue, vk::ImageAspectFlagBits::eColor);
-
-        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral);
-
         cmd.dispatch(static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().width / 16.0f)),
                      static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().height / 16.0f)), 1);
 
-        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eColorAttachmentOptimal);
+
+        // Geometry Drawing
+        vk::RenderingAttachmentInfo colorAttachmentInfo{
+            .imageView = m_Device.getImage(m_RenderTarget)->view_,
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+        };
+        auto drawExtent = m_Device.getImage(m_RenderTarget)->extent_;
+        vk::RenderingInfo renderingInfo{
+            .renderArea = vk::Rect2D{0, 0, drawExtent.width, drawExtent.height},
+            .layerCount = 1,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &colorAttachmentInfo,
+        };
+        cmd.beginRendering(renderingInfo);
+        cmd.bindGraphicsPipeline(m_TrianglePipeline);
+
+        // dynamic state
+        vk::Viewport viewport{0, 0, static_cast<float>(drawExtent.width), static_cast<float>(drawExtent.height), 0.0f, 1.0f};
+        vk::Rect2D scissor{0, 0, drawExtent.width, drawExtent.height};
+        cmd.setViewport(viewport);
+        cmd.setScissor(scissor);
+
+        cmd.draw(3, 1, 0, 0);
+        cmd.endRendering();
+
+        // transition to blit
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal);
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
                             vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
         cmd.blitImage(m_RenderTarget, m_SwapChain.swapChainImageHandle(swapchainImageIndex));
 
+        // transition to swapchain drawing for ImGui
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
                             vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
 
         m_ImguiLayer.draw(cmd.get(), m_SwapChain.swapChainImageView(swapchainImageIndex));
 
+        // transition to swapchain present
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
                             vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
 
@@ -200,7 +239,6 @@ namespace enger
         std::array<vk::Semaphore, 1> presentWaitSemaphores = {*m_RenderFinishedSemaphores[swapchainImageIndex]};
         m_SwapChain.present(presentWaitSemaphores, swapchainImageIndex,
                             m_Device.graphicsQueue().queue());
-
 
         m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
         m_FrameNumber++;

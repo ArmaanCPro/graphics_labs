@@ -72,6 +72,7 @@ namespace enger
     /// These are just tags, they don't mean anything but are useful to differentiate different Handle types.
     /// When you create a Pool, you use the Tag type and the Impl type.
     using ComputePipelineHandle = Handle<struct ComputePipelineTag>;
+    using GraphicsPipelineHandle = Handle<struct GraphicsPipelineTag>;
     using PipelineLayoutHandle = Handle<struct PipelineLayoutTag>;
     using TextureHandle = Handle<struct TextureTag>;
     using DescriptorSetLayoutHandle = Handle<struct DescriptorSetLayoutTag>;
@@ -79,6 +80,7 @@ namespace enger
 
     /// These functions indirect deletion so that the Holder can directly call deletors
     void destroy(Device* device, Queue* queue, ComputePipelineHandle handle);
+    void destroy(Device* device, Queue* queue, GraphicsPipelineHandle handle);
     void destroy(Device* device, Queue* queue, PipelineLayoutHandle handle);
     void destroy(Device* device, Queue* queue, TextureHandle handle);
     void destroy(Device* device, Queue* queue, DescriptorSetLayoutHandle handle);

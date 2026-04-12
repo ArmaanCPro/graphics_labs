@@ -34,12 +34,14 @@ namespace enger
         void waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues, uint64_t timeout = std::numeric_limits<uint64_t>::max());
 
         Holder<ComputePipelineHandle> createComputePipeline(ComputePipelineDesc desc, Queue* queue, std::string_view debugName = "");
+        Holder<GraphicsPipelineHandle> createGraphicsPipeline(GraphicsPipelineDesc desc, Queue* queue, std::string_view debugName = "");
         Holder<PipelineLayoutHandle> createPipelineLayout(PipelineLayoutDesc desc, Queue* queue, std::string_view debugName = "");
         Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, Queue* queue, std::string_view debugName = "");
         Holder<DescriptorSetLayoutHandle> createDescriptorSetLayout(DescriptorSetLayoutDesc desc, Queue* queue, std::string_view debugName = "");
         Holder<ShaderModuleHandle> createShaderModule(std::span<const uint32_t> code, Queue* queue, std::string_view debugName = "");
 
         void destroyComputePipeline(ComputePipelineHandle handle, Queue* queue);
+        void destroyGraphicsPipeline(GraphicsPipelineHandle handle, Queue* queue);
         void destroyPipelineLayout(PipelineLayoutHandle handle, Queue* queue);
         void destroyTexture(TextureHandle handle, Queue* queue);
         void destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle, Queue* queue);
@@ -58,6 +60,7 @@ namespace enger
         [[nodiscard]] VulkanImage* getImage(TextureHandle handle) { return m_TexturePool.get(handle); };
         [[nodiscard]] vk::DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetLayoutHandle handle) { return m_DescriptorSetLayoutPool.get(handle); };
         [[nodiscard]] Pipeline* getComputePipeline(ComputePipelineHandle handle) { return m_ComputePipelinePool.get(handle); };
+        [[nodiscard]] Pipeline* getGraphicsPipeline(GraphicsPipelineHandle handle) { return m_GraphicsPipelinePool.get(handle); };
         [[nodiscard]] PipelineLayout* getPipelineLayout(PipelineLayoutHandle handle) { return m_PipelineLayoutPool.get(handle); };
 
     private:
@@ -73,6 +76,7 @@ namespace enger
         Queue m_GraphicsQueue;
 
         Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
+        Pool<GraphicsPipelineTag, Pipeline> m_GraphicsPipelinePool;
         Pool<PipelineLayoutTag, PipelineLayout> m_PipelineLayoutPool;
         Pool<TextureTag, VulkanImage> m_TexturePool;
         Pool<DescriptorSetLayoutTag, vk::DescriptorSetLayout> m_DescriptorSetLayoutPool;

@@ -6,10 +6,50 @@
 
 namespace enger
 {
+    struct ColorAttachment
+    {
+        vk::Format format = vk::Format::eUndefined;
+        bool blendEnabled = false;
+        vk::BlendOp rgbBlendOp = vk::BlendOp::eAdd;
+        vk::BlendOp alphaBlendOp = vk::BlendOp::eAdd;
+        vk::BlendFactor srcRgbBlendFactor = vk::BlendFactor::eOne;
+        vk::BlendFactor dstRgbBlendFactor = vk::BlendFactor::eZero;
+        vk::BlendFactor srcAlphaBlendFactor = vk::BlendFactor::eZero;
+        vk::BlendFactor dstAlphaBlendFactor = vk::BlendFactor::eOne;
+        vk::ColorComponentFlags colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    };
+
     struct ComputePipelineDesc
     {
-        ShaderModuleHandle shaderModule;
         PipelineLayoutHandle pipelineLayout;
+        ShaderModuleHandle shaderModule;
+
+        std::string_view entryPoint = "computeMain";
+    };
+
+    struct GraphicsPipelineDesc
+    {
+        PipelineLayoutHandle pipelineLayout;
+
+        ShaderModuleHandle vertexShaderModule;
+        ShaderModuleHandle fragmentShaderModule;
+
+        std::string_view entryPointVertex = "vertexMain";
+        std::string_view entryPointFragment = "fragmentMain";
+
+        // TODO convert Color Attachments to array
+        //std::span<ColorAttachment> colorAttachments;
+        ColorAttachment colorAttachment;
+        vk::Format depthFormat = vk::Format::eUndefined;
+        vk::Format stencilFormat = vk::Format::eUndefined;
+
+        vk::PrimitiveTopology topology = vk::PrimitiveTopology::eTriangleList;
+        vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
+        vk::FrontFace frontFace = vk::FrontFace::eClockwise;
+        vk::PolygonMode polygonMode = vk::PolygonMode::eFill;
+
+        vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
+        float minSampleShading = 0.0f;
     };
 
     struct Pipeline

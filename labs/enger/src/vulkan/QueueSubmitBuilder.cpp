@@ -6,8 +6,8 @@ namespace enger
 {
     void QueueSubmitBuilder::waitBinary(vk::Semaphore semaphore, vk::PipelineStageFlags2 stage)
     {
-        assert(waitSemaphoreCount_ < kMaxSemaphores);
-        semaphores_[waitSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
+        assert(waitSemaphoreCount_ + signalSemaphoreCount_ < kMaxSemaphores);
+        semaphores_[waitSemaphoreCount_++ + signalSemaphoreCount_] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .stageMask = stage
         };
@@ -15,7 +15,7 @@ namespace enger
 
     void QueueSubmitBuilder::signalBinary(vk::Semaphore semaphore, vk::PipelineStageFlags2 stage)
     {
-        assert(signalSemaphoreCount_ < kMaxSemaphores);
+        assert(waitSemaphoreCount_ + signalSemaphoreCount_< kMaxSemaphores);
         semaphores_[waitSemaphoreCount_ + signalSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .stageMask = stage
@@ -24,8 +24,8 @@ namespace enger
 
     void QueueSubmitBuilder::waitTimeline(vk::Semaphore semaphore, uint64_t waitValue, vk::PipelineStageFlags2 stage)
     {
-        assert(waitSemaphoreCount_ < kMaxSemaphores);
-        semaphores_[waitSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
+        assert(waitSemaphoreCount_ + signalSemaphoreCount_ < kMaxSemaphores);
+        semaphores_[waitSemaphoreCount_++ + signalSemaphoreCount_] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .value = waitValue,
             .stageMask = stage,
@@ -34,7 +34,7 @@ namespace enger
 
     void QueueSubmitBuilder::signalTimeline(vk::Semaphore semaphore, uint64_t signalValue, vk::PipelineStageFlags2 stage)
     {
-        assert(waitSemaphoreCount_ < kMaxSemaphores);
+        assert(waitSemaphoreCount_ + signalSemaphoreCount_ < kMaxSemaphores);
         semaphores_[waitSemaphoreCount_ + signalSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .value = signalValue,

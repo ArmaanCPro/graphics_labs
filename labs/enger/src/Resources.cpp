@@ -15,6 +15,14 @@ namespace enger
         }
     }
 
+    void destroy(Device *device, Queue *queue, GraphicsPipelineHandle handle)
+    {
+        if (device)
+        {
+            device->destroyGraphicsPipeline(handle, queue);
+        }
+    }
+
     void destroy(Device *device, Queue *queue, PipelineLayoutHandle handle)
     {
         if (device)

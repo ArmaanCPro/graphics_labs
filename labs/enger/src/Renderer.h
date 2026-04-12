@@ -59,5 +59,8 @@ namespace enger
 
         Holder<PipelineLayoutHandle> m_GradientPipelineLayout;
         Holder<ComputePipelineHandle> m_GradientPipeline;
+
+        Holder<PipelineLayoutHandle> m_TrianglePipelineLayout;
+        Holder<GraphicsPipelineHandle> m_TrianglePipeline;
     };
 }

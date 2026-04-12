@@ -164,7 +164,7 @@ namespace enger
         vk::PipelineShaderStageCreateInfo shaderStageCI{
             .stage = vk::ShaderStageFlagBits::eCompute,
             .module = *shaderModule,
-            .pName = "computeMain",
+            .pName = desc.entryPoint.data(),
         };
 
         vk::ComputePipelineCreateInfo pipelineCI{
@@ -183,6 +183,134 @@ namespace enger
             .handle = pipeline,
         });
 
+        return {this, queue, handle};
+    }
+
+    Holder<GraphicsPipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineDesc desc, Queue *queue,
+        std::string_view debugName)
+    {
+        vk::PipelineRenderingCreateInfo renderingCI{
+            .colorAttachmentCount = 1,
+            .pColorAttachmentFormats = &desc.colorAttachment.format,
+            .depthAttachmentFormat = desc.depthFormat,
+            .stencilAttachmentFormat = desc.stencilFormat,
+        };
+
+        // shader stages
+        auto* vertexShaderModule = m_ShaderModulePool.get(desc.vertexShaderModule);
+        auto* fragmentShaderModule = m_ShaderModulePool.get(desc.fragmentShaderModule);
+        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+        if (vertexShaderModule)
+        {
+            shaderStages.push_back(vk::PipelineShaderStageCreateInfo{
+                .stage = vk::ShaderStageFlagBits::eVertex,
+                .module = *vertexShaderModule,
+                .pName = desc.entryPointVertex.data(),
+            });
+        }
+        if (fragmentShaderModule)
+        {
+            shaderStages.push_back(vk::PipelineShaderStageCreateInfo{
+                .stage = vk::ShaderStageFlagBits::eFragment,
+                .module = *fragmentShaderModule,
+                .pName = desc.entryPointFragment.data(),
+            });
+        }
+
+        // viewport state
+        vk::PipelineViewportStateCreateInfo viewportCI{
+            .viewportCount = 1,
+            .scissorCount = 1,
+        };
+
+        // no need for vertex input state
+        vk::PipelineVertexInputStateCreateInfo vertexInputCI{};
+
+        // Input Assembly
+        vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCI{
+            .topology = desc.topology,
+            .primitiveRestartEnable = vk::False,
+        };
+
+        // Rasterization State
+        vk::PipelineRasterizationStateCreateInfo rasterCI{
+            .polygonMode = desc.polygonMode,
+            .cullMode = desc.cullMode,
+            .frontFace = desc.frontFace,
+            .lineWidth = 1.0f,
+        };
+
+        // Multisampling State
+        vk::PipelineMultisampleStateCreateInfo multisampleCI{
+            .rasterizationSamples = desc.sampleCount,
+            .sampleShadingEnable = vk::False, // TODO parameterize multisampling
+            .minSampleShading = desc.minSampleShading,
+            .pSampleMask = nullptr,
+            .alphaToCoverageEnable = vk::False,
+            .alphaToOneEnable = vk::False,
+        };
+
+        // Depth Stencil State
+        vk::PipelineDepthStencilStateCreateInfo depthStencilCI{
+            .depthTestEnable = vk::False,
+            .depthWriteEnable = vk::False,
+            .depthCompareOp = vk::CompareOp::eNever,
+            .depthBoundsTestEnable = vk::False,
+            .stencilTestEnable = vk::False,
+            .front = {},
+            .back = {},
+            .minDepthBounds = 0.0f,
+            .maxDepthBounds = 1.0f,
+        };
+
+        // dummy color blending. refactor later to support transparency
+        vk::PipelineColorBlendAttachmentState colorBlendAttachment{
+            .blendEnable = desc.colorAttachment.blendEnabled,
+            .srcColorBlendFactor = desc.colorAttachment.srcRgbBlendFactor,
+            .dstColorBlendFactor = desc.colorAttachment.dstRgbBlendFactor,
+            .colorBlendOp = desc.colorAttachment.rgbBlendOp,
+            .srcAlphaBlendFactor = desc.colorAttachment.srcAlphaBlendFactor,
+            .dstAlphaBlendFactor = desc.colorAttachment.dstAlphaBlendFactor,
+            .alphaBlendOp = desc.colorAttachment.alphaBlendOp,
+            .colorWriteMask = desc.colorAttachment.colorWriteMask,
+        };
+        vk::PipelineColorBlendStateCreateInfo colorBlendCI{
+            .logicOpEnable = vk::False,
+            .logicOp = vk::LogicOp::eCopy,
+            .attachmentCount = 1,
+            .pAttachments = &colorBlendAttachment,
+        };
+
+        std::array<vk::DynamicState, 2> dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+        vk::PipelineDynamicStateCreateInfo dynamicStateCI{
+            .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+            .pDynamicStates = dynamicStates.data(),
+        };
+        auto* layout = m_PipelineLayoutPool.get(desc.pipelineLayout);
+        vk::GraphicsPipelineCreateInfo pipelineCI{
+            .pNext = &renderingCI,
+            .stageCount = static_cast<uint32_t>(shaderStages.size()),
+            .pStages = shaderStages.data(),
+            .pVertexInputState = &vertexInputCI,
+            .pInputAssemblyState = &inputAssemblyCI,
+            .pTessellationState = nullptr,
+            .pViewportState = &viewportCI,
+            .pRasterizationState = &rasterCI,
+            .pMultisampleState = &multisampleCI,
+            .pDepthStencilState = &depthStencilCI,
+            .pColorBlendState = &colorBlendCI,
+            .pDynamicState = &dynamicStateCI,
+            .layout = layout->layout,
+        };
+
+        Pipeline pipeline;
+        pipeline.handle = vkCheck(m_Device->createGraphicsPipeline(nullptr, pipelineCI));
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, pipeline.handle, debugName);
+        }
+
+        auto handle = m_GraphicsPipelinePool.create(std::move(pipeline));
         return {this, queue, handle};
     }
 
@@ -334,6 +462,19 @@ namespace enger
         });
 
         m_ComputePipelinePool.destroy(handle);
+    }
+
+    void Device::destroyGraphicsPipeline(GraphicsPipelineHandle handle, Queue *queue)
+    {
+        auto pipeline = *m_GraphicsPipelinePool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
+
+        queue->deferredDestroy([=, device = *m_Device, pipeline = pipeline]()
+        {
+            device.destroyPipeline(pipeline.handle);
+        });
+
+        m_GraphicsPipelinePool.destroy(handle);
     }
 
     void Device::destroyPipelineLayout(PipelineLayoutHandle handle, Queue* queue)
