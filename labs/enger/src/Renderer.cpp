@@ -95,18 +95,18 @@ namespace enger
         // Colored Triangle Graphics Pipeline
         std::vector<uint32_t> triShaderData = std::move(loadSpirvFromFile("shaders/colored_triangle.spv").value());
         auto triShaderModule = m_Device.createShaderModule(triShaderData, &m_GraphicsQueue, "TriangleShaderModule");
-        std::array<PushConstantsInfo, 1> pushConstantsInfo = {
-            PushConstantsInfo{
-                .offset = 0,
-                .size = sizeof(DrawPushConstants),
-                .stages = vk::ShaderStageFlagBits::eVertex,
-            }
-        };
-        m_TrianglePipelineLayout = m_Device.createPipelineLayout({
-                                                                     .pushConstantRanges = pushConstantsInfo,
+
+        m_GraphicsPipelineLayout = m_Device.createPipelineLayout({
+                                                                     .pushConstantRanges = std::array{
+                                                                         PushConstantsInfo{
+                                                                             .offset = 0,
+                                                                             .size = sizeof(DrawPushConstants),
+                                                                             .stages = vk::ShaderStageFlagBits::eVertex,
+                                                                         }
+                                                                     },
                                                                  }, &m_GraphicsQueue, "TrianglePipelineLayout");
-        m_TrianglePipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
-                                                                 .pipelineLayout = m_TrianglePipelineLayout,
+        m_GraphicsPipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
+                                                                 .pipelineLayout = m_GraphicsPipelineLayout,
                                                                  .vertexShaderModule = triShaderModule,
                                                                  .fragmentShaderModule = triShaderModule,
                                                                  .colorAttachments = {
@@ -119,21 +119,13 @@ namespace enger
                                                              }, &m_GraphicsQueue, "TrianglePipeline");
 
 
-        // Filling out buffers
-        std::array<Vertex, 4> rectVerts{};
-        rectVerts[0].position = {0.5f, -0.5f, 0.0f};
-        rectVerts[1].position = {0.5f, 0.5f, 0.0f};
-        rectVerts[2].position = {-0.5f, -0.5f, 0.0f};
-        rectVerts[3].position = {-0.5f, 0.5f, 0.0f};
-
-        rectVerts[0].color = {1.0f, 0.0f, 0.0f, 1.0f};
-        rectVerts[1].color = {0.5f, 0.5f, 0.5f, 1.0f};
-        rectVerts[2].color = {1.0f, 0.0f, 0.0f, 1.0f};
-        rectVerts[3].color = {0.0f, 1.0f, 0.0f, 1.0f};
-
-        std::array<uint32_t, 6> rectIndices = {0, 1, 2, 2, 1, 3};
-
-        m_Rectangle = uploadMesh(rectIndices, rectVerts);
+        auto expectedMeshes = LoadMeshes(m_Device, "assets/basicmesh.glb");
+        if (!expectedMeshes)
+        {
+            std::cerr << "Failed to load meshes" << std::endl;
+            std::terminate();
+        }
+        m_TestMeshes = expectedMeshes.value();
     }
 
     Renderer::~Renderer()
@@ -163,8 +155,8 @@ namespace enger
         // Compute Drawing
         cmd.bindComputePipeline(m_GradientPipeline);
 
-        std::array<vk::DescriptorSet, 1> descriptorSets = {m_Device.bindlessDescriptorSet()};
-        cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_GradientPipelineLayout, 0, descriptorSets);
+        cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_GradientPipelineLayout, 0,
+                               {{m_Device.bindlessDescriptorSet()}});
 
         ComputePushConstants pc{};
         pc.data1 = {1, 0, 0, 1};
@@ -196,7 +188,7 @@ namespace enger
             .pColorAttachments = &colorAttachmentInfo,
         };
         cmd.beginRendering(renderingInfo);
-        cmd.bindGraphicsPipeline(m_TrianglePipeline);
+        cmd.bindGraphicsPipeline(m_GraphicsPipeline);
 
         // dynamic state
         vk::Viewport viewport{
@@ -208,12 +200,13 @@ namespace enger
 
         DrawPushConstants pushConstants{
             .worldMatrix = glm::mat4(1.0f),
-            .vertexBufferDeviceAddress = m_Device.getBuffer(m_Rectangle.vertexBuffer)->deviceAddress_,
+            .vertexBufferDeviceAddress = m_Device.getBuffer(m_TestMeshes[2]->meshBuffers.vertexBuffer)->deviceAddress_,
         };
-        cmd.pushConstants(m_TrianglePipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(DrawPushConstants), &pushConstants);
-        cmd.bindIndexBuffer(m_Rectangle.indexBuffer, 0, vk::IndexType::eUint32);
+        cmd.pushConstants(m_GraphicsPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(DrawPushConstants),
+                          &pushConstants);
+        cmd.bindIndexBuffer(m_TestMeshes[2].get()->meshBuffers.indexBuffer, 0, vk::IndexType::eUint32);
 
-        cmd.drawIndexed(6, 1, 0, 0, 0);
+        cmd.drawIndexed(m_TestMeshes[2]->surfaces[0].indexCount, 1, m_TestMeshes[2]->surfaces[0].startIndex, 0, 0);
         cmd.endRendering();
 
         // transition to blit
@@ -245,67 +238,11 @@ namespace enger
 
         m_LastFrameSubmits[m_CurrentFrame] = m_GraphicsQueue.submit(submission.build());
 
-        std::array<vk::Semaphore, 1> presentWaitSemaphores = {*m_RenderFinishedSemaphores[swapchainImageIndex]};
-        m_SwapChain.present(presentWaitSemaphores, swapchainImageIndex,
+        m_SwapChain.present({{*m_RenderFinishedSemaphores[swapchainImageIndex]}}, swapchainImageIndex,
                             m_Device.graphicsQueue().queue());
 
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }
 
-    GPUMeshBuffers Renderer::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const
-    {
-        const size_t vbSize = sizeof(Vertex) * vertices.size();
-        const size_t ibSize = sizeof(uint32_t) * indices.size();
 
-        GPUMeshBuffers surface;
-
-        surface.vertexBuffer = m_Device.createBuffer(
-            vbSize,
-            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &m_GraphicsQueue,
-            "VertexBuffer");
-        surface.indexBuffer = m_Device.createBuffer(
-            ibSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &m_GraphicsQueue,
-            "IndexBuffer");
-
-        auto staging = m_Device.createBuffer(
-            vbSize + ibSize, vk::BufferUsageFlagBits::eTransferSrc,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &m_GraphicsQueue,
-            "StagingBuffer"
-        );
-
-        auto* stagingBuffer = m_Device.getBuffer(staging);
-
-        //void* data = stagingBuffer->mappedMemory_;
-
-        //memcpy(data, vertices.data(), vbSize);
-        //memcpy(static_cast<char*>(data) + vbSize, indices.data(), ibSize);
-
-        stagingBuffer->bufferSubData(m_Device.allocator(), 0, vbSize, vertices.data());
-        stagingBuffer->bufferSubData(m_Device.allocator(), vbSize, ibSize, indices.data());
-
-        m_GraphicsQueue.submitImmediate([&](CommandBuffer cmd) {
-            vk::BufferCopy vertexCopy{
-                .srcOffset = 0,
-                .dstOffset = 0,
-                .size = vbSize,
-            };
-            cmd.copyBuffer(staging, surface.vertexBuffer, vertexCopy);
-
-            vk::BufferCopy indexCopy{
-                .srcOffset = vbSize,
-                .dstOffset = 0,
-                .size = ibSize,
-            };
-
-            cmd.copyBuffer(staging, surface.indexBuffer, indexCopy);
-        });
-
-        return surface;
-    }
 }

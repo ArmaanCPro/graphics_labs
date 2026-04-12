@@ -156,7 +156,7 @@ namespace enger
         vkCheck(m_Device->waitIdle());
     }
 
-    void Device::waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues, uint64_t timeout)
+    void Device::waitSemaphores(std::span<const vk::Semaphore> semaphores, std::span<const uint64_t> waitValues, uint64_t timeout)
     {
         assert(semaphores.size() == waitValues.size());
 
@@ -424,7 +424,10 @@ namespace enger
 
         TextureHandle handle = m_TexturePool.create(std::move(image));
 
-        updateBindlessStorageImage(handle.index(), image.view_);
+        if (m_UseBindless)
+        {
+            updateBindlessStorageImage(handle.index(), image.view_);
+        }
 
         return {this, queue, handle};
     }

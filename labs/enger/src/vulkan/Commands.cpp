@@ -162,15 +162,13 @@ namespace enger
     }
 
     void CommandBuffer::bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout,
-                                           uint32_t firstSet, std::span<vk::DescriptorSet> descriptorSets)
+                                           uint32_t firstSet, std::span<const vk::DescriptorSet> descriptorSets)
     {
         assert(m_Device != nullptr);
         auto* layout = m_Device->getPipelineLayout(pipelineLayout);
         assert(layout != nullptr);
 
-        m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, firstSet,
-            static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data(),
-            0, nullptr);
+        m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, firstSet, descriptorSets, nullptr);
     }
 
     void CommandBuffer::pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages,

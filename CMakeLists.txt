@@ -30,5 +30,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(VulkanHeaders CONFIG)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
+find_package(fastgltf CONFIG REQUIRED)
+find_package(Stb REQUIRED)
 
 add_subdirectory(labs)

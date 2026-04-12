@@ -11,6 +11,8 @@
 
 #include <glm/glm.hpp>
 
+#include "MeshLoader.h"
+
 namespace enger
 {
     constexpr uint32_t FRAMES_IN_FLIGHT = 2;
@@ -20,21 +22,6 @@ namespace enger
         alignas(16) glm::vec4 data1;
         alignas(16) glm::vec4 data2;
         alignas(4) uint32_t textureIndex;
-    };
-
-    struct Vertex
-    {
-        glm::vec3 position;
-        float uv_x;
-        glm::vec3 normal;
-        float uv_y;
-        glm::vec4 color;
-    };
-
-    struct GPUMeshBuffers
-    {
-        Holder<BufferHandle> vertexBuffer;
-        Holder<BufferHandle> indexBuffer;
     };
 
     struct DrawPushConstants
@@ -52,8 +39,6 @@ namespace enger
         void drawFrame();
 
     private:
-        // Consider allowing a secondary thread to manage uploads.
-        GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const;
 
         Device& m_Device;
         SwapChain& m_SwapChain;
@@ -78,9 +63,9 @@ namespace enger
         Holder<PipelineLayoutHandle> m_GradientPipelineLayout;
         Holder<ComputePipelineHandle> m_GradientPipeline;
 
-        Holder<PipelineLayoutHandle> m_TrianglePipelineLayout;
-        Holder<GraphicsPipelineHandle> m_TrianglePipeline;
+        Holder<PipelineLayoutHandle> m_GraphicsPipelineLayout;
+        Holder<GraphicsPipelineHandle> m_GraphicsPipeline;
 
-        GPUMeshBuffers m_Rectangle;
+        std::vector<std::shared_ptr<MeshAsset>> m_TestMeshes;
     };
 }

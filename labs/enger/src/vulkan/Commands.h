@@ -52,7 +52,8 @@ namespace enger
 
         void bindComputePipeline(ComputePipelineHandle pipelineHandle);
         void bindGraphicsPipeline(GraphicsPipelineHandle pipelineHandle);
-        void bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout, uint32_t firstSet, std::span<vk::DescriptorSet> descriptorSets);
+        void bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout, uint32_t firstSet, std::span<const vk::
+                                DescriptorSet> descriptorSets);
         void pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages, uint32_t offset, uint32_t size, const void* data);
         void bindIndexBuffer(BufferHandle buffer, uint32_t offset, vk::IndexType indexType);
 

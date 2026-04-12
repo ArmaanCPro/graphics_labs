@@ -131,7 +131,7 @@ namespace enger
         }
     }
 
-    void SwapChain::present(std::span<vk::Semaphore> waitSemaphores, uint32_t imageIndex, vk::Queue queue)
+    void SwapChain::present(std::span<const vk::Semaphore> waitSemaphores, uint32_t imageIndex, vk::Queue queue)
     {
         vk::PresentInfoKHR presentInfo{
             .waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),

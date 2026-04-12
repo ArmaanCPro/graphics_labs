@@ -24,7 +24,7 @@ namespace enger
         PipelineLayoutHandle pipelineLayout;
         ShaderModuleHandle shaderModule;
 
-        std::string_view entryPoint = "computeMain";
+        std::string entryPoint = "computeMain";
     };
 
     struct GraphicsPipelineDesc
@@ -78,8 +78,8 @@ namespace enger
 
     struct PipelineLayoutDesc
     {
-        std::span<DescriptorSetLayoutHandle> descriptorLayouts;
-        std::span<PushConstantsInfo> pushConstantRanges;
+        std::span<const DescriptorSetLayoutHandle> descriptorLayouts;
+        std::span<const PushConstantsInfo> pushConstantRanges;
     };
 
     struct PipelineLayout

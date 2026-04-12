@@ -15,7 +15,7 @@ namespace enger
         SwapChain(Device& device, vk::SurfaceKHR surface, GLFWwindow* window, vk::PresentModeKHR desiredPresentMode);
         ~SwapChain();
 
-        void present(std::span<vk::Semaphore> waitSemaphores, uint32_t imageIndex, vk::Queue queue);
+        void present(std::span<const vk::Semaphore> waitSemaphores, uint32_t imageIndex, vk::Queue queue);
 
         [[nodiscard]] vk::SwapchainKHR swapChain() { return *m_SwapChain; }
 

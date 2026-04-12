@@ -5,7 +5,13 @@ add_executable(enger ${ENGER_SOURCES} ${ENGER_HEADERS})
 
 target_include_directories(enger PRIVATE src)
 
-target_link_libraries(enger PRIVATE glfw glm::glm Vulkan::Headers GPUOpen::VulkanMemoryAllocator imgui::imgui)
+target_link_libraries(enger PRIVATE
+        glfw glm::glm
+        Vulkan::Headers GPUOpen::VulkanMemoryAllocator
+        imgui::imgui fastgltf::fastgltf
+)
+
+target_include_directories(enger PRIVATE ${Stb_INCLUDE_DIR})
 
 target_compile_definitions(enger PRIVATE
         GLFW_INCLUDE_NONE
@@ -18,6 +24,7 @@ target_compile_definitions(enger PRIVATE
 
         GLM_FORCE_RADIANS
         GLM_FORCE_DEPTH_ZERO_TO_ONE
+        GLM_ENABLE_EXPERIMENTAL
 )
 
 set_project_warnings(enger)

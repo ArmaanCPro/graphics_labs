@@ -13,6 +13,8 @@
         "vulkan-headers-binding",
         "docking-experimental"
       ]
-    }
+    },
+    "fastgltf",
+    "stb"
   ]
 }
