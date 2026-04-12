@@ -53,7 +53,7 @@ namespace enger
         void drawFrame();
 
     private:
-        void uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const;
+        GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const;
 
         Device& m_Device;
         SwapChain& m_SwapChain;

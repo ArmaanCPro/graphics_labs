@@ -1,9 +1,12 @@
 #pragma once
 
+#include "GpuResourceTypes.h"
 #include "vk.h"
 
 namespace enger
 {
+    struct VulkanBuffer;
+
     class Allocator
     {
     public:
@@ -16,11 +19,11 @@ namespace enger
 
         void init(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
 
-        [[nodiscard]] VmaAllocation createBuffer(vk::BufferCreateInfo &bufferCI, vk::Buffer &buffer,
-                                                 vk::MemoryPropertyFlags memFlags, bool coherent, void* mappedPtr = nullptr);
+        [[nodiscard]] VulkanBuffer createBuffer(vk::BufferCreateInfo &bufferCI,
+                                                vk::MemoryPropertyFlags memFlags);
 
         /// This function handles the Vulkan creation of an image AND allocation.
-        [[nodiscard]] VmaAllocation createImage(vk::ImageCreateInfo &imageCI, vk::Image &image);
+        [[nodiscard]] VulkanImage createImage(vk::ImageCreateInfo &imageCI);
 
         /// This function solely deallocates an allocation.
         void free(VmaAllocation alloc);

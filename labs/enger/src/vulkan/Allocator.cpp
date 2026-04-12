@@ -83,58 +83,58 @@ namespace enger
         vkCheck(vk::Result{vmaCreateAllocator(&allocatorCI, &m_Allocator)});
     }
 
-    VmaAllocation Allocator::createBuffer(vk::BufferCreateInfo &bufferCI, vk::Buffer& buffer,
-                                          vk::MemoryPropertyFlags memFlags, bool coherent, void* mappedPtr)
+    VulkanBuffer Allocator::createBuffer(vk::BufferCreateInfo &bufferCI,
+                                         vk::MemoryPropertyFlags memFlags)
     {
         VmaAllocationCreateInfo allocCI{};
+        allocCI.usage = VMA_MEMORY_USAGE_AUTO;
 
         if (memFlags & vk::MemoryPropertyFlagBits::eHostVisible)
         {
-            allocCI = {
-                .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-            };
-
-            if (coherent)
-            {
-                allocCI.requiredFlags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-            }
+            allocCI.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+            allocCI.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         }
 
-        allocCI.usage = VMA_MEMORY_USAGE_AUTO;
-
+        VmaAllocationInfo resultInfo{};
         VmaAllocation alloc{};
-        VkBufferCreateInfo& bci = bufferCI;
         VkBuffer rawBuf{};
-        vmaCreateBufferWithAlignment(m_Allocator, &bci, &allocCI, 16, &rawBuf, &alloc, nullptr);
-        buffer = rawBuf;
+        VkBufferCreateInfo& rawCI = bufferCI;
+        vkCheck(vk::Result{
+            vmaCreateBuffer(m_Allocator, &rawCI, &allocCI, &rawBuf, &alloc, &resultInfo)});
 
-        if ((memFlags & vk::MemoryPropertyFlagBits::eHostVisible) && mappedPtr)
-        {
-            vmaMapMemory(m_Allocator, alloc, &mappedPtr);
-        }
+        VkMemoryPropertyFlags actualFlags;
+        vmaGetAllocationMemoryProperties(m_Allocator, alloc, &actualFlags);
 
-        return alloc;
+        return VulkanBuffer{
+            .buffer_ = rawBuf,
+            .allocation_ = alloc,
+            .size_ = bufferCI.size,
+            .mappedMemory_ = resultInfo.pMappedData,
+            .isCoherent_ = (actualFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0,
+        };
     }
 
-    VmaAllocation Allocator::createImage(vk::ImageCreateInfo& imageCI, vk::Image& image)
+    VulkanImage Allocator::createImage(vk::ImageCreateInfo& imageCI)
     {
         VmaAllocationCreateInfo allocCI{
-            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .usage = VMA_MEMORY_USAGE_AUTO,
             .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            .priority = 1.0f, // keep this?
         };
 
-        VmaAllocation alloc{};
-
         auto& ici = static_cast<VkImageCreateInfo&>(imageCI);
+        VmaAllocation alloc{};
         VkImage rawImage{};
-
         vkCheck(vk::Result{vmaCreateImage(m_Allocator, &ici, &allocCI,
                            &rawImage, &alloc, nullptr)});
 
-        image = rawImage;
-
-        return alloc;
+        return VulkanImage{
+            .image_ = rawImage,
+            .allocation_ = alloc,
+            .extent_ = imageCI.extent,
+            .usage_ = imageCI.usage,
+            .format_ = imageCI.format,
+        };
     }
 
     void Allocator::free(VmaAllocation alloc)

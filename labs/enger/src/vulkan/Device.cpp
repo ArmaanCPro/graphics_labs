@@ -356,11 +356,6 @@ namespace enger
 
     Holder<TextureHandle> Device::createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, Queue* queue, std::string_view debugName)
     {
-        VulkanImage image;
-        image.extent_ = extent;
-        image.format_ = format;
-        image.usage_ = usage;
-
         vk::ImageCreateInfo imageCI{
             .imageType = vk::ImageType::e2D,
             .format = format,
@@ -374,13 +369,20 @@ namespace enger
             .initialLayout = vk::ImageLayout::eUndefined,
         };
 
-        image.allocation_ = m_Allocator.createImage(imageCI, image.image_);
+        VulkanImage image = m_Allocator.createImage(imageCI);
+
+        vk::ImageAspectFlags aspectFlags = vk::ImageAspectFlagBits::eColor;
+        if (format == vk::Format::eD32Sfloat || format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint)
+        {
+            aspectFlags = vk::ImageAspectFlagBits::eDepth;
+        }
+        image.aspectFlags_ = aspectFlags;
 
         vk::ImageViewCreateInfo viewCI{
             .image = image.image_,
             .viewType = vk::ImageViewType::e2D,
             .format = format,
-            .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 },
+            .subresourceRange = { aspectFlags, 0, 1, 0, 1 },
         };
 
         vkCheck(m_Device->createImageView(&viewCI, nullptr, &image.view_));
@@ -402,34 +404,13 @@ namespace enger
 
         // TODO assert that sizes are within physical device limits
 
-        VulkanBuffer buffer{
-            .size_ = size,
-            .usage_ = usage,
-            .memoryProperties_ = memFlags
-        };
-
         vk::BufferCreateInfo bufferCI{
             .size = size,
             .usage = usage,
             .sharingMode = vk::SharingMode::eExclusive,
         };
 
-        // check if coherent buffer is available
-        if (memFlags & vk::MemoryPropertyFlagBits::eHostVisible)
-        {
-            vkCheck(m_Device->createBuffer(&bufferCI, nullptr, &buffer.buffer_));
-            vk::MemoryRequirements memReqs;
-            m_Device->getBufferMemoryRequirements(buffer.buffer_, &memReqs);
-            m_Device->destroyBuffer(buffer.buffer_, nullptr);
-            buffer.buffer_ = nullptr;
-
-            if ((memReqs.memoryTypeBits & static_cast<uint32_t>(vk::MemoryPropertyFlagBits::eHostCoherent)))
-            {
-                buffer.isCoherent_ = true;
-            }
-        }
-
-        buffer.allocation_ = m_Allocator.createBuffer(bufferCI, buffer.buffer_, memFlags, buffer.isCoherent_, buffer.mappedMemory_);
+        VulkanBuffer buffer = m_Allocator.createBuffer(bufferCI, memFlags);
 
         if (!debugName.empty())
         {

@@ -2,6 +2,7 @@
 
 #include "Allocator.h"
 
+
 namespace enger
 {
     void VulkanBuffer::bufferSubData(const Allocator &allocator, size_t offset, size_t size, const void *data)

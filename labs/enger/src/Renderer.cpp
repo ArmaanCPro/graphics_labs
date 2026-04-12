@@ -132,8 +132,6 @@ namespace enger
             .vertexShaderModule = triShaderModule,
             .fragmentShaderModule = triShaderModule,
             .colorAttachment = { .format = m_Device.getImage(m_RenderTarget)->format_ },
-            .cullMode = vk::CullModeFlagBits::eNone,
-            .frontFace = vk::FrontFace::eCounterClockwise,
         }, &m_GraphicsQueue, "TrianglePipeline");
     }
 
@@ -242,7 +240,7 @@ namespace enger
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }
 
-    void Renderer::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const
+    GPUMeshBuffers Renderer::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const
     {
         const size_t vbSize = sizeof(Vertex) * vertices.size();
         const size_t ibSize = sizeof(uint32_t) * indices.size();
@@ -260,5 +258,20 @@ namespace enger
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             &m_GraphicsQueue,
             "IndexBuffer");
+
+        auto staging = m_Device.createBuffer(
+            vbSize + ibSize, vk::BufferUsageFlagBits::eTransferSrc,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            &m_GraphicsQueue,
+            "StagingBuffer"
+        );
+
+        auto* stagingBuffer = m_Device.getBuffer(staging);
+
+        void* data = stagingBuffer->mappedMemory_;
+
+        memcpy(data, vertices.data(), vbSize);
+
+        return {};
     }
 }
