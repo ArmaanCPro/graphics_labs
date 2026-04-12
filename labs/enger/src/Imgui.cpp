@@ -13,10 +13,9 @@ namespace enger
         return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance*>(user_data)), function_name);
     }
 
-    ImguiLayer::ImguiLayer(Instance& instance, Device &device, GLFWwindow *window, SwapChain& swapchain)
+    ImguiLayer::ImguiLayer(Instance& instance, Device &device, GlfwWindow& window, SwapChain& swapchain)
         :
-        m_Device(device),
-        m_Swapchain(swapchain)
+        m_Device(device)
     {
         VkInstance inst = instance.instance();
         ImGui_ImplVulkan_LoadFunctions(vk::ApiVersion14, imguiFn, &inst);
@@ -46,7 +45,7 @@ namespace enger
 
         ImGui::StyleColorsDark();
 
-        ImGui_ImplGlfw_InitForVulkan(window, true);
+        ImGui_ImplGlfw_InitForVulkan(window.nativeHandle(), true);
 
         auto swapchainFormat = static_cast<VkFormat>(swapchain.swapChainFormat());
 
@@ -82,7 +81,7 @@ namespace enger
         m_DescriptorAllocator.destroyPool(m_Device.device());
     }
 
-    void ImguiLayer::draw(vk::CommandBuffer cmd, vk::ImageView targetImageView)
+    void ImguiLayer::draw(framing::FrameContext& frameContext)
     {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -97,14 +96,17 @@ namespace enger
 
         ImGui::Render();
 
+        frameContext.cmd.transitionImage(frameContext.swapchainImageHandle,
+            vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+
         vk::RenderingAttachmentInfo colorAttachmentInfo{
-            .imageView = targetImageView,
+            .imageView = m_Device.getImage(frameContext.swapchainImageHandle)->view_,
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eLoad,
             .storeOp = vk::AttachmentStoreOp::eStore,
         };
 
-        auto extent = m_Swapchain.swapChainExtent();
+        auto extent = frameContext.swapchainExtent;
         vk::RenderingInfo renderingInfo{
             .renderArea = vk::Rect2D{0, 0, extent.width, extent.height},
             .layerCount = 1,
@@ -112,11 +114,11 @@ namespace enger
             .pColorAttachments = &colorAttachmentInfo,
         };
 
-        cmd.beginRendering(renderingInfo);
+        frameContext.cmd.beginRendering(renderingInfo);
 
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frameContext.cmd.get());
 
-        cmd.endRendering();
+        frameContext.cmd.endRendering();
 
         ImGui::EndFrame();
 

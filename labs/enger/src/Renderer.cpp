@@ -30,38 +30,11 @@ namespace enger
         return data;
     }
 
-    Renderer::Renderer(Instance& instance, Device& device, SwapChain& swapchain, GLFWwindow* window) :
+    Renderer::Renderer(Device& device, SwapChain& swapchain) :
         m_Device(device),
         m_SwapChain(swapchain),
-        m_GraphicsQueue(device.graphicsQueue()),
-        m_ImguiLayer(instance, device, window, swapchain)
+        m_GraphicsQueue(device.graphicsQueue())
     {
-        vk::SemaphoreCreateInfo semaphoreCI{};
-
-        auto commandPoolsVec = m_Device.createUniqueCommandPools(CommandPoolFlags::ResetCommandBuffer,
-                                                                 m_GraphicsQueue.familyIndex(), FRAMES_IN_FLIGHT,
-                                                                 "FrameCommandPools");
-
-        std::ranges::move(commandPoolsVec, m_CommandPools.begin());
-
-        for (auto i = 0; i < FRAMES_IN_FLIGHT; ++i)
-        {
-            m_CommandBuffers[i] = m_Device.allocateCommandBuffer(m_CommandPools[i],
-                                                                 CommandBufferLevel::Primary,
-                                                                 "FrameCommandBuffer" + std::to_string(i));
-
-            m_ImageAvailableSemaphores[i] = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
-            setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i],
-                         "FrameImageAvailableSemaphore" + std::to_string(i));
-        }
-
-        for (uint32_t i = 0; i < m_SwapChain.numSwapChainImages(); ++i)
-        {
-            m_RenderFinishedSemaphores.push_back(vkCheck(device.device().createSemaphoreUnique(semaphoreCI)));
-            setDebugName(m_Device.device(), *m_RenderFinishedSemaphores[i],
-                         "FrameRenderFinishedSemaphore" + std::to_string(i));
-        }
-
         // Create textures
         m_RenderTarget = device.createTexture(
             {m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1},
@@ -153,29 +126,9 @@ namespace enger
         m_TestMeshes = expectedMeshes.value();
     }
 
-    Renderer::~Renderer()
+    void Renderer::draw(framing::FrameContext& fctx)
     {
-        m_GraphicsQueue.waitIdle();
-        m_GraphicsQueue.forceDeletionQueueFlush();
-        vkCheck(m_Device.device().waitIdle());
-    }
-
-    void Renderer::drawFrame()
-    {
-        m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
-        m_GraphicsQueue.flushDeletionQueue();
-
-        uint32_t swapchainImageIndex = 0;
-        vkCheck(m_Device.device().acquireNextImageKHR(m_SwapChain.swapChain(),
-                                                      std::numeric_limits<uint64_t>::max(),
-                                                      *m_ImageAvailableSemaphores[m_CurrentFrame],
-                                                      nullptr, &swapchainImageIndex));
-
-        CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
-
-        cmd.reset();
-
-        cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+        auto cmd = fctx.cmd;
 
         // Compute Drawing
         cmd.bindComputePipeline(m_GradientPipeline);
@@ -252,35 +205,9 @@ namespace enger
         // transition to blit
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eColorAttachmentOptimal,
                             vk::ImageLayout::eTransferSrcOptimal);
-        cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
+        cmd.transitionImage(fctx.swapchainImageHandle,
                             vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
-        cmd.blitImage(m_RenderTarget, m_SwapChain.swapChainImageHandle(swapchainImageIndex));
-
-        // transition to swapchain drawing for ImGui
-        cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
-                            vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
-
-        m_ImguiLayer.draw(cmd.get(), m_SwapChain.swapChainImageView(swapchainImageIndex));
-
-        // transition to swapchain present
-        cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
-                            vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
-
-        cmd.end();
-
-        QueueSubmitBuilder submission{};
-        submission.waitBinary(*m_ImageAvailableSemaphores[m_CurrentFrame],
-                              vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-        submission.signalBinary(*m_RenderFinishedSemaphores[swapchainImageIndex],
-                                vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-        submission.addCmd(cmd);
-
-        m_LastFrameSubmits[m_CurrentFrame] = m_GraphicsQueue.submit(submission.build());
-
-        m_SwapChain.present({{*m_RenderFinishedSemaphores[swapchainImageIndex]}}, swapchainImageIndex,
-                            m_Device.graphicsQueue().queue());
-
-        m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
+        cmd.blitImage(m_RenderTarget, fctx.swapchainImageHandle);
     }
 }

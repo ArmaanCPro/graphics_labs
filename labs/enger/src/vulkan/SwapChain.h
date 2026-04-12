@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "Device.h"
+#include "GlfwWindow.h"
 
 namespace enger
 {
@@ -12,10 +13,10 @@ namespace enger
     {
     public:
         // TODO cleanly refactor to use Device texture pools nicely
-        SwapChain(Device& device, vk::SurfaceKHR surface, GLFWwindow* window, vk::PresentModeKHR desiredPresentMode);
+        SwapChain(Device& device, vk::SurfaceKHR surface, const GlfwWindow& window, vk::PresentModeKHR desiredPresentMode);
         ~SwapChain();
 
-        void present(std::span<const vk::Semaphore> waitSemaphores, uint32_t imageIndex, vk::Queue queue);
+        vk::Result present(std::span<const vk::Semaphore> waitSemaphores, uint32_t imageIndex, Queue& queue);
 
         [[nodiscard]] vk::SwapchainKHR swapChain() { return *m_SwapChain; }
 

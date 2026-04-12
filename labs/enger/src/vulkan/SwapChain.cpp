@@ -26,18 +26,17 @@ namespace enger
         return vk::PresentModeKHR::eFifo;
     }
 
-    vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& caps, GLFWwindow* window)
+    vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& caps, const GlfwWindow& window)
     {
         if (caps.currentExtent.width != std::numeric_limits<uint32_t>::max())
         {
             return caps.currentExtent;
         }
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
+        auto [width, height] = window.framebufferSize();
 
         return vk::Extent2D{
-            std::clamp<uint32_t>(width, caps.minImageExtent.width, caps.maxImageExtent.width),
-            std::clamp<uint32_t>(height, caps.minImageExtent.height, caps.maxImageExtent.height)
+            std::clamp(width, caps.minImageExtent.width, caps.maxImageExtent.width),
+            std::clamp(height, caps.minImageExtent.height, caps.maxImageExtent.height)
         };
     }
 
@@ -52,7 +51,7 @@ namespace enger
         return minImageCount;
     }
 
-    SwapChain::SwapChain(Device& device, vk::SurfaceKHR surface, GLFWwindow* window, vk::PresentModeKHR desiredPresentMode)
+    SwapChain::SwapChain(Device& device, vk::SurfaceKHR surface, const GlfwWindow& window, vk::PresentModeKHR desiredPresentMode)
         :
         m_Device(device)
     {
@@ -131,7 +130,7 @@ namespace enger
         }
     }
 
-    void SwapChain::present(std::span<const vk::Semaphore> waitSemaphores, uint32_t imageIndex, vk::Queue queue)
+    vk::Result SwapChain::present(std::span<const vk::Semaphore> waitSemaphores, uint32_t imageIndex, Queue& queue)
     {
         vk::PresentInfoKHR presentInfo{
             .waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
@@ -140,6 +139,6 @@ namespace enger
             .pSwapchains = &*m_SwapChain,
             .pImageIndices = &imageIndex,
         };
-        vkCheck(queue.presentKHR(presentInfo));
+        return queue.queue().presentKHR(presentInfo);
     }
 }

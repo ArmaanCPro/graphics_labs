@@ -2,17 +2,17 @@
 
 #include "vk.h"
 
-#include <GLFW/glfw3.h>
+#include "GlfwWindow.h"
 
 namespace enger
 {
     class Surface
     {
     public:
-        Surface(GLFWwindow* window, vk::Instance instance)
+        Surface(GlfwWindow& window, vk::Instance instance)
         {
             VkSurfaceKHR surface;
-            vkCheck(vk::Result{glfwCreateWindowSurface(instance, window, nullptr, &surface)});
+            vkCheck(vk::Result{glfwCreateWindowSurface(instance, window.nativeHandle(), nullptr, &surface)});
             m_Surface = vk::UniqueSurfaceKHR{surface, instance};
         }
 

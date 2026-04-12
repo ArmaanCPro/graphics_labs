@@ -11,6 +11,7 @@
 
 #include <glm/glm.hpp>
 
+#include "Framing.h"
 #include "MeshLoader.h"
 
 namespace enger
@@ -30,13 +31,12 @@ namespace enger
         vk::DeviceAddress vertexBufferDeviceAddress;
     };
 
-    class Renderer
+    class Renderer : public framing::IFrameLayer
     {
     public:
-        Renderer(Instance& instance, Device& device, SwapChain& swapchain, GLFWwindow* window);
-        ~Renderer();
+        Renderer(Device& device, SwapChain& swapchain);
 
-        void drawFrame();
+        void draw(framing::FrameContext& frameContext) override;
 
     private:
 
@@ -44,19 +44,7 @@ namespace enger
         SwapChain& m_SwapChain;
         Queue& m_GraphicsQueue;
 
-        ImguiLayer m_ImguiLayer;
-
         uint32_t m_CurrentFrame = 0;
-
-        std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits = {0};
-
-        std::array<UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;
-        // the cmdbuf will be destroyed when its parent pool is destroyed, so it doesn't need to be unique
-        std::array<CommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
-
-        std::array<vk::UniqueSemaphore, FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
-        // this has as many elements as there are swapchain images
-        std::vector<vk::UniqueSemaphore> m_RenderFinishedSemaphores;
 
         Holder<TextureHandle> m_RenderTarget;
         Holder<TextureHandle> m_DepthBuffer;
