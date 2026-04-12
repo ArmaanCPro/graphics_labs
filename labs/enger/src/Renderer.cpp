@@ -147,6 +147,7 @@ namespace enger
 
     void Renderer::drawFrame()
     {
+        m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
         m_GraphicsQueue.flushDeletionQueue();
 
         uint32_t swapchainImageIndex = 0;
@@ -230,8 +231,6 @@ namespace enger
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput);
         submission.signalBinary(*m_RenderFinishedSemaphores[swapchainImageIndex],
                                 vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-        submission.signalTimeline(m_GraphicsQueue.timelineSemaphore(), m_FrameNumber + 1,
-                                  vk::PipelineStageFlagBits2::eAllGraphics);
         submission.addCmd(cmd);
 
         m_LastFrameSubmits[m_CurrentFrame] = m_GraphicsQueue.submit(submission.build());
@@ -240,8 +239,6 @@ namespace enger
         m_SwapChain.present(presentWaitSemaphores, swapchainImageIndex,
                             m_Device.graphicsQueue().queue());
 
-        m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
-        m_FrameNumber++;
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }
 }

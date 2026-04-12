@@ -74,7 +74,20 @@ namespace enger
     SubmitHandle Queue::submit(vk::SubmitInfo2 submitInfo)
     {
         m_CurrentSubmitCounter++;
-        vkCheck(m_Queue.submit2(1, &submitInfo, nullptr));
+        // Signal the timeline semaphore
+        std::vector<vk::SemaphoreSubmitInfo> signalSemaphores(
+            submitInfo.pSignalSemaphoreInfos,
+            submitInfo.pSignalSemaphoreInfos + submitInfo.signalSemaphoreInfoCount
+        );
+        signalSemaphores.push_back(vk::SemaphoreSubmitInfo{
+            .semaphore = *m_TimelineSemaphore,
+            .value = m_CurrentSubmitCounter,
+            .stageMask = vk::PipelineStageFlagBits2::eAllCommands
+        });
+        submitInfo.signalSemaphoreInfoCount += 1;
+        submitInfo.pSignalSemaphoreInfos = signalSemaphores.data();
+
+        vkCheck(m_Queue.submit2(submitInfo, nullptr));
         return m_CurrentSubmitCounter;
     }
 

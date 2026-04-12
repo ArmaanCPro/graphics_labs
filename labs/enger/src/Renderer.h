@@ -39,7 +39,6 @@ namespace enger
         ImguiLayer m_ImguiLayer;
 
         uint32_t m_CurrentFrame = 0;
-        uint64_t m_FrameNumber = 0;
 
         std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits = {0};
 
