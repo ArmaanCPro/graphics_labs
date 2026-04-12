@@ -38,7 +38,11 @@ namespace enger
 
         void draw(framing::FrameContext& frameContext) override;
 
+        void onResize(uint32_t width, uint32_t height) override;
+
     private:
+
+        void createRenderTextures(uint32_t width, uint32_t height);
 
         Device& m_Device;
         SwapChain& m_SwapChain;

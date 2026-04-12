@@ -36,20 +36,7 @@ namespace enger
         m_GraphicsQueue(device.graphicsQueue())
     {
         // Create textures
-        m_RenderTarget = device.createTexture(
-            {m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1},
-            vk::Format::eR16G16B16A16Sfloat,
-            vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
-            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
-            &m_GraphicsQueue, "RenderTarget"
-        );
-
-        m_DepthBuffer = device.createTexture(
-            {m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1},
-            vk::Format::eD32Sfloat,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            &m_GraphicsQueue, "DepthBuffer"
-        );
+        createRenderTextures(m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height);
 
         // Load shader from file
         auto shaderData = loadSpirvFromFile("shaders/gradient.spv");
@@ -209,5 +196,29 @@ namespace enger
                             vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
         cmd.blitImage(m_RenderTarget, fctx.swapchainImageHandle);
+    }
+
+    void Renderer::onResize(uint32_t width, uint32_t height)
+    {
+        createRenderTextures(width, height);
+    }
+
+    void Renderer::createRenderTextures(uint32_t width, uint32_t height)
+    {
+        // Create textures
+        m_RenderTarget = m_Device.createTexture(
+            {width, height, 1},
+            vk::Format::eR16G16B16A16Sfloat,
+            vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
+            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
+            &m_GraphicsQueue, "RenderTarget"
+        );
+
+        m_DepthBuffer = m_Device.createTexture(
+            {width, height, 1},
+            vk::Format::eD32Sfloat,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            &m_GraphicsQueue, "DepthBuffer"
+        );
     }
 }

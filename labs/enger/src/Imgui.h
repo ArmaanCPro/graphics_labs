@@ -22,6 +22,8 @@ namespace enger
 
         void draw(framing::FrameContext& ctx) override;
 
+        void onResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height) override {}
+
     private:
         Device& m_Device;
         DescriptorAllocator m_DescriptorAllocator;

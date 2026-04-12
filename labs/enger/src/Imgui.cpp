@@ -55,8 +55,8 @@ namespace enger
             .Device = device.device(),
             .Queue = device.graphicsQueue().queue(),
             .DescriptorPool = m_DescriptorAllocator.pool_,
-            .MinImageCount = 3, // TODO parameterize...? (many of these)
-            .ImageCount = 3,
+            .MinImageCount = swapchain.numSwapChainImages(),
+            .ImageCount = swapchain.numSwapChainImages(),
 
             .PipelineInfoMain = ImGui_ImplVulkan_PipelineInfo{
                 .MSAASamples = VK_SAMPLE_COUNT_1_BIT,

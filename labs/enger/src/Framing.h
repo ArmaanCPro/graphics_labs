@@ -29,7 +29,7 @@ namespace enger::framing
 
         virtual void draw(FrameContext& ctx) = 0;
 
-        virtual void onResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height) {};
+        virtual void onResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height) = 0;
     };
 
     /// This exists for the sake of decoupling the core Renderer & ImGui.
