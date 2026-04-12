@@ -10,6 +10,7 @@
 
 #include "Allocator.h"
 #include "Commands.h"
+#include "Descriptors.h"
 
 #include "Queue.h"
 
@@ -22,7 +23,7 @@ namespace enger
     {
     public:
         /// Requires surface for presentation. Headless is not currently supported.
-        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions);
+        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions, bool useBindless = true);
 
         ~Device();
 
@@ -133,6 +134,16 @@ namespace enger
             return m_PipelineLayoutPool.get(handle);
         };
 
+        [[nodiscard]] DescriptorSetLayoutHandle bindlessDescriptorSetLayout()
+        {
+            return m_BindlessLayoutHandle;
+        }
+
+        [[nodiscard]] const vk::DescriptorSet& bindlessDescriptorSet() const
+        {
+            return *m_GlobalDescriptorSet;
+        }
+
     private:
         vk::PhysicalDevice m_PhysicalDevice;
         vk::UniqueDevice m_Device;
@@ -152,5 +163,15 @@ namespace enger
         Pool<BufferTag, VulkanBuffer> m_BufferPool;
         Pool<DescriptorSetLayoutTag, vk::DescriptorSetLayout> m_DescriptorSetLayoutPool;
         Pool<ShaderModuleTag, vk::ShaderModule> m_ShaderModulePool;
+
+        // BINDLESS
+        bool m_UseBindless;
+        Holder<DescriptorSetLayoutHandle> m_BindlessLayoutHandle;
+        vk::UniqueDescriptorPool m_BindlessPool;
+        vk::UniqueDescriptorSet  m_GlobalDescriptorSet;
+
+        void initBindlessDescriptors();
+
+        void updateBindlessStorageImage(uint32_t index, vk::ImageView view);
     };
 }

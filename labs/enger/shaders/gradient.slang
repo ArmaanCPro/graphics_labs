@@ -3,19 +3,19 @@ struct PushConstants
 {
     float4 data1;
     float4 data2;
-    float4 data3;
-    float4 data4;
+    uint textureIndex;
 };
-[[push_constant]] PushConstants pc;
+[[vk::push_constant]] PushConstants pc;
 
 [format("rgba16f")]
-RWTexture2D<float4> texture;
+RWTexture2D<float4> textures[];
 
 [shader("compute")]
 [numthreads(16, 16, 1)]
 void computeMain(uint3 threadId : SV_DispatchThreadID, uint3 localInvocationId : SV_GroupThreadID)
 {
     uint width, height;
+    RWTexture2D<float4> texture = textures[pc.textureIndex];
     texture.GetDimensions(width, height);
 
     int2 texelCoord = int2(threadId.xy);

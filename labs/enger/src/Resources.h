@@ -6,9 +6,6 @@
 #include <utility>
 #include <vector>
 
-// unfortunate we have to include Vulkan here, but it is what it is. Maybe refactor later by seperating Holder<>?
-//#include "vulkan/Queue.h"
-
 namespace enger
 {
     class Device;

@@ -59,45 +59,12 @@ namespace enger
                          "FrameRenderFinishedSemaphore" + std::to_string(i));
         }
 
-        std::array<DescriptorAllocator::PoolSizeRatio, 1> sizes = {
-            {vk::DescriptorType::eStorageImage, 1.0f}
-        };
-        m_DescriptorAllocator.initPool(m_Device.device(), 10, sizes);
-
-        std::array<uint32_t, 1> bindIndices = {0};
-        std::array<vk::DescriptorType, 1> types = {vk::DescriptorType::eStorageImage};
-        m_RenderTargetDescriptorLayout = m_Device.createDescriptorSetLayout({
-                                                                                .bindIndices = bindIndices,
-                                                                                .types = types,
-                                                                                .shaderStages =
-                                                                                vk::ShaderStageFlagBits::eCompute,
-                                                                            }, &m_GraphicsQueue,
-                                                                            "RenderTargetDescriptorSetLayout");
-
         m_RenderTarget = device.createTexture(
             {m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1},
             vk::Format::eR16G16B16A16Sfloat,
             vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
             vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
             &m_GraphicsQueue, "RenderTarget");
-
-        m_RenderTargetDescriptor = m_DescriptorAllocator.allocate(m_Device,
-                                                                  m_RenderTargetDescriptorLayout
-        );
-
-        // TODO very temporary, introduce descriptor writer helper later
-        vk::DescriptorImageInfo imgInfo{
-            .imageView = m_Device.getImage(m_RenderTarget)->view_,
-            .imageLayout = vk::ImageLayout::eGeneral,
-        };
-        vk::WriteDescriptorSet writeInfo{
-            .dstSet = m_RenderTargetDescriptor,
-            .dstBinding = 0,
-            .descriptorCount = 1,
-            .descriptorType = vk::DescriptorType::eStorageImage,
-            .pImageInfo = &imgInfo,
-        };
-        m_Device.device().updateDescriptorSets(1, &writeInfo, 0, nullptr);
 
         // Load shader from file
         auto shaderData = loadSpirvFromFile("shaders/gradient.spv");
@@ -109,7 +76,7 @@ namespace enger
 
         auto shaderModule = m_Device.createShaderModule(shaderData.value(), &m_GraphicsQueue, "GradientShaderModule");
 
-        std::array<DescriptorSetLayoutHandle, 1> setLayouts = {m_RenderTargetDescriptorLayout};
+        std::array<DescriptorSetLayoutHandle, 1> setLayouts = {m_Device.bindlessDescriptorSetLayout()};
         std::array<PushConstantsInfo, 1> pushConstantRanges = {
             PushConstantsInfo{
                 .offset = 0, .size = sizeof(ComputePushConstants), .stages = vk::ShaderStageFlagBits::eCompute
@@ -171,7 +138,6 @@ namespace enger
 
     Renderer::~Renderer()
     {
-        m_DescriptorAllocator.destroyPool(m_Device.device());
         m_GraphicsQueue.waitIdle();
         m_GraphicsQueue.forceDeletionQueueFlush();
         vkCheck(m_Device.device().waitIdle());
@@ -197,12 +163,13 @@ namespace enger
         // Compute Drawing
         cmd.bindComputePipeline(m_GradientPipeline);
 
-        std::array<vk::DescriptorSet, 1> descriptorSets = {m_RenderTargetDescriptor};
+        std::array<vk::DescriptorSet, 1> descriptorSets = {m_Device.bindlessDescriptorSet()};
         cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_GradientPipelineLayout, 0, descriptorSets);
 
         ComputePushConstants pc{};
         pc.data1 = {1, 0, 0, 1};
         pc.data2 = {0, 0, 1, 1};
+        pc.textureIndex = m_RenderTarget.index();
 
         cmd.pushConstants(m_GradientPipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(ComputePushConstants),
                           &pc);

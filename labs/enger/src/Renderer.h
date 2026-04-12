@@ -19,8 +19,7 @@ namespace enger
     {
         alignas(16) glm::vec4 data1;
         alignas(16) glm::vec4 data2;
-        alignas(16) glm::vec4 data3;
-        alignas(16) glm::vec4 data4;
+        alignas(4) uint32_t textureIndex;
     };
 
     struct Vertex
@@ -74,10 +73,6 @@ namespace enger
         // this has as many elements as there are swapchain images
         std::vector<vk::UniqueSemaphore> m_RenderFinishedSemaphores;
 
-        DescriptorAllocator m_DescriptorAllocator;
-        vk::DescriptorSet m_RenderTargetDescriptor;
-
-        Holder<DescriptorSetLayoutHandle> m_RenderTargetDescriptorLayout;
         Holder<TextureHandle> m_RenderTarget;
 
         Holder<PipelineLayoutHandle> m_GradientPipelineLayout;
