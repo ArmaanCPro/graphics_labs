@@ -395,6 +395,46 @@ namespace enger
         return {this, queue, handle};
     }
 
+    Holder<BufferHandle> Device::createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage,
+        vk::MemoryPropertyFlags memFlags, Queue *queue, std::string_view debugName)
+    {
+        assert(size > 0);
+
+        // TODO assert that sizes are within physical device limits
+
+        VulkanBuffer buffer{
+            .size_ = size,
+            .usage_ = usage,
+            .memoryProperties_ = memFlags
+        };
+
+        queue = queue ? queue : &m_GraphicsQueue;
+
+        vk::BufferCreateInfo bufferCI{
+            .size = size,
+            .usage = usage,
+            .sharingMode = vk::SharingMode::eExclusive,
+        };
+
+        buffer.allocation_ = m_Allocator.createBuffer(bufferCI, buffer.buffer_, memFlags, buffer.mappedMemory_);
+
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, buffer.buffer_, debugName);
+        }
+
+        if (usage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
+        {
+            vk::BufferDeviceAddressInfo bufferDeviceAddressInfo{
+                .buffer = buffer.buffer_,
+            };
+            buffer.deviceAddress_ = m_Device->getBufferAddress(bufferDeviceAddressInfo);
+            assert(buffer.deviceAddress_ != 0);
+        }
+
+        return {this, queue, m_BufferPool.create(std::move(buffer))};
+    }
+
     Holder<DescriptorSetLayoutHandle> Device::createDescriptorSetLayout(DescriptorSetLayoutDesc desc,
                                                                         Queue* queue, std::string_view debugName)
     {
@@ -502,6 +542,19 @@ namespace enger
         });
 
         m_TexturePool.destroy(handle);
+    }
+
+    void Device::destroyBuffer(BufferHandle handle, Queue *queue)
+    {
+        auto& buffer = *m_BufferPool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
+
+        queue->deferredDestroy([=, device = *m_Device, allocator = &m_Allocator, buffer = buffer]()
+        {
+            allocator->destroyBuffer(buffer.allocation_, buffer.buffer_);
+        });
+
+        m_BufferPool.destroy(handle);
     }
 
     void Device::destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle, Queue* queue)

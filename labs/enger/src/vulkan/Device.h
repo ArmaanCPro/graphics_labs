@@ -23,45 +23,111 @@ namespace enger
     {
     public:
         /// Requires surface for presentation. Headless is not currently supported.
-        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions);
+        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char *> deviceExtensions);
+
         ~Device();
 
-        [[nodiscard]] vk::PhysicalDevice physicalDevice() { return m_PhysicalDevice; }
-        [[nodiscard]] vk::Device device() { return *m_Device; }
+        [[nodiscard]] vk::PhysicalDevice physicalDevice()
+        {
+            return m_PhysicalDevice;
+        }
 
-        [[nodiscard]] Queue& graphicsQueue() { return m_GraphicsQueue; }
+        [[nodiscard]] vk::Device device()
+        {
+            return *m_Device;
+        }
 
-        void waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues, uint64_t timeout = std::numeric_limits<uint64_t>::max());
+        [[nodiscard]] Queue &graphicsQueue()
+        {
+            return m_GraphicsQueue;
+        }
 
-        Holder<ComputePipelineHandle> createComputePipeline(ComputePipelineDesc desc, Queue* queue, std::string_view debugName = "");
-        Holder<GraphicsPipelineHandle> createGraphicsPipeline(GraphicsPipelineDesc desc, Queue* queue, std::string_view debugName = "");
-        Holder<PipelineLayoutHandle> createPipelineLayout(PipelineLayoutDesc desc, Queue* queue, std::string_view debugName = "");
-        Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, Queue* queue, std::string_view debugName = "");
-        Holder<DescriptorSetLayoutHandle> createDescriptorSetLayout(DescriptorSetLayoutDesc desc, Queue* queue, std::string_view debugName = "");
-        Holder<ShaderModuleHandle> createShaderModule(std::span<const uint32_t> code, Queue* queue, std::string_view debugName = "");
+        void waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues,
+                            uint64_t timeout = std::numeric_limits<uint64_t>::max());
 
-        void destroyComputePipeline(ComputePipelineHandle handle, Queue* queue);
-        void destroyGraphicsPipeline(GraphicsPipelineHandle handle, Queue* queue);
-        void destroyPipelineLayout(PipelineLayoutHandle handle, Queue* queue);
-        void destroyTexture(TextureHandle handle, Queue* queue);
-        void destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle, Queue* queue);
-        void destroyShaderModule(ShaderModuleHandle handle, Queue* queue);
+        Holder<ComputePipelineHandle> createComputePipeline(ComputePipelineDesc desc, Queue *queue,
+                                                            std::string_view debugName = "");
 
-        UniqueCommandPool createUniqueCommandPool(CommandPoolFlags flags, uint32_t queueFamilyIndex, std::string_view debugName = "");
-        std::vector<UniqueCommandPool> createUniqueCommandPools(CommandPoolFlags flags, uint32_t queueFamilyIndex, uint32_t count, std::string_view debugName = "");
-        CommandBuffer allocateCommandBuffer(UniqueCommandPool& commandPool, CommandBufferLevel level, std::string_view debugName = "");
-        std::vector<CommandBuffer> allocateCommandBuffers(UniqueCommandPool& commandPool, CommandBufferLevel level, uint32_t count, std::string_view debugName = "");
+        Holder<GraphicsPipelineHandle> createGraphicsPipeline(GraphicsPipelineDesc desc, Queue *queue,
+                                                              std::string_view debugName = "");
+
+        Holder<PipelineLayoutHandle> createPipelineLayout(PipelineLayoutDesc desc, Queue *queue,
+                                                          std::string_view debugName = "");
+
+        Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage,
+                                            Queue *queue, std::string_view debugName = "");
+
+        Holder<BufferHandle> createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage,
+                                          vk::MemoryPropertyFlags memFlags,
+                                          Queue *queue, std::string_view debugName = "");
+
+        Holder<DescriptorSetLayoutHandle> createDescriptorSetLayout(DescriptorSetLayoutDesc desc, Queue *queue,
+                                                                    std::string_view debugName = "");
+
+        Holder<ShaderModuleHandle> createShaderModule(std::span<const uint32_t> code, Queue *queue,
+                                                      std::string_view debugName = "");
+
+        void destroyComputePipeline(ComputePipelineHandle handle, Queue *queue);
+
+        void destroyGraphicsPipeline(GraphicsPipelineHandle handle, Queue *queue);
+
+        void destroyPipelineLayout(PipelineLayoutHandle handle, Queue *queue);
+
+        void destroyTexture(TextureHandle handle, Queue *queue);
+
+        void destroyBuffer(BufferHandle handle, Queue *queue);
+
+        void destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle, Queue *queue);
+
+        void destroyShaderModule(ShaderModuleHandle handle, Queue *queue);
+
+        UniqueCommandPool createUniqueCommandPool(CommandPoolFlags flags, uint32_t queueFamilyIndex,
+                                                  std::string_view debugName = "");
+
+        std::vector<UniqueCommandPool> createUniqueCommandPools(CommandPoolFlags flags, uint32_t queueFamilyIndex,
+                                                                uint32_t count, std::string_view debugName = "");
+
+        CommandBuffer allocateCommandBuffer(UniqueCommandPool &commandPool, CommandBufferLevel level,
+                                            std::string_view debugName = "");
+
+        std::vector<CommandBuffer> allocateCommandBuffers(UniqueCommandPool &commandPool, CommandBufferLevel level,
+                                                          uint32_t count, std::string_view debugName = "");
 
         // useful for swapchain. Resource deallocation is not automatic.
-        [[nodiscard]] TextureHandle addTextureToPool(VulkanImage&& image);
+        [[nodiscard]] TextureHandle addTextureToPool(VulkanImage &&image);
+
         void removeTextureFromPool(TextureHandle handle);
 
         // TODO consider a better API to get raw objects from Pools
-        [[nodiscard]] VulkanImage* getImage(TextureHandle handle) { return m_TexturePool.get(handle); };
-        [[nodiscard]] vk::DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetLayoutHandle handle) { return m_DescriptorSetLayoutPool.get(handle); };
-        [[nodiscard]] Pipeline* getComputePipeline(ComputePipelineHandle handle) { return m_ComputePipelinePool.get(handle); };
-        [[nodiscard]] Pipeline* getGraphicsPipeline(GraphicsPipelineHandle handle) { return m_GraphicsPipelinePool.get(handle); };
-        [[nodiscard]] PipelineLayout* getPipelineLayout(PipelineLayoutHandle handle) { return m_PipelineLayoutPool.get(handle); };
+        [[nodiscard]] VulkanImage *getImage(TextureHandle handle)
+        {
+            return m_TexturePool.get(handle);
+        };
+
+        [[nodiscard]] VulkanBuffer *getBuffer(BufferHandle handle)
+        {
+            return m_BufferPool.get(handle);
+        };
+
+        [[nodiscard]] vk::DescriptorSetLayout *getDescriptorSetLayout(DescriptorSetLayoutHandle handle)
+        {
+            return m_DescriptorSetLayoutPool.get(handle);
+        };
+
+        [[nodiscard]] Pipeline *getComputePipeline(ComputePipelineHandle handle)
+        {
+            return m_ComputePipelinePool.get(handle);
+        };
+
+        [[nodiscard]] Pipeline *getGraphicsPipeline(GraphicsPipelineHandle handle)
+        {
+            return m_GraphicsPipelinePool.get(handle);
+        };
+
+        [[nodiscard]] PipelineLayout *getPipelineLayout(PipelineLayoutHandle handle)
+        {
+            return m_PipelineLayoutPool.get(handle);
+        };
 
     private:
         vk::PhysicalDevice m_PhysicalDevice;
@@ -79,6 +145,7 @@ namespace enger
         Pool<GraphicsPipelineTag, Pipeline> m_GraphicsPipelinePool;
         Pool<PipelineLayoutTag, PipelineLayout> m_PipelineLayoutPool;
         Pool<TextureTag, VulkanImage> m_TexturePool;
+        Pool<BufferTag, VulkanBuffer> m_BufferPool;
         Pool<DescriptorSetLayoutTag, vk::DescriptorSetLayout> m_DescriptorSetLayoutPool;
         Pool<ShaderModuleTag, vk::ShaderModule> m_ShaderModulePool;
     };

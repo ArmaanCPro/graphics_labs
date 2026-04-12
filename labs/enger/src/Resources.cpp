@@ -39,6 +39,14 @@ namespace enger
         }
     }
 
+    void destroy(Device *device, Queue *queue, BufferHandle handle)
+    {
+        if (device)
+        {
+            device->destroyBuffer(handle, queue);
+        }
+    }
+
     void destroy(Device *device, Queue *queue, DescriptorSetLayoutHandle handle)
     {
         if (device)

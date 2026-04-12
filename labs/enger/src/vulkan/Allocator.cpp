@@ -1,5 +1,7 @@
 #include "Allocator.h"
 
+#include "GpuResourceTypes.h"
+
 namespace enger
 {
     Allocator::Allocator(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device)
@@ -81,6 +83,35 @@ namespace enger
         vkCheck(vk::Result{vmaCreateAllocator(&allocatorCI, &m_Allocator)});
     }
 
+    VmaAllocation Allocator::createBuffer(vk::BufferCreateInfo &bufferCI, vk::Buffer& buffer,
+                                          vk::MemoryPropertyFlags memFlags, void* mappedPtr)
+    {
+        VmaAllocationCreateInfo allocCI{};
+
+        if (memFlags & vk::MemoryPropertyFlagBits::eHostVisible)
+        {
+            allocCI = {
+                .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            };
+        }
+
+        allocCI.usage = VMA_MEMORY_USAGE_AUTO;
+
+        VmaAllocation alloc{};
+        VkBufferCreateInfo& bci = bufferCI;
+        VkBuffer rawBuf{};
+        vmaCreateBufferWithAlignment(m_Allocator, &bci, &allocCI, 16, &rawBuf, &alloc, nullptr);
+        buffer = rawBuf;
+
+        if ((memFlags & vk::MemoryPropertyFlagBits::eHostVisible) && mappedPtr)
+        {
+            vmaMapMemory(m_Allocator, alloc, &mappedPtr);
+        }
+
+        return alloc;
+    }
+
     VmaAllocation Allocator::createImage(vk::ImageCreateInfo& imageCI, vk::Image& image)
     {
         VmaAllocationCreateInfo allocCI{
@@ -104,6 +135,12 @@ namespace enger
     void Allocator::free(VmaAllocation alloc)
     {
         vmaFreeMemory(m_Allocator, alloc);
+    }
+
+    void Allocator::destroyBuffer(VmaAllocation alloc, vk::Buffer buffer)
+    {
+        assert(buffer != nullptr);
+        vmaDestroyBuffer(m_Allocator, static_cast<VkBuffer>(buffer), alloc);
     }
 
     void Allocator::destroyImage(VmaAllocation alloc, vk::Image image)

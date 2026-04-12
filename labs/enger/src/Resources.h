@@ -75,6 +75,7 @@ namespace enger
     using GraphicsPipelineHandle = Handle<struct GraphicsPipelineTag>;
     using PipelineLayoutHandle = Handle<struct PipelineLayoutTag>;
     using TextureHandle = Handle<struct TextureTag>;
+    using BufferHandle = Handle<struct BufferTag>;
     using DescriptorSetLayoutHandle = Handle<struct DescriptorSetLayoutTag>;
     using ShaderModuleHandle = Handle<struct ShaderModuleTag>;
 
@@ -83,6 +84,7 @@ namespace enger
     void destroy(Device* device, Queue* queue, GraphicsPipelineHandle handle);
     void destroy(Device* device, Queue* queue, PipelineLayoutHandle handle);
     void destroy(Device* device, Queue* queue, TextureHandle handle);
+    void destroy(Device* device, Queue* queue, BufferHandle handle);
     void destroy(Device* device, Queue* queue, DescriptorSetLayoutHandle handle);
     void destroy(Device* device, Queue* queue, ShaderModuleHandle handle);
 
