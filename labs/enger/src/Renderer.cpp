@@ -4,6 +4,9 @@
 #include <fstream>
 #include <filesystem>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "vulkan/QueueSubmitBuilder.h"
 
 namespace enger
@@ -59,12 +62,21 @@ namespace enger
                          "FrameRenderFinishedSemaphore" + std::to_string(i));
         }
 
+        // Create textures
         m_RenderTarget = device.createTexture(
             {m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1},
             vk::Format::eR16G16B16A16Sfloat,
             vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
             vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
-            &m_GraphicsQueue, "RenderTarget");
+            &m_GraphicsQueue, "RenderTarget"
+        );
+
+        m_DepthBuffer = device.createTexture(
+            {m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height, 1},
+            vk::Format::eD32Sfloat,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            &m_GraphicsQueue, "DepthBuffer"
+        );
 
         // Load shader from file
         auto shaderData = loadSpirvFromFile("shaders/gradient.spv");
@@ -109,6 +121,9 @@ namespace enger
                                                                  .pipelineLayout = m_GraphicsPipelineLayout,
                                                                  .vertexShaderModule = triShaderModule,
                                                                  .fragmentShaderModule = triShaderModule,
+                                                                 .depthTestEnable = true,
+                                                                 .depthWriteEnable = true,
+                                                                 .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
                                                                  .colorAttachments = {
                                                                      ColorAttachment{
                                                                          .format = m_Device.getImage(m_RenderTarget)->
@@ -116,6 +131,8 @@ namespace enger
                                                                      }
                                                                  },
                                                                  .colorAttachmentCount = 1,
+                                                                 .depthFormat = m_Device.getImage(m_DepthBuffer)->
+                                                                 format_,
                                                                  .frontFace = vk::FrontFace::eCounterClockwise,
                                                              }, &m_GraphicsQueue, "TrianglePipeline");
 
@@ -173,6 +190,8 @@ namespace enger
                      static_cast<uint32_t>(std::ceil(m_SwapChain.swapChainExtent().height / 16.0f)), 1);
 
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eColorAttachmentOptimal);
+        cmd.transitionImage(m_DepthBuffer, vk::ImageLayout::eUndefined,
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
         // Geometry Drawing
         vk::RenderingAttachmentInfo colorAttachmentInfo{
@@ -180,6 +199,13 @@ namespace enger
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eLoad,
             .storeOp = vk::AttachmentStoreOp::eStore,
+        };
+        vk::RenderingAttachmentInfo depthAttachmentInfo{
+            .imageView = m_Device.getImage(m_DepthBuffer)->view_,
+            .imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = vk::ClearValue{vk::ClearDepthStencilValue{0.0f, 0}},
         };
         auto drawExtent = m_Device.getImage(m_RenderTarget)->extent_;
         vk::RenderingInfo renderingInfo{
@@ -201,8 +227,12 @@ namespace enger
         cmd.setViewport(viewport);
         cmd.setScissor(scissor);
 
+        glm::mat4 view = glm::translate(glm::mat4{1.0f}, glm::vec3{0, 0, -5});
+        glm::mat4 projection = glm::perspective(glm::radians(70.0f),
+                                                static_cast<float>(drawExtent.width) / static_cast<float>(drawExtent.
+                                                    height), 1000.0f, 0.1f);
         DrawPushConstants pushConstants{
-            .worldMatrix = glm::mat4(1.0f),
+            .worldMatrix = projection * view,
             .vertexBufferDeviceAddress = m_Device.getBuffer(m_TestMeshes[2]->meshBuffers.vertexBuffer)->deviceAddress_,
         };
         cmd.pushConstants(m_GraphicsPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(DrawPushConstants),

@@ -59,6 +59,7 @@ namespace enger
         std::vector<vk::UniqueSemaphore> m_RenderFinishedSemaphores;
 
         Holder<TextureHandle> m_RenderTarget;
+        Holder<TextureHandle> m_DepthBuffer;
 
         Holder<PipelineLayoutHandle> m_GradientPipelineLayout;
         Holder<ComputePipelineHandle> m_GradientPipeline;
