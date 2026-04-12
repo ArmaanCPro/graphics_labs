@@ -11,7 +11,8 @@ namespace enger
         :
         m_Device(device),
         m_GraphicsQueue(device.graphicsQueue()),
-        m_Swapchain(swapchain)
+        m_Swapchain(swapchain),
+        m_Window(window)
     {
         window.setResizeCallback([this](uint32_t width, uint32_t height) { onWindowResize(width, height); });
         
@@ -80,7 +81,7 @@ namespace enger
         if (acquireResult == vk::Result::eErrorOutOfDateKHR)
         {
             m_ShouldRecreateSwapchain = true;
-            //return;
+            return;
         }
 
         enger::CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
@@ -125,7 +126,7 @@ namespace enger
             m_ShouldRecreateSwapchain = true;
         }
 
-        m_CurrentFrame = (m_CurrentFrame + 1) % enger::framing::FRAMES_IN_FLIGHT;
+        m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }
 
     void framing::FrameOrchestrator::onWindowResize(uint32_t width, uint32_t height)
@@ -137,12 +138,33 @@ namespace enger
         else
         {
             m_ShouldRender = true;
+            m_ShouldRecreateSwapchain = true;
         }
-        m_ShouldRecreateSwapchain = true;
     }
 
     void framing::FrameOrchestrator::recreateSwapchain()
     {
+        auto [width, height] = m_Window.framebufferSize();
 
+        m_GraphicsQueue.waitIdle();
+        m_Device.waitIdle();
+
+        m_Swapchain.recreate(width, height);
+
+        m_RenderFinishedSemaphores.clear();
+        for (uint32_t i = 0; i < m_Swapchain.numSwapChainImages(); ++i)
+        {
+            m_RenderFinishedSemaphores.push_back(enger::vkCheck(m_Device.device().createSemaphoreUnique({})));
+            enger::setDebugName(m_Device.device(), *m_RenderFinishedSemaphores[i],
+                         "FrameRenderFinishedSemaphore" + std::to_string(i));
+        }
+
+        auto newExtent = m_Swapchain.swapChainExtent();
+        for (auto& layer : m_Layers)
+        {
+            layer->onResize(newExtent.width, newExtent.height);
+        }
+
+        m_ShouldRecreateSwapchain = false;
     }
 }

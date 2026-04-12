@@ -21,7 +21,6 @@ constexpr auto HEIGHT = 600;
 
 int main()
 {
-    bool shouldRender = true;
     enger::GlfwWindow window{WIDTH, HEIGHT, "Enger"};
 
     std::vector<const char *> instanceExtensions;

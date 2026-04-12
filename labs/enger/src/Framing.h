@@ -55,6 +55,7 @@ namespace enger::framing
         Device& m_Device;
         Queue& m_GraphicsQueue;
         SwapChain& m_Swapchain;
+        GlfwWindow& m_Window;
 
         std::vector<IFrameLayer*> m_Layers;
 

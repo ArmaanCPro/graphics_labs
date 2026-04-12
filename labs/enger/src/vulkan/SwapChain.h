@@ -13,8 +13,12 @@ namespace enger
     {
     public:
         // TODO cleanly refactor to use Device texture pools nicely
-        SwapChain(Device& device, vk::SurfaceKHR surface, const GlfwWindow& window, vk::PresentModeKHR desiredPresentMode);
+        SwapChain(Device& device, vk::SurfaceKHR surface, const GlfwWindow& window,
+                  vk::PresentModeKHR desiredPresentMode);
+
         ~SwapChain();
+
+        void recreate(uint32_t width, uint32_t height, std::optional<vk::PresentModeKHR> desiredPresentMode = {});
 
         vk::Result present(std::span<const vk::Semaphore> waitSemaphores, uint32_t imageIndex, Queue& queue);
 
@@ -29,10 +33,19 @@ namespace enger
         [[nodiscard]] vk::Format swapChainFormat() const { return m_SwapFormat.format; }
 
     private:
+        void createSwapChain(uint32_t width, uint32_t height, vk::PresentModeKHR desiredPresentMode,
+                             std::optional<vk::SwapchainKHR> oldSwapchain = {});
+
+        void destroySwapchainHandles();
+
+    private:
         Device& m_Device;
         vk::Extent2D m_SwapExtent;
+        vk::SurfaceKHR m_Surface; // non-owning
         vk::SurfaceFormatKHR m_SwapFormat;
         vk::UniqueSwapchainKHR m_SwapChain;
+
+        vk::PresentModeKHR m_CurrentPresentMode;
 
         // TEMP, need to refactor better, a texture handle representing swapchain images
         std::vector<TextureHandle> m_SwapchainImageHandles;

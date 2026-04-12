@@ -144,6 +144,11 @@ namespace enger
             return *m_GlobalDescriptorSet;
         }
 
+        void waitIdle()
+        {
+            vkCheck(m_Device->waitIdle());
+        }
+
     private:
         vk::PhysicalDevice m_PhysicalDevice;
         vk::UniqueDevice m_Device;
