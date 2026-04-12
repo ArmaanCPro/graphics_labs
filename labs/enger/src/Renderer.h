@@ -23,6 +23,27 @@ namespace enger
         alignas(16) glm::vec4 data4;
     };
 
+    struct Vertex
+    {
+        glm::vec3 position;
+        float uv_x;
+        glm::vec3 normal;
+        float uv_y;
+        glm::vec4 color;
+    };
+
+    struct GPUMeshBuffers
+    {
+        Holder<BufferHandle> vertexBuffer;
+        Holder<BufferHandle> indexBuffer;
+    };
+
+    struct DrawPushConstants
+    {
+        glm::mat4 worldMatrix;
+        vk::DeviceAddress vertexBufferDeviceAddress;
+    };
+
     class Renderer
     {
     public:
@@ -32,6 +53,8 @@ namespace enger
         void drawFrame();
 
     private:
+        void uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const;
+
         Device& m_Device;
         SwapChain& m_SwapChain;
         Queue& m_GraphicsQueue;

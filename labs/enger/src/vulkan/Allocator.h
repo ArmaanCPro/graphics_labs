@@ -17,7 +17,7 @@ namespace enger
         void init(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
 
         [[nodiscard]] VmaAllocation createBuffer(vk::BufferCreateInfo &bufferCI, vk::Buffer &buffer,
-                                   vk::MemoryPropertyFlags memFlags, void *mappedPtr = nullptr);
+                                                 vk::MemoryPropertyFlags memFlags, bool coherent, void* mappedPtr = nullptr);
 
         /// This function handles the Vulkan creation of an image AND allocation.
         [[nodiscard]] VmaAllocation createImage(vk::ImageCreateInfo &imageCI, vk::Image &image);

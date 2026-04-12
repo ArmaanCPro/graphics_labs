@@ -408,21 +408,35 @@ namespace enger
             .memoryProperties_ = memFlags
         };
 
-        queue = queue ? queue : &m_GraphicsQueue;
-
         vk::BufferCreateInfo bufferCI{
             .size = size,
             .usage = usage,
             .sharingMode = vk::SharingMode::eExclusive,
         };
 
-        buffer.allocation_ = m_Allocator.createBuffer(bufferCI, buffer.buffer_, memFlags, buffer.mappedMemory_);
+        // check if coherent buffer is available
+        if (memFlags & vk::MemoryPropertyFlagBits::eHostVisible)
+        {
+            vkCheck(m_Device->createBuffer(&bufferCI, nullptr, &buffer.buffer_));
+            vk::MemoryRequirements memReqs;
+            m_Device->getBufferMemoryRequirements(buffer.buffer_, &memReqs);
+            m_Device->destroyBuffer(buffer.buffer_, nullptr);
+            buffer.buffer_ = nullptr;
+
+            if ((memReqs.memoryTypeBits & static_cast<uint32_t>(vk::MemoryPropertyFlagBits::eHostCoherent)))
+            {
+                buffer.isCoherent_ = true;
+            }
+        }
+
+        buffer.allocation_ = m_Allocator.createBuffer(bufferCI, buffer.buffer_, memFlags, buffer.isCoherent_, buffer.mappedMemory_);
 
         if (!debugName.empty())
         {
             setDebugName(*m_Device, buffer.buffer_, debugName);
         }
 
+        // BDA
         if (usage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
         {
             vk::BufferDeviceAddressInfo bufferDeviceAddressInfo{

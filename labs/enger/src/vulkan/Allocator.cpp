@@ -84,7 +84,7 @@ namespace enger
     }
 
     VmaAllocation Allocator::createBuffer(vk::BufferCreateInfo &bufferCI, vk::Buffer& buffer,
-                                          vk::MemoryPropertyFlags memFlags, void* mappedPtr)
+                                          vk::MemoryPropertyFlags memFlags, bool coherent, void* mappedPtr)
     {
         VmaAllocationCreateInfo allocCI{};
 
@@ -94,6 +94,11 @@ namespace enger
                 .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
                 .requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             };
+
+            if (coherent)
+            {
+                allocCI.requiredFlags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            }
         }
 
         allocCI.usage = VMA_MEMORY_USAGE_AUTO;

@@ -241,4 +241,24 @@ namespace enger
 
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }
+
+    void Renderer::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const
+    {
+        const size_t vbSize = sizeof(Vertex) * vertices.size();
+        const size_t ibSize = sizeof(uint32_t) * indices.size();
+
+        GPUMeshBuffers surface;
+
+        surface.vertexBuffer = m_Device.createBuffer(
+            vbSize,
+            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            &m_GraphicsQueue,
+            "VertexBuffer");
+        surface.indexBuffer = m_Device.createBuffer(
+            ibSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            &m_GraphicsQueue,
+            "IndexBuffer");
+    }
 }
