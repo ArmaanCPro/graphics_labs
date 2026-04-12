@@ -41,6 +41,11 @@ namespace enger
             return m_GraphicsQueue;
         }
 
+        [[nodiscard]] const Allocator& allocator() const
+        {
+            return m_Allocator;
+        }
+
         void waitSemaphores(std::span<vk::Semaphore> semaphores, std::span<uint64_t> waitValues,
                             uint64_t timeout = std::numeric_limits<uint64_t>::max());
 

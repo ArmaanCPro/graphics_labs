@@ -112,6 +112,17 @@ namespace enger
         m_CommandBuffer.clearColorImage(image->image_, vk::ImageLayout::eGeneral, &color, 1, &clearRange);
     }
 
+    void CommandBuffer::copyBuffer(BufferHandle srcBuffer, BufferHandle dstBuffer, vk::BufferCopy region)
+    {
+        assert(m_Device != nullptr);
+        auto* srcBufferObj = m_Device->getBuffer(srcBuffer);
+        assert(srcBufferObj != nullptr);
+        auto* dstBufferObj = m_Device->getBuffer(dstBuffer);
+        assert(dstBufferObj != nullptr);
+
+        m_CommandBuffer.copyBuffer(srcBufferObj->buffer_, dstBufferObj->buffer_, 1, &region);
+    }
+
     void CommandBuffer::setViewport(vk::Viewport& viewport)
     {
         m_CommandBuffer.setViewport(0, 1, &viewport);
@@ -172,6 +183,15 @@ namespace enger
         m_CommandBuffer.pushConstants(layout->layout, stages, offset, size, data);
     }
 
+    void CommandBuffer::bindIndexBuffer(BufferHandle buffer, uint32_t offset, vk::IndexType indexType)
+    {
+        assert(m_Device != nullptr);
+        auto* rawBuf = m_Device->getBuffer(buffer);
+        assert(rawBuf != nullptr);
+
+        m_CommandBuffer.bindIndexBuffer(rawBuf->buffer_, offset, indexType);
+    }
+
     void CommandBuffer::dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
     {
         m_CommandBuffer.dispatch(groupCountX, groupCountY, groupCountZ);
@@ -180,6 +200,12 @@ namespace enger
     void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
         m_CommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    }
+
+    void CommandBuffer::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
+        int32_t vertexOffset, uint32_t firstInstance)
+    {
+        m_CommandBuffer.drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
 
     CommandBuffer::CommandBuffer(Device *device, vk::CommandBuffer commandBuffer)

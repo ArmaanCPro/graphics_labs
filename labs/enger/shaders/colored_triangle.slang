@@ -1,27 +1,35 @@
+struct Vertex
+{
+    float3 position;
+    float uv_x;
+    float3 normal;
+    float uv_y;
+    float4 color;
+};
+
 struct VSOutput
 {
     float4 position : SV_Position;
     float3 color;
+    float2 uv;
 };
+
+struct PushConstant
+{
+    float4x4 renderMatrix;
+    Vertex* vertexBuffer;
+};
+[[vk::push_constant]] PushConstant pc;
 
 [shader("vertex")]
 VSOutput vertexMain(uint vertexId : SV_VulkanVertexID)
 {
-    const float3 positions[3] = float3[](
-        float3(1.0f, 1.0f, 0.0f),
-        float3(-1.0f, 1.0f, 0.0f),
-        float3(0.0f, -1.0f, 0.0f)
-    );
-
-    const float3 colors[3] = float3[](
-        float3(1.0f, 0.0f, 0.0f),
-        float3(0.0f, 1.0f, 0.0f),
-        float3(0.0f, 0.0f, 1.0f)
-    );
+    Vertex v = pc.vertexBuffer[vertexId];
 
     VSOutput output;
-    output.position = float4(positions[vertexId], 1.0f);
-    output.color = colors[vertexId];
+    output.position = mul(pc.renderMatrix, float4(v.position, 1.0f));
+    output.color = v.color.xyz;
+    output.uv = float2(v.uv_x, v.uv_y);
     return output;
 };
 

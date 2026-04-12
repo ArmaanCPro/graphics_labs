@@ -53,6 +53,7 @@ namespace enger
         void drawFrame();
 
     private:
+        // Consider allowing a secondary thread to manage uploads.
         GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) const;
 
         Device& m_Device;
@@ -84,5 +85,7 @@ namespace enger
 
         Holder<PipelineLayoutHandle> m_TrianglePipelineLayout;
         Holder<GraphicsPipelineHandle> m_TrianglePipeline;
+
+        GPUMeshBuffers m_Rectangle;
     };
 }

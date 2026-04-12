@@ -21,13 +21,13 @@ namespace enger
         std::vector<uint32_t> data(size / sizeof(uint32_t));
         file.seekg(0);
 
-        file.read(reinterpret_cast<char *>(data.data()), size);
+        file.read(reinterpret_cast<char*>(data.data()), size);
         file.close();
 
         return data;
     }
 
-    Renderer::Renderer(Instance &instance, Device &device, SwapChain &swapchain, GLFWwindow *window) :
+    Renderer::Renderer(Instance& instance, Device& device, SwapChain& swapchain, GLFWwindow* window) :
         m_Device(device),
         m_SwapChain(swapchain),
         m_GraphicsQueue(device.graphicsQueue()),
@@ -50,7 +50,6 @@ namespace enger
             m_ImageAvailableSemaphores[i] = vkCheck(device.device().createSemaphoreUnique(semaphoreCI));
             setDebugName(m_Device.device(), *m_ImageAvailableSemaphores[i],
                          "FrameImageAvailableSemaphore" + std::to_string(i));
-
         }
 
         for (uint32_t i = 0; i < m_SwapChain.numSwapChainImages(); ++i)
@@ -84,7 +83,7 @@ namespace enger
 
         m_RenderTargetDescriptor = m_DescriptorAllocator.allocate(m_Device,
                                                                   m_RenderTargetDescriptorLayout
-            );
+        );
 
         // TODO very temporary, introduce descriptor writer helper later
         vk::DescriptorImageInfo imgInfo{
@@ -112,7 +111,10 @@ namespace enger
 
         std::array<DescriptorSetLayoutHandle, 1> setLayouts = {m_RenderTargetDescriptorLayout};
         std::array<PushConstantsInfo, 1> pushConstantRanges = {
-            PushConstantsInfo{.offset = 0, .size = sizeof(ComputePushConstants), .stages = vk::ShaderStageFlagBits::eCompute}};
+            PushConstantsInfo{
+                .offset = 0, .size = sizeof(ComputePushConstants), .stages = vk::ShaderStageFlagBits::eCompute
+            }
+        };
         m_GradientPipelineLayout = m_Device.createPipelineLayout({
                                                                      .descriptorLayouts = setLayouts,
                                                                      .pushConstantRanges = pushConstantRanges
@@ -126,14 +128,45 @@ namespace enger
         // Colored Triangle Graphics Pipeline
         std::vector<uint32_t> triShaderData = std::move(loadSpirvFromFile("shaders/colored_triangle.spv").value());
         auto triShaderModule = m_Device.createShaderModule(triShaderData, &m_GraphicsQueue, "TriangleShaderModule");
-        m_TrianglePipelineLayout = m_Device.createPipelineLayout({}, &m_GraphicsQueue, "TrianglePipelineLayout");
+        std::array<PushConstantsInfo, 1> pushConstantsInfo = {
+            PushConstantsInfo{
+                .offset = 0,
+                .size = sizeof(DrawPushConstants),
+                .stages = vk::ShaderStageFlagBits::eVertex,
+            }
+        };
+        m_TrianglePipelineLayout = m_Device.createPipelineLayout({
+                                                                     .pushConstantRanges = pushConstantsInfo,
+                                                                 }, &m_GraphicsQueue, "TrianglePipelineLayout");
         m_TrianglePipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
-            .pipelineLayout = m_TrianglePipelineLayout,
-            .vertexShaderModule = triShaderModule,
-            .fragmentShaderModule = triShaderModule,
-            .colorAttachments = { ColorAttachment{ .format = m_Device.getImage(m_RenderTarget)->format_ } },
-            .colorAttachmentCount = 1,
-        }, &m_GraphicsQueue, "TrianglePipeline");
+                                                                 .pipelineLayout = m_TrianglePipelineLayout,
+                                                                 .vertexShaderModule = triShaderModule,
+                                                                 .fragmentShaderModule = triShaderModule,
+                                                                 .colorAttachments = {
+                                                                     ColorAttachment{
+                                                                         .format = m_Device.getImage(m_RenderTarget)->
+                                                                         format_
+                                                                     }
+                                                                 },
+                                                                 .colorAttachmentCount = 1,
+                                                             }, &m_GraphicsQueue, "TrianglePipeline");
+
+
+        // Filling out buffers
+        std::array<Vertex, 4> rectVerts{};
+        rectVerts[0].position = {0.5f, -0.5f, 0.0f};
+        rectVerts[1].position = {0.5f, 0.5f, 0.0f};
+        rectVerts[2].position = {-0.5f, -0.5f, 0.0f};
+        rectVerts[3].position = {-0.5f, 0.5f, 0.0f};
+
+        rectVerts[0].color = {1.0f, 0.0f, 0.0f, 1.0f};
+        rectVerts[1].color = {0.5f, 0.5f, 0.5f, 1.0f};
+        rectVerts[2].color = {1.0f, 0.0f, 0.0f, 1.0f};
+        rectVerts[3].color = {0.0f, 1.0f, 0.0f, 1.0f};
+
+        std::array<uint32_t, 6> rectIndices = {0, 1, 2, 2, 3, 0};
+
+        m_Rectangle = uploadMesh(rectIndices, rectVerts);
     }
 
     Renderer::~Renderer()
@@ -171,7 +204,8 @@ namespace enger
         pc.data1 = {1, 0, 0, 1};
         pc.data2 = {0, 0, 1, 1};
 
-        cmd.pushConstants(m_GradientPipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(ComputePushConstants), &pc);
+        cmd.pushConstants(m_GradientPipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(ComputePushConstants),
+                          &pc);
 
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 
@@ -198,16 +232,26 @@ namespace enger
         cmd.bindGraphicsPipeline(m_TrianglePipeline);
 
         // dynamic state
-        vk::Viewport viewport{0, 0, static_cast<float>(drawExtent.width), static_cast<float>(drawExtent.height), 0.0f, 1.0f};
+        vk::Viewport viewport{
+            0, 0, static_cast<float>(drawExtent.width), static_cast<float>(drawExtent.height), 0.0f, 1.0f
+        };
         vk::Rect2D scissor{0, 0, drawExtent.width, drawExtent.height};
         cmd.setViewport(viewport);
         cmd.setScissor(scissor);
 
-        cmd.draw(3, 1, 0, 0);
+        DrawPushConstants pushConstants{
+            .worldMatrix = glm::mat4(1.0f),
+            .vertexBufferDeviceAddress = m_Device.getBuffer(m_Rectangle.vertexBuffer)->deviceAddress_,
+        };
+        cmd.pushConstants(m_TrianglePipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(DrawPushConstants), &pushConstants);
+        cmd.bindIndexBuffer(m_Rectangle.indexBuffer, 0, vk::IndexType::eUint32);
+
+        cmd.drawIndexed(6, 1, 0, 0, 0);
         cmd.endRendering();
 
         // transition to blit
-        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal);
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eColorAttachmentOptimal,
+                            vk::ImageLayout::eTransferSrcOptimal);
         cmd.transitionImage(m_SwapChain.swapChainImageHandle(swapchainImageIndex),
                             vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
@@ -250,7 +294,8 @@ namespace enger
 
         surface.vertexBuffer = m_Device.createBuffer(
             vbSize,
-            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             &m_GraphicsQueue,
             "VertexBuffer");
@@ -269,10 +314,31 @@ namespace enger
 
         auto* stagingBuffer = m_Device.getBuffer(staging);
 
-        void* data = stagingBuffer->mappedMemory_;
+        //void* data = stagingBuffer->mappedMemory_;
 
-        memcpy(data, vertices.data(), vbSize);
+        //memcpy(data, vertices.data(), vbSize);
+        //memcpy(static_cast<char*>(data) + vbSize, indices.data(), ibSize);
 
-        return {};
+        stagingBuffer->bufferSubData(m_Device.allocator(), 0, vbSize, vertices.data());
+        stagingBuffer->bufferSubData(m_Device.allocator(), vbSize, ibSize, indices.data());
+
+        m_GraphicsQueue.submitImmediate([&](CommandBuffer cmd) {
+            vk::BufferCopy vertexCopy{
+                .srcOffset = 0,
+                .dstOffset = 0,
+                .size = vbSize,
+            };
+            cmd.copyBuffer(staging, surface.vertexBuffer, vertexCopy);
+
+            vk::BufferCopy indexCopy{
+                .srcOffset = vbSize,
+                .dstOffset = 0,
+                .size = ibSize,
+            };
+
+            cmd.copyBuffer(staging, surface.indexBuffer, indexCopy);
+        });
+
+        return surface;
     }
 }
