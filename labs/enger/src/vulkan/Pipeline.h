@@ -34,12 +34,17 @@ namespace enger
         ShaderModuleHandle vertexShaderModule;
         ShaderModuleHandle fragmentShaderModule;
 
-        std::string_view entryPointVertex = "vertexMain";
-        std::string_view entryPointFragment = "fragmentMain";
+        std::string entryPointVertex = "vertexMain";
+        std::string entryPointFragment = "fragmentMain";
 
-        // TODO convert Color Attachments to array
-        //std::span<ColorAttachment> colorAttachments;
-        ColorAttachment colorAttachment;
+        bool depthTestEnable = false;
+        bool depthWriteEnable = false;
+        vk::CompareOp depthCompareOp = vk::CompareOp::eLessOrEqual;
+
+        static constexpr auto kMaxColorAttachments = 8;
+        std::array<ColorAttachment, kMaxColorAttachments> colorAttachments;
+        uint32_t colorAttachmentCount = 0;
+
         vk::Format depthFormat = vk::Format::eUndefined;
         vk::Format stencilFormat = vk::Format::eUndefined;
 

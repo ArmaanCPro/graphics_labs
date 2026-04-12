@@ -189,9 +189,15 @@ namespace enger
     Holder<GraphicsPipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineDesc desc, Queue *queue,
         std::string_view debugName)
     {
+        // Color Attachments
+        std::array<vk::Format, GraphicsPipelineDesc::kMaxColorAttachments> colorAttachmentFormats;
+        for (uint32_t i = 0; i < desc.colorAttachmentCount; ++i)
+        {
+            colorAttachmentFormats[i] = desc.colorAttachments[i].format;
+        }
         vk::PipelineRenderingCreateInfo renderingCI{
-            .colorAttachmentCount = 1,
-            .pColorAttachmentFormats = &desc.colorAttachment.format,
+            .colorAttachmentCount = desc.colorAttachmentCount,
+            .pColorAttachmentFormats = colorAttachmentFormats.data(),
             .depthAttachmentFormat = desc.depthFormat,
             .stencilAttachmentFormat = desc.stencilFormat,
         };
@@ -205,7 +211,7 @@ namespace enger
             shaderStages.push_back(vk::PipelineShaderStageCreateInfo{
                 .stage = vk::ShaderStageFlagBits::eVertex,
                 .module = *vertexShaderModule,
-                .pName = desc.entryPointVertex.data(),
+                .pName = desc.entryPointVertex.c_str(),
             });
         }
         if (fragmentShaderModule)
@@ -213,7 +219,7 @@ namespace enger
             shaderStages.push_back(vk::PipelineShaderStageCreateInfo{
                 .stage = vk::ShaderStageFlagBits::eFragment,
                 .module = *fragmentShaderModule,
-                .pName = desc.entryPointFragment.data(),
+                .pName = desc.entryPointFragment.c_str(),
             });
         }
 
@@ -252,9 +258,9 @@ namespace enger
 
         // Depth Stencil State
         vk::PipelineDepthStencilStateCreateInfo depthStencilCI{
-            .depthTestEnable = vk::False,
-            .depthWriteEnable = vk::False,
-            .depthCompareOp = vk::CompareOp::eNever,
+            .depthTestEnable = desc.depthTestEnable,
+            .depthWriteEnable = desc.depthWriteEnable,
+            .depthCompareOp = desc.depthCompareOp,
             .depthBoundsTestEnable = vk::False,
             .stencilTestEnable = vk::False,
             .front = {},
@@ -263,30 +269,37 @@ namespace enger
             .maxDepthBounds = 1.0f,
         };
 
-        // dummy color blending. refactor later to support transparency
-        vk::PipelineColorBlendAttachmentState colorBlendAttachment{
-            .blendEnable = desc.colorAttachment.blendEnabled,
-            .srcColorBlendFactor = desc.colorAttachment.srcRgbBlendFactor,
-            .dstColorBlendFactor = desc.colorAttachment.dstRgbBlendFactor,
-            .colorBlendOp = desc.colorAttachment.rgbBlendOp,
-            .srcAlphaBlendFactor = desc.colorAttachment.srcAlphaBlendFactor,
-            .dstAlphaBlendFactor = desc.colorAttachment.dstAlphaBlendFactor,
-            .alphaBlendOp = desc.colorAttachment.alphaBlendOp,
-            .colorWriteMask = desc.colorAttachment.colorWriteMask,
-        };
+        // Color Blending
+        std::array<vk::PipelineColorBlendAttachmentState, GraphicsPipelineDesc::kMaxColorAttachments> colorBlendAttachments;
+        for (uint32_t i = 0; i < desc.colorAttachmentCount; ++i)
+        {
+            colorBlendAttachments[i] = vk::PipelineColorBlendAttachmentState{
+                .blendEnable = desc.colorAttachments[i].blendEnabled,
+                .srcColorBlendFactor = desc.colorAttachments[i].srcRgbBlendFactor,
+                .dstColorBlendFactor = desc.colorAttachments[i].dstRgbBlendFactor,
+                .colorBlendOp = desc.colorAttachments[i].rgbBlendOp,
+                .srcAlphaBlendFactor = desc.colorAttachments[i].srcAlphaBlendFactor,
+                .dstAlphaBlendFactor = desc.colorAttachments[i].dstAlphaBlendFactor,
+                .alphaBlendOp = desc.colorAttachments[i].alphaBlendOp,
+                .colorWriteMask = desc.colorAttachments[i].colorWriteMask,
+            };
+        }
         vk::PipelineColorBlendStateCreateInfo colorBlendCI{
             .logicOpEnable = vk::False,
             .logicOp = vk::LogicOp::eCopy,
-            .attachmentCount = 1,
-            .pAttachments = &colorBlendAttachment,
+            .attachmentCount = desc.colorAttachmentCount,
+            .pAttachments = colorBlendAttachments.data(),
         };
 
+        // Dynamic States
         std::array<vk::DynamicState, 2> dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
         vk::PipelineDynamicStateCreateInfo dynamicStateCI{
             .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
             .pDynamicStates = dynamicStates.data(),
         };
         auto* layout = m_PipelineLayoutPool.get(desc.pipelineLayout);
+
+        // Pipeline Creation
         vk::GraphicsPipelineCreateInfo pipelineCI{
             .pNext = &renderingCI,
             .stageCount = static_cast<uint32_t>(shaderStages.size()),

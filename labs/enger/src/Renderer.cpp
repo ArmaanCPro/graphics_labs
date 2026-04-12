@@ -131,7 +131,8 @@ namespace enger
             .pipelineLayout = m_TrianglePipelineLayout,
             .vertexShaderModule = triShaderModule,
             .fragmentShaderModule = triShaderModule,
-            .colorAttachment = { .format = m_Device.getImage(m_RenderTarget)->format_ },
+            .colorAttachments = { ColorAttachment{ .format = m_Device.getImage(m_RenderTarget)->format_ } },
+            .colorAttachmentCount = 1,
         }, &m_GraphicsQueue, "TrianglePipeline");
     }
 
