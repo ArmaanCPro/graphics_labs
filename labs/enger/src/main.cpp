@@ -1,5 +1,6 @@
 #include <array>
 #include <span>
+#include <thread>
 
 #include "vulkan/vk.h"
 
@@ -14,6 +15,20 @@
 constexpr auto WIDTH = 800;
 constexpr auto HEIGHT = 600;
 
+void glfwSizeCallback(GLFWwindow* window, int width, int height)
+{
+    bool& shouldRender = *static_cast<bool*>(glfwGetWindowUserPointer(window));
+
+    if (width == 0 || height == 0)
+    {
+        shouldRender = false;
+    }
+    else
+    {
+        shouldRender = true;
+    }
+}
+
 int main()
 {
     glfwInit();
@@ -22,6 +37,10 @@ int main()
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Enger", nullptr, nullptr);
+
+    bool shouldRender = true;
+    glfwSetWindowUserPointer(window, &shouldRender);
+    glfwSetWindowSizeCallback(window, glfwSizeCallback);
 
     std::vector<const char *> instanceExtensions;
 #ifndef NDEBUG
@@ -51,6 +70,13 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+
+        if (!shouldRender)
+        {
+            // throttle
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
 
         renderer.drawFrame();
     }
