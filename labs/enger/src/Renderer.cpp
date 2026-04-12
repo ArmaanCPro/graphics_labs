@@ -164,7 +164,7 @@ namespace enger
         rectVerts[2].color = {1.0f, 0.0f, 0.0f, 1.0f};
         rectVerts[3].color = {0.0f, 1.0f, 0.0f, 1.0f};
 
-        std::array<uint32_t, 6> rectIndices = {0, 1, 2, 2, 3, 0};
+        std::array<uint32_t, 6> rectIndices = {0, 1, 2, 2, 1, 3};
 
         m_Rectangle = uploadMesh(rectIndices, rectVerts);
     }
