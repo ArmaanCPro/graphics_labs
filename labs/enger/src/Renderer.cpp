@@ -116,6 +116,7 @@ namespace enger
                                                                      }
                                                                  },
                                                                  .colorAttachmentCount = 1,
+                                                                 .frontFace = vk::FrontFace::eCounterClockwise,
                                                              }, &m_GraphicsQueue, "TrianglePipeline");
 
 
@@ -192,7 +193,9 @@ namespace enger
 
         // dynamic state
         vk::Viewport viewport{
-            0, 0, static_cast<float>(drawExtent.width), static_cast<float>(drawExtent.height), 0.0f, 1.0f
+            0, static_cast<float>(drawExtent.height),
+            static_cast<float>(drawExtent.width), -1.0f * static_cast<float>(drawExtent.height),
+            0.0f, 1.0f
         };
         vk::Rect2D scissor{0, 0, drawExtent.width, drawExtent.height};
         cmd.setViewport(viewport);
@@ -243,6 +246,4 @@ namespace enger
 
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }
-
-
 }
