@@ -127,7 +127,14 @@ namespace enger
                                                                  .colorAttachments = {
                                                                      ColorAttachment{
                                                                          .format = m_Device.getImage(m_RenderTarget)->
-                                                                         format_
+                                                                         format_,
+                                                                         .blendEnabled = true,
+                                                                         .srcRgbBlendFactor = vk::BlendFactor::eSrcAlpha,
+                                                                         .dstRgbBlendFactor = vk::BlendFactor::eOne,
+                                                                         .rgbBlendOp = vk::BlendOp::eAdd,
+                                                                         .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                                                                         .dstAlphaBlendFactor = vk::BlendFactor::eZero,
+                                                                         .alphaBlendOp = vk::BlendOp::eAdd,
                                                                      }
                                                                  },
                                                                  .colorAttachmentCount = 1,

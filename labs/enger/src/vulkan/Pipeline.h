@@ -10,12 +10,12 @@ namespace enger
     {
         vk::Format format = vk::Format::eUndefined;
         bool blendEnabled = false;
-        vk::BlendOp rgbBlendOp = vk::BlendOp::eAdd;
-        vk::BlendOp alphaBlendOp = vk::BlendOp::eAdd;
         vk::BlendFactor srcRgbBlendFactor = vk::BlendFactor::eOne;
         vk::BlendFactor dstRgbBlendFactor = vk::BlendFactor::eZero;
+        vk::BlendOp rgbBlendOp = vk::BlendOp::eAdd;
         vk::BlendFactor srcAlphaBlendFactor = vk::BlendFactor::eZero;
         vk::BlendFactor dstAlphaBlendFactor = vk::BlendFactor::eOne;
+        vk::BlendOp alphaBlendOp = vk::BlendOp::eAdd;
         vk::ColorComponentFlags colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
     };
 
