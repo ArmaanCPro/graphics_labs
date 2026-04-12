@@ -426,7 +426,14 @@ namespace enger
 
         if (m_UseBindless)
         {
-            updateBindlessStorageImage(handle.index(), image.view_);
+            if (image.isStorageImage())
+            {
+                updateBindlessStorageImage(handle.index(), image.view_);
+            }
+            else if (image.isSampledImage())
+            {
+                updateBindlessSampledImage(handle.index(), image.view_);
+            }
         }
 
         return {this, queue, handle};
@@ -810,6 +817,27 @@ namespace enger
             .dstArrayElement = index,
             .descriptorCount = 1,
             .descriptorType = vk::DescriptorType::eStorageImage,
+            .pImageInfo = &imageInfo,
+        };
+
+        m_Device->updateDescriptorSets(1, &write, 0, nullptr);
+    }
+
+    void Device::updateBindlessSampledImage(uint32_t index, vk::ImageView view)
+    {
+        assert(m_GlobalDescriptorSet);
+
+        vk::DescriptorImageInfo imageInfo{
+            .imageView = view,
+            .imageLayout = vk::ImageLayout::eGeneral,
+        };
+
+        vk::WriteDescriptorSet write{
+            .dstSet = *m_GlobalDescriptorSet,
+            .dstBinding = 1,
+            .dstArrayElement = index,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eSampledImage,
             .pImageInfo = &imageInfo,
         };
 
