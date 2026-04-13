@@ -30,8 +30,8 @@ namespace enger::framing
         std::optional<FrameContext> beginFrame();
         void endFrame(FrameContext& fctx);
 
-    private:
         void onWindowResize(uint32_t width, uint32_t height);
+    private:
 
         void recreateSwapchain();
 

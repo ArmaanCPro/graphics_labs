@@ -26,6 +26,8 @@ namespace enger
         virtual void endFrame(framing::FrameContext& fctx) = 0;
 
         virtual void postRenderFinished() = 0;
+
+        virtual void onResize(uint32_t width, uint32_t height) = 0;
     };
 
     class ImguiLayer : public UILayer
@@ -41,8 +43,11 @@ namespace enger
         // not sure if this is needed or can be merged into endFrame(...)
         void postRenderFinished() override;
 
+        void onResize(uint32_t width, uint32_t height) override;
+
     private:
         Device& m_Device;
+        SwapChain& m_Swapchain;
         DescriptorAllocator m_DescriptorAllocator;
     };
 }

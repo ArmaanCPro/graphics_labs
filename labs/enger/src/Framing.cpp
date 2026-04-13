@@ -14,8 +14,6 @@ namespace enger
         m_Swapchain(swapchain),
         m_Window(window)
     {
-        window.setResizeCallback([this](uint32_t width, uint32_t height) { onWindowResize(width, height); });
-        
         auto commandPoolsVec = device.createUniqueCommandPools(enger::CommandPoolFlags::ResetCommandBuffer,
                                                                  m_GraphicsQueue.familyIndex(), enger::framing::FRAMES_IN_FLIGHT,
                                                                  "FrameCommandPools");

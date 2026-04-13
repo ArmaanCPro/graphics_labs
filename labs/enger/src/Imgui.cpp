@@ -15,7 +15,8 @@ namespace enger
 
     ImguiLayer::ImguiLayer(Instance& instance, Device &device, GlfwWindow& window, SwapChain& swapchain)
         :
-        m_Device(device)
+        m_Device(device),
+        m_Swapchain(swapchain)
     {
         VkInstance inst = instance.instance();
         ImGui_ImplVulkan_LoadFunctions(vk::ApiVersion14, imguiFn, &inst);
@@ -125,13 +126,16 @@ namespace enger
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frameContext.cmd.get());
 
         frameContext.cmd.endRendering();
-
-        ImGui::EndFrame();
     }
 
     void ImguiLayer::postRenderFinished()
     {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
+    }
+
+    void ImguiLayer::onResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height)
+    {
+        ImGui_ImplVulkan_SetMinImageCount(m_Swapchain.numSwapChainImages());
     }
 }

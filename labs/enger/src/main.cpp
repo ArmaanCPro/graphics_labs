@@ -1,5 +1,6 @@
 #include <array>
 #include <span>
+#include <stack>
 #include <thread>
 
 #include "vulkan/vk.h"
@@ -19,9 +20,21 @@
 constexpr auto WIDTH = 800;
 constexpr auto HEIGHT = 600;
 
+struct ResizeEvent
+{
+    uint32_t newWidth;
+    uint32_t newHeight;
+};
+
 int main()
 {
     enger::GlfwWindow window{WIDTH, HEIGHT, "Enger"};
+
+    std::stack<ResizeEvent> resizeEventBus;
+
+    window.setResizeCallback([&](uint32_t width, uint32_t height) {
+        resizeEventBus.push({width, height});
+    });
 
     std::vector<const char *> instanceExtensions;
 #ifndef NDEBUG
@@ -53,6 +66,18 @@ int main()
     while (!window.shouldClose())
     {
         window.poll();
+
+        if (resizeEventBus.size() > 0)
+        {
+            auto event = resizeEventBus.top();
+            while (resizeEventBus.size() > 0)
+            {
+                resizeEventBus.pop();
+            }
+
+            frameOrchestrator.onWindowResize(event.newWidth, event.newHeight);
+            renderer.onResize(event.newWidth, event.newHeight);
+        }
 
         if (auto optfctx = frameOrchestrator.beginFrame())
         {
