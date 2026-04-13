@@ -59,5 +59,5 @@ int main()
         frameOrchestrator.drawFrame();
     }
 
-    enger::vkCheck(device.device().waitIdle());
+    device.waitIdle();
 }

@@ -111,6 +111,13 @@ namespace enger
             std::terminate();
         }
         m_TestMeshes = expectedMeshes.value();
+
+        // GPU scene data
+        m_GPUSceneDataBuffer = m_Device.createBuffer(
+            sizeof(GPUSceneData), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            &m_GraphicsQueue, "GPUSceneDataBuffer"
+        );
     }
 
     void Renderer::draw(framing::FrameContext& fctx)
@@ -181,6 +188,7 @@ namespace enger
         DrawPushConstants pushConstants{
             .worldMatrix = projection * view,
             .vertexBufferDeviceAddress = m_Device.getBuffer(m_TestMeshes[2]->meshBuffers.vertexBuffer)->deviceAddress_,
+            .sceneDataBDA = m_Device.getBuffer(m_GPUSceneDataBuffer)->deviceAddress_,
         };
         cmd.pushConstants(m_GraphicsPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(DrawPushConstants),
                           &pushConstants);

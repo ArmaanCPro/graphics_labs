@@ -18,6 +18,16 @@ namespace enger
 {
     constexpr uint32_t FRAMES_IN_FLIGHT = 2;
 
+    struct GPUSceneData
+    {
+        glm::mat4 view;
+        glm::mat4 proj;
+        glm::mat4 viewProj;
+        glm::vec4 ambientColor;
+        glm::vec4 sunlightDirection; // w for sun power
+        glm::vec4 sunlightColor;
+    };
+
     struct ComputePushConstants
     {
         alignas(16) glm::vec4 data1;
@@ -29,6 +39,7 @@ namespace enger
     {
         glm::mat4 worldMatrix;
         vk::DeviceAddress vertexBufferDeviceAddress;
+        vk::DeviceAddress sceneDataBDA;
     };
 
     class Renderer : public framing::IFrameLayer
@@ -58,6 +69,8 @@ namespace enger
 
         Holder<PipelineLayoutHandle> m_GraphicsPipelineLayout;
         Holder<GraphicsPipelineHandle> m_GraphicsPipeline;
+
+        Holder<BufferHandle> m_GPUSceneDataBuffer;
 
         std::vector<std::shared_ptr<MeshAsset>> m_TestMeshes;
     };
