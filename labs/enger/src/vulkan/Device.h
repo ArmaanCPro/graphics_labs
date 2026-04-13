@@ -23,7 +23,8 @@ namespace enger
     {
     public:
         /// Requires surface for presentation. Headless is not currently supported.
-        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions, bool useBindless = true);
+        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions,
+                        bool useBindless = true);
 
         ~Device();
 
@@ -59,8 +60,8 @@ namespace enger
         Holder<PipelineLayoutHandle> createPipelineLayout(PipelineLayoutDesc desc, Queue* queue,
                                                           std::string_view debugName = "");
 
-        Holder<TextureHandle> createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage,
-                                            Queue* queue, std::string_view debugName = "");
+        Holder<TextureHandle> createTexture(
+            const TextureDesc& desc, Queue* queue, std::string_view debugName = "");
 
         Holder<BufferHandle> createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage,
                                           vk::MemoryPropertyFlags memFlags,
@@ -173,12 +174,13 @@ namespace enger
         bool m_UseBindless;
         Holder<DescriptorSetLayoutHandle> m_BindlessLayoutHandle;
         vk::UniqueDescriptorPool m_BindlessPool;
-        vk::UniqueDescriptorSet  m_GlobalDescriptorSet;
+        vk::UniqueDescriptorSet m_GlobalDescriptorSet;
 
         void initBindlessDescriptors();
 
         // consider adding this on resource deletion, and writing VK_NULL_HANLDE/nullptr for robustness2
         void updateBindlessStorageImage(uint32_t index, vk::ImageView view);
+
         void updateBindlessSampledImage(uint32_t index, vk::ImageView view);
     };
 }

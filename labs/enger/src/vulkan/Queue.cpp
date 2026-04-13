@@ -140,4 +140,41 @@ namespace enger
     {
         m_DeletionQueue.push(std::move(func), m_CurrentSubmitCounter);
     }
+
+    void Queue::uploadTexture2DData(TextureHandle handle, const void* data, const vk::Extent3D& dimensions, [[maybe_unused]] uint32_t mipLevels,
+                                    uint32_t arrayLayers, vk::Format imageFormat)
+    {
+        size_t dataSize = dimensions.width * dimensions.height * dimensions.depth * (findBppFromFormat(imageFormat) / 8);
+        auto stagingHandle = m_Device->createBuffer(dataSize,
+            vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            this, "StagingBufferForImage");
+        auto* staging = m_Device->getBuffer(stagingHandle);
+
+        assert(staging && staging->mappedMemory_);
+
+        memcpy(staging->mappedMemory_, data, dataSize);
+
+        submitImmediate([&](CommandBuffer& cmd) {
+            cmd.transitionImage(handle, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+
+            vk::BufferImageCopy copyRegion{
+                .bufferOffset = 0,
+                .bufferRowLength = 0,
+                .bufferImageHeight = 0,
+
+                .imageSubresource = vk::ImageSubresourceLayers{
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = arrayLayers,
+                },
+                .imageOffset = {0, 0, 0},
+                .imageExtent = dimensions,
+            };
+
+            cmd.copyBufferToImage(stagingHandle, handle, copyRegion);
+
+            cmd.transitionImage(handle, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral);
+        });
+    }
 }

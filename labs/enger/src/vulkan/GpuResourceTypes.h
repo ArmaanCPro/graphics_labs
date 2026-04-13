@@ -4,6 +4,36 @@
 
 namespace enger
 {
+    // helper function
+    constexpr uint32_t findBppFromFormat(vk::Format format)
+    {
+        switch (format)
+        {
+            case vk::Format::eR8G8B8A8Unorm:
+            case vk::Format::eR8G8B8A8Srgb: return 32;
+            case vk::Format::eR16G16B16A16Sfloat: return 64;
+            default:
+                break;
+        }
+        std::cerr << "Unknown BPP for format: " << vk::to_string(format) << std::endl;
+        return 0;
+    }
+
+    // Not an actual GPU resource type, but I don't know where else to put it. Used for texture creation as a parameter to device
+    struct TextureDesc
+    {
+        vk::ImageType type = vk::ImageType::e2D;
+        vk::Format format = vk::Format::eUndefined;
+
+        vk::Extent3D dimensions = {1, 1, 1};
+        uint32_t arrayLayers = 1;
+        vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
+        vk::ImageUsageFlags usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+        uint32_t mipLevels = 1;
+        vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+        const void* initialData = nullptr;
+    };
+
     struct VulkanImage final
     {
         // clang-format off
@@ -23,6 +53,8 @@ namespace enger
         vk::ImageUsageFlags usage_;
         vk::Format format_;
         vk::ImageAspectFlags aspectFlags_;
+
+        void* mappedMemory_ = nullptr;
 
         // for Combined Image Samplers
         // vk::Sampler sampler_{};

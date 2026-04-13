@@ -66,6 +66,9 @@ namespace enger
 
         void deferredDestroy(std::function<void()> func);
 
+        void uploadTexture2DData(TextureHandle handle, const void* data, const vk::Extent3D& dimensions, uint32_t mipLevels, uint32_t arrayLayers, vk::
+                                 Format imageFormat);
+
         [[nodiscard]] vk::Semaphore timelineSemaphore() const { return *m_TimelineSemaphore; };
         [[nodiscard]] uint32_t familyIndex() const { return m_FamilyIndex; };
         [[nodiscard]] vk::Queue queue() const { return m_Queue; }

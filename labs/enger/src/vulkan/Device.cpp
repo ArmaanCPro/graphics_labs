@@ -382,27 +382,33 @@ namespace enger
         return {this, queue, handle};
     }
 
-    Holder<TextureHandle> Device::createTexture(vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage,
-                                                Queue* queue, std::string_view debugName)
+    Holder<TextureHandle> Device::createTexture(
+        const TextureDesc& desc, Queue* queue, std::string_view debugName)
     {
+        assert(desc.mipLevels > 0);
+        assert(desc.arrayLayers > 0);
+        assert(desc.dimensions.width > 0);
+        assert(desc.dimensions.height > 0);
+        assert(desc.dimensions.depth > 0);
+
         vk::ImageCreateInfo imageCI{
             .imageType = vk::ImageType::e2D,
-            .format = format,
-            .extent = extent,
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = vk::SampleCountFlagBits::e1, // TODO parameterize (for MSAA)
+            .format = desc.format,
+            .extent = desc.dimensions,
+            .mipLevels = desc.mipLevels,
+            .arrayLayers = desc.arrayLayers,
+            .samples = desc.samples,
             .tiling = vk::ImageTiling::eOptimal,
-            .usage = usage,
+            .usage = desc.usage,
             .sharingMode = vk::SharingMode::eExclusive,
             .initialLayout = vk::ImageLayout::eUndefined,
         };
 
-        VulkanImage image = m_Allocator.createImage(imageCI);
+        VulkanImage image = m_Allocator.createImage(imageCI, desc.memoryProperties);
 
         vk::ImageAspectFlags aspectFlags = vk::ImageAspectFlagBits::eColor;
-        if (format == vk::Format::eD32Sfloat || format == vk::Format::eD32SfloatS8Uint || format ==
-            vk::Format::eD24UnormS8Uint)
+        if (desc.format == vk::Format::eD32Sfloat || desc.format == vk::Format::eD32SfloatS8Uint ||
+            desc.format == vk::Format::eD24UnormS8Uint)
         {
             aspectFlags = vk::ImageAspectFlagBits::eDepth;
         }
@@ -411,8 +417,8 @@ namespace enger
         vk::ImageViewCreateInfo viewCI{
             .image = image.image_,
             .viewType = vk::ImageViewType::e2D,
-            .format = format,
-            .subresourceRange = {aspectFlags, 0, 1, 0, 1},
+            .format = desc.format,
+            .subresourceRange = {aspectFlags, 0, desc.mipLevels, 0, desc.arrayLayers},
         };
 
         vkCheck(m_Device->createImageView(&viewCI, nullptr, &image.view_));
@@ -434,6 +440,17 @@ namespace enger
             {
                 updateBindlessSampledImage(handle.index(), image.view_);
             }
+        }
+
+        if (desc.initialData)
+        {
+            assert(aspectFlags == vk::ImageAspectFlagBits::eColor && "Non-color aspect for initial data");
+            assert(desc.usage & vk::ImageUsageFlagBits::eColorAttachment && "Non-color usage for initial data");
+            assert(desc.usage & vk::ImageUsageFlagBits::eTransferDst && "Non-transfer dst usage for initial data (can't upload)");
+            assert(desc.type == vk::ImageType::e2D && "Non-2D image for initial data");
+            queue = queue ? queue : &m_GraphicsQueue;
+            queue->uploadTexture2DData(handle, desc.initialData, desc.dimensions, desc.mipLevels, desc.arrayLayers,
+                                       desc.format);
         }
 
         return {this, queue, handle};

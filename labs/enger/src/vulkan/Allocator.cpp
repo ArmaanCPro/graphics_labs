@@ -114,11 +114,11 @@ namespace enger
         };
     }
 
-    VulkanImage Allocator::createImage(vk::ImageCreateInfo& imageCI)
+    VulkanImage Allocator::createImage(vk::ImageCreateInfo& imageCI, vk::MemoryPropertyFlags memFlags)
     {
         VmaAllocationCreateInfo allocCI{
-            .usage = VMA_MEMORY_USAGE_AUTO,
-            .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            .usage = memFlags & vk::MemoryPropertyFlagBits::eHostVisible
+                ?  VMA_MEMORY_USAGE_GPU_TO_CPU : VMA_MEMORY_USAGE_AUTO,
             .priority = 1.0f, // keep this?
         };
 
@@ -128,12 +128,24 @@ namespace enger
         vkCheck(vk::Result{vmaCreateImage(m_Allocator, &ici, &allocCI,
                            &rawImage, &alloc, nullptr)});
 
+        void* mappedMemory = nullptr;
+
+        if (memFlags & vk::MemoryPropertyFlagBits::eHostVisible)
+        {
+            vkCheck(vk::Result{vmaMapMemory(m_Allocator, alloc, &mappedMemory)});
+            if ((memFlags & vk::MemoryPropertyFlagBits::eHostCoherent) != vk::MemoryPropertyFlagBits::eHostCoherent)
+            {
+                vkCheck(vk::Result{vmaFlushAllocation(m_Allocator, alloc, 0, VK_WHOLE_SIZE)});
+            }
+        }
+
         return VulkanImage{
             .image_ = rawImage,
             .allocation_ = alloc,
             .extent_ = imageCI.extent,
             .usage_ = imageCI.usage,
             .format_ = imageCI.format,
+            .mappedMemory_ = mappedMemory,
         };
     }
 

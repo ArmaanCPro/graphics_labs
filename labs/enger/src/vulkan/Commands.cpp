@@ -123,6 +123,17 @@ namespace enger
         m_CommandBuffer.copyBuffer(srcBufferObj->buffer_, dstBufferObj->buffer_, 1, &region);
     }
 
+    void CommandBuffer::copyBufferToImage(BufferHandle buffer, TextureHandle image, vk::BufferImageCopy region)
+    {
+        assert(m_Device != nullptr);
+        auto* bufferObj = m_Device->getBuffer(buffer);
+        assert(bufferObj != nullptr);
+        auto* imageObj = m_Device->getImage(image);
+        assert(imageObj != nullptr);
+
+        m_CommandBuffer.copyBufferToImage(bufferObj->buffer_, imageObj->image_, vk::ImageLayout::eTransferDstOptimal, 1, &region);
+    }
+
     void CommandBuffer::setViewport(vk::Viewport& viewport)
     {
         m_CommandBuffer.setViewport(0, 1, &viewport);

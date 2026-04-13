@@ -215,18 +215,41 @@ namespace enger
     {
         // Create textures
         m_RenderTarget = m_Device.createTexture(
-            {width, height, 1},
-            vk::Format::eR16G16B16A16Sfloat,
-            vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
-            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
-            &m_GraphicsQueue, "RenderTarget"
+            {
+                .format = vk::Format::eR16G16B16A16Sfloat,
+                .dimensions = {width, height, 1},
+                .usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
+                         vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
+                .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+                .initialData = nullptr,
+            },
+            &m_GraphicsQueue,
+            "RenderTarget"
+        );
+        m_DepthBuffer = m_Device.createTexture(
+            {
+                .format = vk::Format::eD32Sfloat,
+                .dimensions = {width, height, 1},
+                .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+                .initialData = nullptr,
+            },
+            &m_GraphicsQueue,
+            "DepthBuffer"
         );
 
-        m_DepthBuffer = m_Device.createTexture(
-            {width, height, 1},
-            vk::Format::eD32Sfloat,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            &m_GraphicsQueue, "DepthBuffer"
+        char* data = new char[width * height * 16];
+        auto testImage = m_Device.createTexture(
+            {
+                .format = vk::Format::eR16G16B16A16Sfloat,
+                .dimensions = {width, height, 1},
+                .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
+                .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+                .initialData = data,
+            },
+            &m_GraphicsQueue,
+            "TestImage"
         );
+        delete[] data;
     }
 }

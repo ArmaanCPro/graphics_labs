@@ -23,7 +23,7 @@ namespace enger
                                                 vk::MemoryPropertyFlags memFlags);
 
         /// This function handles the Vulkan creation of an image AND allocation.
-        [[nodiscard]] VulkanImage createImage(vk::ImageCreateInfo &imageCI);
+        [[nodiscard]] VulkanImage createImage(vk::ImageCreateInfo &imageCI, vk::MemoryPropertyFlags memFlags);
 
         /// This function solely deallocates an allocation.
         void free(VmaAllocation alloc);
