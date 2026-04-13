@@ -144,15 +144,16 @@ namespace enger
     void Queue::uploadTexture2DData(TextureHandle handle, const void* data, const vk::Extent3D& dimensions, [[maybe_unused]] uint32_t mipLevels,
                                     uint32_t arrayLayers, vk::Format imageFormat)
     {
-        size_t dataSize = dimensions.width * dimensions.height * dimensions.depth * (findBppFromFormat(imageFormat) / 8);
+        const size_t dataSize = dimensions.width * dimensions.height * dimensions.depth * (findBppFromFormat(imageFormat) / 8);
         auto stagingHandle = m_Device->createBuffer(dataSize,
             vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             this, "StagingBufferForImage");
-        auto* staging = m_Device->getBuffer(stagingHandle);
 
+        // TODO move buffer subdata to Device as an internal function
+        auto* staging = m_Device->getBuffer(stagingHandle);
         assert(staging && staging->mappedMemory_);
 
-        memcpy(staging->mappedMemory_, data, dataSize);
+        staging->bufferSubData(m_Device->allocator(), 0, dataSize, data);
 
         submitImmediate([&](CommandBuffer& cmd) {
             cmd.transitionImage(handle, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
