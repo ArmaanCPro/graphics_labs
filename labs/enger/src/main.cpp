@@ -49,14 +49,25 @@ int main()
     enger::ImguiLayer imguiLayer{instance, device, window, swapchain};
 
     enger::framing::FrameOrchestrator frameOrchestrator{device, swapchain, window};
-    frameOrchestrator.pushLayer(&renderer);
-    frameOrchestrator.pushLayer(&imguiLayer);
 
     while (!window.shouldClose())
     {
         window.poll();
 
-        frameOrchestrator.drawFrame();
+        if (auto optfctx = frameOrchestrator.beginFrame())
+        {
+            auto fctx = std::move(*optfctx);
+            renderer.draw(fctx);
+
+            imguiLayer.beginFrame();
+            // we could remove imguiLayer.draw() and put our own imgui drawing here
+            imguiLayer.draw();
+            imguiLayer.endFrame(fctx);
+
+            frameOrchestrator.endFrame(fctx);
+
+            imguiLayer.postRenderFinished();
+        }
     }
 
     device.waitIdle();

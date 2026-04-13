@@ -81,19 +81,25 @@ namespace enger
         m_DescriptorAllocator.destroyPool(m_Device.device());
     }
 
-    void ImguiLayer::draw(framing::FrameContext& frameContext)
+    void ImguiLayer::beginFrame()
     {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
 
         ImGui::NewFrame();
+    }
 
+    void ImguiLayer::draw()
+    {
         ImGui::Begin("Settings");
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
         ImGui::End();
+    }
 
+    void ImguiLayer::endFrame(framing::FrameContext& frameContext)
+    {
         ImGui::Render();
 
         frameContext.cmd.transitionImage(frameContext.swapchainImageHandle,
@@ -121,7 +127,10 @@ namespace enger
         frameContext.cmd.endRendering();
 
         ImGui::EndFrame();
+    }
 
+    void ImguiLayer::postRenderFinished()
+    {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
     }

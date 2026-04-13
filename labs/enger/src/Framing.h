@@ -18,33 +18,17 @@ namespace enger::framing
         uint32_t frameIndex;
     };
 
-    /// Describes a layer in the frame rendering pipeline.
-    /// Honestly, not sure how great this is.
-    /// It's not a full layer-stack system, this is solely for decoupling renderers that draw
-    /// (for now) sequentially in a frame.
-    class IFrameLayer
-    {
-    public:
-        virtual ~IFrameLayer() = default;
-
-        virtual void draw(FrameContext& ctx) = 0;
-
-        virtual void onResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height) = 0;
-    };
-
-    /// This exists for the sake of decoupling the core Renderer & ImGui.
-    /// This orchestrator manages SOLELY frame rendering, not any CPU/game logic.
-    /// Currently, the Frame Orchestrator only allows single-Queue operations.
-    /// A better solution would be a full Frame Graph.
+    /// The FrameOrchestrator simply manages frame synchronization AND swapchain recreation/resizing.
+    /// It is not tightly coupled to renderers and is meant to be used as a standalone orchestrator.
+    /// The proper usage is to put any graphics logic within the begin/endFrame() functions.
     class FrameOrchestrator
     {
     public:
         FrameOrchestrator(Device& device, enger::SwapChain& swapchain, GlfwWindow& window);
         ~FrameOrchestrator();
 
-        void pushLayer(IFrameLayer* layer);
-
-        void drawFrame();
+        std::optional<FrameContext> beginFrame();
+        void endFrame(FrameContext& fctx);
 
     private:
         void onWindowResize(uint32_t width, uint32_t height);
@@ -56,8 +40,6 @@ namespace enger::framing
         Queue& m_GraphicsQueue;
         SwapChain& m_Swapchain;
         GlfwWindow& m_Window;
-
-        std::vector<IFrameLayer*> m_Layers;
 
         std::array<enger::SubmitHandle, enger::framing::FRAMES_IN_FLIGHT> m_LastFrameSubmits = {0, 0};
         std::array<enger::UniqueCommandPool, enger::framing::FRAMES_IN_FLIGHT> m_CommandPools;

@@ -47,18 +47,13 @@ namespace enger
         vkCheck(m_Device.device().waitIdle());
     }
 
-    void framing::FrameOrchestrator::pushLayer(IFrameLayer* layer)
-    {
-        m_Layers.push_back(layer);
-    }
-
-    void framing::FrameOrchestrator::drawFrame()
+    std::optional<framing::FrameContext> framing::FrameOrchestrator::beginFrame()
     {
         if (!m_ShouldRender)
         {
             // throttle
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            return;
+            return std::nullopt;
         }
 
         m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
@@ -67,7 +62,7 @@ namespace enger
         if (m_ShouldRecreateSwapchain)
         {
             recreateSwapchain();
-            //return;
+            //return std::nullopt;
         }
 
         uint32_t swapchainImageIndex = 0;
@@ -81,28 +76,28 @@ namespace enger
         if (acquireResult == vk::Result::eErrorOutOfDateKHR)
         {
             m_ShouldRecreateSwapchain = true;
-            return;
+            return std::nullopt;
         }
 
         enger::CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
         cmd.reset();
         cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-        enger::framing::FrameContext frameContext{
-            .cmd = cmd,
-            .swapchainImageIndex = swapchainImageIndex,
-            .swapchainImageHandle = m_Swapchain.swapChainImageHandle(swapchainImageIndex),
-            .swapchainExtent = m_Swapchain.swapChainExtent(),
-            .frameIndex = m_CurrentFrame,
-        };
+        return std::make_optional<FrameContext>(
+            cmd,
+            swapchainImageIndex,
+            m_Swapchain.swapChainImageHandle(swapchainImageIndex),
+            m_Swapchain.swapChainExtent(),
+            m_CurrentFrame
+        );
+    }
 
-        for (auto* layer : m_Layers)
-        {
-            layer->draw(frameContext);
-        }
+    void framing::FrameOrchestrator::endFrame(FrameContext& fctx)
+    {
+        auto& cmd = fctx.cmd;
 
         // ImGui layer, the final layer, always leaves the swapchain in Color Attachment layout
-        cmd.transitionImage(frameContext.swapchainImageHandle,
+        cmd.transitionImage(fctx.swapchainImageHandle,
             vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
 
         cmd.end();
@@ -110,14 +105,14 @@ namespace enger
         enger::QueueSubmitBuilder submission{};
         submission.waitBinary(*m_ImageAvailableSemaphores[m_CurrentFrame],
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-        submission.signalBinary(*m_RenderFinishedSemaphores[swapchainImageIndex],
+        submission.signalBinary(*m_RenderFinishedSemaphores[fctx.swapchainImageIndex],
                                 vk::PipelineStageFlagBits2::eColorAttachmentOutput);
         submission.addCmd(cmd);
 
         m_LastFrameSubmits[m_CurrentFrame] = m_GraphicsQueue.submit(submission.build());
         auto presentResult = m_Swapchain.present(
-            {{*m_RenderFinishedSemaphores[swapchainImageIndex]}},
-            swapchainImageIndex,
+            {{*m_RenderFinishedSemaphores[fctx.swapchainImageIndex]}},
+            fctx.swapchainImageIndex,
             m_GraphicsQueue
         );
 
@@ -157,12 +152,6 @@ namespace enger
             m_RenderFinishedSemaphores.push_back(enger::vkCheck(m_Device.device().createSemaphoreUnique({})));
             enger::setDebugName(m_Device.device(), *m_RenderFinishedSemaphores[i],
                          "FrameRenderFinishedSemaphore" + std::to_string(i));
-        }
-
-        auto newExtent = m_Swapchain.swapChainExtent();
-        for (auto& layer : m_Layers)
-        {
-            layer->onResize(newExtent.width, newExtent.height);
         }
 
         m_ShouldRecreateSwapchain = false;

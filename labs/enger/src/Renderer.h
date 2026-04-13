@@ -42,14 +42,14 @@ namespace enger
         vk::DeviceAddress sceneDataBDA;
     };
 
-    class Renderer : public framing::IFrameLayer
+    class Renderer
     {
     public:
         Renderer(Device& device, SwapChain& swapchain);
 
-        void draw(framing::FrameContext& frameContext) override;
+        void draw(framing::FrameContext& frameContext);
 
-        void onResize(uint32_t width, uint32_t height) override;
+        void onResize(uint32_t width, uint32_t height);
 
     private:
 

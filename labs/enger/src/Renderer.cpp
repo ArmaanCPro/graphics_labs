@@ -237,19 +237,5 @@ namespace enger
             &m_GraphicsQueue,
             "DepthBuffer"
         );
-
-        char* data = new char[width * height * 16];
-        auto testImage = m_Device.createTexture(
-            {
-                .format = vk::Format::eR16G16B16A16Sfloat,
-                .dimensions = {width, height, 1},
-                .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
-                .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                .initialData = data,
-            },
-            &m_GraphicsQueue,
-            "TestImage"
-        );
-        delete[] data;
     }
 }

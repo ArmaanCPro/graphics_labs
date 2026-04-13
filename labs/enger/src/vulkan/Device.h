@@ -178,7 +178,7 @@ namespace enger
 
         void initBindlessDescriptors();
 
-        // consider adding this on resource deletion, and writing VK_NULL_HANLDE/nullptr for robustness2
+        // consider adding this on resource deletion, and writing VK_NULL_HANDLE/nullptr for robustness2
         void updateBindlessStorageImage(uint32_t index, vk::ImageView view);
 
         void updateBindlessSampledImage(uint32_t index, vk::ImageView view);
