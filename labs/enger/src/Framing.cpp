@@ -79,7 +79,7 @@ namespace enger
             return std::nullopt;
         }
 
-        enger::CommandBuffer cmd = m_CommandBuffers[m_CurrentFrame];
+        enger::CommandBuffer& cmd = m_CommandBuffers[m_CurrentFrame];
         cmd.reset();
         cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 

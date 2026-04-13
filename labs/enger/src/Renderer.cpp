@@ -122,7 +122,7 @@ namespace enger
 
     void Renderer::draw(framing::FrameContext& fctx)
     {
-        auto cmd = fctx.cmd;
+        auto& cmd = fctx.cmd;
 
         // Compute Drawing
         cmd.bindComputePipeline(m_GradientPipeline);

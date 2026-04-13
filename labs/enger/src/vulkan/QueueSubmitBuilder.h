@@ -12,7 +12,7 @@ namespace enger
         void signalBinary(vk::Semaphore semaphore, vk::PipelineStageFlags2 stage);
         void waitTimeline(vk::Semaphore semaphore, uint64_t waitValue, vk::PipelineStageFlags2 stage);
         void signalTimeline(vk::Semaphore semaphore, uint64_t signalValue, vk::PipelineStageFlags2 stage);
-        void addCmd(CommandBuffer commandBuffer);
+        void addCmd(CommandBuffer& commandBuffer);
 
         [[nodiscard]] vk::SubmitInfo2 build() const;
 

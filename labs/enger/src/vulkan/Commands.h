@@ -32,6 +32,12 @@ namespace enger
         friend class Device;
     public:
         CommandBuffer() = default;
+        CommandBuffer(CommandBuffer&) = delete;
+        CommandBuffer& operator=(CommandBuffer&) = delete;
+        CommandBuffer(CommandBuffer&&) = default;
+        CommandBuffer& operator=(CommandBuffer&&) = default;
+        ~CommandBuffer() = default;
+
         // temporary
         vk::CommandBuffer& get() { return m_CommandBuffer; }
 

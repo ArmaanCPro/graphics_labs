@@ -47,7 +47,7 @@ namespace enger
         stagingBuffer->bufferSubData(device.allocator(), 0, vbSize, vertices.data());
         stagingBuffer->bufferSubData(device.allocator(), vbSize, ibSize, indices.data());
 
-        device.graphicsQueue().submitImmediate([&](CommandBuffer cmd) {
+        device.graphicsQueue().submitImmediate([&](CommandBuffer& cmd) {
             vk::BufferCopy vertexCopy{
                 .srcOffset = 0,
                 .dstOffset = 0,

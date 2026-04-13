@@ -42,7 +42,7 @@ namespace enger
         };
     }
 
-    void QueueSubmitBuilder::addCmd(CommandBuffer commandBuffer)
+    void QueueSubmitBuilder::addCmd(CommandBuffer& commandBuffer)
     {
         assert(commandBufferCount_ < kMaxCommandBuffers);
         commandBuffers_[commandBufferCount_++] = vk::CommandBufferSubmitInfo{
