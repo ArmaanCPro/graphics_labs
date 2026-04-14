@@ -29,11 +29,62 @@ namespace enger
         auto* image = m_Device->getImage(texHandle);
         assert(image != nullptr);
 
+        vk::AccessFlags2 srcAccess = vk::AccessFlagBits2::eMemoryWrite;
+        vk::PipelineStageFlags2 srcStage = vk::PipelineStageFlagBits2::eAllCommands;
+        if (srcLayout == vk::ImageLayout::eTransferSrcOptimal)
+        {
+            srcAccess = vk::AccessFlagBits2::eTransferRead;
+            srcStage = vk::PipelineStageFlagBits2::eTransfer;
+        }
+        else if (srcLayout == vk::ImageLayout::eTransferDstOptimal)
+        {
+            srcAccess = vk::AccessFlagBits2::eTransferWrite;
+            srcStage = vk::PipelineStageFlagBits2::eTransfer;
+        }
+        else if (srcLayout == vk::ImageLayout::eColorAttachmentOptimal)
+        {
+            srcAccess = vk::AccessFlagBits2::eColorAttachmentRead;
+            srcStage = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+        }
+        else if (srcLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
+        {
+            srcAccess = vk::AccessFlagBits2::eDepthStencilAttachmentRead;
+            srcStage = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
+        }
+
+        vk::AccessFlags2 dstAccess = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
+        vk::PipelineStageFlags2 dstStage = vk::PipelineStageFlagBits2::eAllCommands;
+        if (dstLayout == vk::ImageLayout::eTransferSrcOptimal)
+        {
+            dstAccess = vk::AccessFlagBits2::eTransferRead;
+            dstStage = vk::PipelineStageFlagBits2::eTransfer;
+        }
+        else if (dstLayout == vk::ImageLayout::eTransferDstOptimal)
+        {
+            dstAccess = vk::AccessFlagBits2::eTransferWrite;
+            dstStage = vk::PipelineStageFlagBits2::eTransfer;
+        }
+        else if (dstLayout == vk::ImageLayout::eColorAttachmentOptimal)
+        {
+            dstAccess = vk::AccessFlagBits2::eColorAttachmentWrite;
+            dstStage = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+        }
+        else if (dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
+        {
+            dstAccess = vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
+            dstStage = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
+        }
+        else if (dstLayout == vk::ImageLayout::ePresentSrcKHR)
+        {
+            dstAccess = vk::AccessFlagBits2::eNone;
+            dstStage = vk::PipelineStageFlagBits2::eTopOfPipe;
+        }
+
         vk::ImageMemoryBarrier2 barrier{
-            .srcStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-            .srcAccessMask = vk::AccessFlagBits2::eMemoryWrite,
-            .dstStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-            .dstAccessMask = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite,
+            .srcStageMask = srcStage,
+            .srcAccessMask = srcAccess,
+            .dstStageMask = dstStage,
+            .dstAccessMask = dstAccess,
             .oldLayout = srcLayout,
             .newLayout = dstLayout,
             .image = image->image_,

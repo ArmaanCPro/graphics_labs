@@ -187,12 +187,15 @@ namespace enger
         m_Device.getBuffer(m_GPUSceneDataBuffer)->bufferSubData(m_Device.allocator(), 0, sizeof(GPUSceneData),
             &m_SceneData);
 
+
+        // Currently, all render objects are opaque
+        fctx.cmd.bindGraphicsPipeline(m_GLTFMetallic_Roughness.opaquePipeline.pipeline);
+        // TODO right now the pipeline layout system is very unsturdy. I need a global bindless pipeline layout (meaning 1 descriptor set layout and 1 push constant range)
+        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GLTFMetallic_Roughness.opaquePipeline.pipelineLayout, 0,
+                    {{m_Device.bindlessDescriptorSet()}});
+
         for (const RenderObject& drawObj : m_MainDrawContext.opaqueSurfaces)
         {
-            fctx.cmd.bindGraphicsPipeline(drawObj.material->pipeline->pipeline);
-            // TODO right now the pipeline layout system is very unsturdy. I need a global bindless pipeline layout (meaning 1 descriptor set layout and 1 push constant range)
-            cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, drawObj.material->pipeline->pipelineLayout, 0,
-                        {{m_Device.bindlessDescriptorSet()}});
 
             fctx.cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
 
@@ -260,8 +263,7 @@ namespace enger
             {
                 .format = vk::Format::eR16G16B16A16Sfloat,
                 .dimensions = {width, height, 1},
-                .usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
-                         vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eColorAttachment,
+                .usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eColorAttachment,
                 .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
                 .initialData = nullptr,
             },
