@@ -16,7 +16,8 @@ namespace enger
     ImguiLayer::ImguiLayer(Instance& instance, Device &device, GlfwWindow& window, SwapChain& swapchain)
         :
         m_Device(device),
-        m_Swapchain(swapchain)
+        m_Swapchain(swapchain),
+        m_Window(window)
     {
         VkInstance inst = instance.instance();
         ImGui_ImplVulkan_LoadFunctions(vk::ApiVersion14, imguiFn, &inst);
@@ -44,7 +45,6 @@ namespace enger
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-        ImGui::StyleColorsDark();
 
         ImGui_ImplGlfw_InitForVulkan(window.nativeHandle(), true);
 
@@ -72,6 +72,22 @@ namespace enger
         };
 
         ImGui_ImplVulkan_Init(&initInfo);
+
+        // Styling
+        ImGui::StyleColorsDark();
+
+        float dpiScale = m_Window.getDpiScale();
+        io.Fonts->Clear();
+
+        ImFontConfig fontcfg;
+        fontcfg.OversampleH = 2;
+        fontcfg.OversampleV = 2;
+        fontcfg.PixelSnapH = true;
+        io.Fonts->AddFontFromFileTTF("assets/fonts/Inter/Inter_18pt-Medium.ttf", 16.0f * dpiScale, &fontcfg, io.Fonts->GetGlyphRangesDefault());
+        io.Fonts->Build();
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.ScaleAllSizes(dpiScale);
     }
 
     ImguiLayer::~ImguiLayer()

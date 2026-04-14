@@ -49,6 +49,13 @@ namespace enger
             return std::vector<const char*>(glfwExtensions, glfwExtensions + count);
         }
 
+        float getDpiScale() const
+        {
+            float xscale, yscale;
+            glfwGetWindowContentScale(m_Window, &xscale, &yscale);
+            return xscale; // usually same as the y-scale
+        }
+
         void setResizeCallback(std::function<void(uint32_t, uint32_t)> callback)
         {
             m_ResizeCallback = std::move(callback);

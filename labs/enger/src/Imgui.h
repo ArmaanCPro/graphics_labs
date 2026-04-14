@@ -48,6 +48,7 @@ namespace enger
     private:
         Device& m_Device;
         SwapChain& m_Swapchain;
+        GlfwWindow& m_Window;
         DescriptorAllocator m_DescriptorAllocator;
     };
 }
