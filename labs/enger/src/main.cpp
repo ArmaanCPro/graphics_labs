@@ -101,7 +101,7 @@ int main()
         auto fctx = frameOrchestrator.beginFrame();
         if (fctx.has_value())
         {
-            renderer.draw(fctx.value());
+            renderer.render(fctx.value());
 
             imguiLayer.beginFrame();
             // we could remove imguiLayer.draw() and put our own imgui drawing here

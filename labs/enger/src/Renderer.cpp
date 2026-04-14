@@ -105,7 +105,7 @@ namespace enger
 
         MaterialResources materialResources;
         materialResources.colorImage = m_WhiteImage;
-        materialResources.colorSampler = m_DefaultSamplerNearest;
+        materialResources.colorSampler = m_DefaultSamplerLinear;
         materialResources.metallicRoughnessImage = m_WhiteImage;
         materialResources.metallicRoughnessSampler = m_DefaultSamplerLinear;
 
@@ -116,7 +116,8 @@ namespace enger
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             &m_GraphicsQueue, "MaterialConstants"
         );
-        MaterialConstants materialConstantsData{.colorFactors = glm::vec4(1), .metallicRoughnessFactors = glm::vec4(1)};
+        MaterialConstants materialConstantsData{.colorFactors = glm::vec4(1),
+            .metallicRoughnessFactors = glm::vec4(1, 0.5, 0, 0)};
         m_Device.getBuffer(materialConstants)->bufferSubData(m_Device.allocator(), 0, sizeof(MaterialConstants),
                                                              &materialConstantsData);
 
@@ -141,7 +142,7 @@ namespace enger
         }
     }
 
-    void Renderer::draw(framing::FrameContext& fctx)
+    void Renderer::render(framing::FrameContext& fctx)
     {
         if (m_ShouldResize)
         {
@@ -254,8 +255,8 @@ namespace enger
 
         m_SceneData.viewProj = m_SceneData.proj * m_SceneData.view;
 
-        m_SceneData.ambientColor = glm::vec4(1.0f);
-        m_SceneData.sunlightColor = glm::vec4(1.0f);
+        m_SceneData.ambientColor = glm::vec4(0.2f);
+        m_SceneData.sunlightColor = glm::vec4(0.8f, 0.6f, 0.7f, 1.0f);
         m_SceneData.sunlightDirection = glm::vec4(0.0f, 1.0f, 0.5f, 1.0f);
 
         for (int x = -3; x < 3; x++)

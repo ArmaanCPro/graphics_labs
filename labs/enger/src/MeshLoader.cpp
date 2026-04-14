@@ -183,7 +183,7 @@ namespace enger
             }
 
             // Display Vertex Normals
-            static constexpr bool overrideColors = true;
+            static constexpr bool overrideColors = false;
             if constexpr (overrideColors)
             {
                 for (Vertex& vertex: vertices)

@@ -12,10 +12,13 @@ namespace enger
     public:
         // TODO this is dirty, the default constructor is invalid state until property initialized
         Allocator() = default;
-
         Allocator(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
-
         ~Allocator();
+
+        Allocator(const Allocator&) = delete;
+        Allocator& operator=(const Allocator&) = delete;
+        Allocator(Allocator&&) = default;
+        Allocator& operator=(Allocator&&) = default;
 
         void init(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
 

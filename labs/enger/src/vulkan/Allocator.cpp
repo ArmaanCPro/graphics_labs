@@ -6,48 +6,7 @@ namespace enger
 {
     Allocator::Allocator(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device)
     {
-        assert(instance != nullptr);
-        assert(physicalDevice != nullptr);
-        assert(device != nullptr);
-
-        const auto& dld = VULKAN_HPP_DEFAULT_DISPATCHER;
-        m_VulkanFunctions = {
-            .vkGetInstanceProcAddr = dld.vkGetInstanceProcAddr,
-            .vkGetDeviceProcAddr   = dld.vkGetDeviceProcAddr,
-
-            .vkGetPhysicalDeviceProperties       = dld.vkGetPhysicalDeviceProperties,
-            .vkGetPhysicalDeviceMemoryProperties = dld.vkGetPhysicalDeviceMemoryProperties,
-            .vkAllocateMemory = dld.vkAllocateMemory,
-            .vkFreeMemory = dld.vkFreeMemory,
-            .vkMapMemory = dld.vkMapMemory,
-            .vkUnmapMemory = dld.vkUnmapMemory,
-            .vkFlushMappedMemoryRanges = dld.vkFlushMappedMemoryRanges,
-            .vkInvalidateMappedMemoryRanges = dld.vkInvalidateMappedMemoryRanges,
-            .vkBindBufferMemory = dld.vkBindBufferMemory,
-            .vkBindImageMemory = dld.vkBindImageMemory,
-            .vkGetBufferMemoryRequirements = dld.vkGetBufferMemoryRequirements,
-            .vkGetImageMemoryRequirements = dld.vkGetImageMemoryRequirements,
-            .vkCreateBuffer = dld.vkCreateBuffer,
-            .vkDestroyBuffer = dld.vkDestroyBuffer,
-            .vkCreateImage = dld.vkCreateImage,
-            .vkDestroyImage = dld.vkDestroyImage,
-            .vkCmdCopyBuffer = dld.vkCmdCopyBuffer,
-
-            .vkGetBufferMemoryRequirements2KHR = dld.vkGetBufferMemoryRequirements2,
-            .vkGetImageMemoryRequirements2KHR  = dld.vkGetImageMemoryRequirements2,
-            .vkBindBufferMemory2KHR = dld.vkBindBufferMemory2,
-            .vkBindImageMemory2KHR  = dld.vkBindImageMemory2,
-
-            .vkGetPhysicalDeviceMemoryProperties2KHR = dld.vkGetPhysicalDeviceMemoryProperties2,
-        };
-        VmaAllocatorCreateInfo allocatorCI{
-            .flags = 0,//VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-            .physicalDevice = physicalDevice,
-            .device = device,
-            .pVulkanFunctions = &m_VulkanFunctions,
-            .instance = instance,
-        };
-        vkCheck(vk::Result{vmaCreateAllocator(&allocatorCI, &m_Allocator)});
+        init(instance, physicalDevice, device);
     }
 
     Allocator::~Allocator()

@@ -22,7 +22,7 @@ namespace enger
 
     struct GPUSceneData
     {
-        glm::mat4 view;
+        alignas(16) glm::mat4 view;
         glm::mat4 proj;
         glm::mat4 viewProj;
         glm::vec4 ambientColor;
@@ -39,6 +39,7 @@ namespace enger
 
     struct DrawPushConstants
     {
+        // TODO move worldMatrix into a SSBO (BDA to SSBO could exist within sceneData)
         alignas(16) glm::mat4 worldMatrix;
         alignas(8) vk::DeviceAddress vertexBufferDeviceAddress;
         alignas(8) vk::DeviceAddress sceneDataBDA;
@@ -53,7 +54,7 @@ namespace enger
     public:
         Renderer(Device& device, SwapChain& swapchain);
 
-        void draw(framing::FrameContext& frameContext);
+        void render(framing::FrameContext& frameContext);
 
         void onResize(uint32_t width, uint32_t height);
 
