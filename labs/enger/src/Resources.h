@@ -75,6 +75,7 @@ namespace enger
     using BufferHandle = Handle<struct BufferTag>;
     using DescriptorSetLayoutHandle = Handle<struct DescriptorSetLayoutTag>;
     using ShaderModuleHandle = Handle<struct ShaderModuleTag>;
+    using SamplerHandle = Handle<struct SamplerTag>;
 
     /// These functions indirect deletion so that the Holder can directly call deletors
     void destroy(Device* device, Queue* queue, ComputePipelineHandle handle);
@@ -84,6 +85,7 @@ namespace enger
     void destroy(Device* device, Queue* queue, BufferHandle handle);
     void destroy(Device* device, Queue* queue, DescriptorSetLayoutHandle handle);
     void destroy(Device* device, Queue* queue, ShaderModuleHandle handle);
+    void destroy(Device* device, Queue* queue, SamplerHandle handle);
 
     /// This is an RAII class that actually owns the lifetime of an object that a Handle Points to.
     /// This is an optional type, useful for when lexical scope (RAII) matches actual resource lifetime.

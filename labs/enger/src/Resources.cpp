@@ -62,4 +62,12 @@ namespace enger
             device->destroyShaderModule(handle, queue);
         }
     }
+
+    void destroy(Device* device, Queue* queue, SamplerHandle handle)
+    {
+        if (device)
+        {
+            device->destroySampler(handle, queue);
+        }
+    }
 }

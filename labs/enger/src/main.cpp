@@ -77,6 +77,7 @@ int main()
 
             frameOrchestrator.onWindowResize(event.newWidth, event.newHeight);
             renderer.onResize(event.newWidth, event.newHeight);
+            imguiLayer.onResize(event.newWidth, event.newHeight);
         }
 
         if (auto optfctx = frameOrchestrator.beginFrame())

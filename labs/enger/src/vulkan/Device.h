@@ -73,6 +73,9 @@ namespace enger
         Holder<ShaderModuleHandle> createShaderModule(std::span<const uint32_t> code, Queue* queue,
                                                       std::string_view debugName = "");
 
+        Holder<SamplerHandle> createSampler(vk::Filter magFilter, vk::Filter minFilter, Queue* queue,
+                                            std::string_view debugName = "");
+
         void destroyComputePipeline(ComputePipelineHandle handle, Queue* queue);
 
         void destroyGraphicsPipeline(GraphicsPipelineHandle handle, Queue* queue);
@@ -86,6 +89,8 @@ namespace enger
         void destroyDescriptorSetLayout(DescriptorSetLayoutHandle handle, Queue* queue);
 
         void destroyShaderModule(ShaderModuleHandle handle, Queue* queue);
+
+        void destroySampler(SamplerHandle handle, Queue* queue);
 
         UniqueCommandPool createUniqueCommandPool(CommandPoolFlags flags, uint32_t queueFamilyIndex,
                                                   std::string_view debugName = "");
@@ -169,6 +174,7 @@ namespace enger
         Pool<BufferTag, VulkanBuffer> m_BufferPool;
         Pool<DescriptorSetLayoutTag, vk::DescriptorSetLayout> m_DescriptorSetLayoutPool;
         Pool<ShaderModuleTag, vk::ShaderModule> m_ShaderModulePool;
+        Pool<SamplerTag, vk::Sampler> m_SamplerPool;
 
         // BINDLESS
         bool m_UseBindless;
@@ -180,7 +186,7 @@ namespace enger
 
         // consider adding this on resource deletion, and writing VK_NULL_HANDLE/nullptr for robustness2
         void updateBindlessStorageImage(uint32_t index, vk::ImageView view);
-
         void updateBindlessSampledImage(uint32_t index, vk::ImageView view);
+        void updateBindlessSampler(uint32_t index, vk::Sampler sampler);
     };
 }

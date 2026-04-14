@@ -69,11 +69,12 @@ namespace enger
         auto triShaderModule = m_Device.createShaderModule(triShaderData, &m_GraphicsQueue, "TriangleShaderModule");
 
         m_GraphicsPipelineLayout = m_Device.createPipelineLayout({
+                                                                     .descriptorLayouts = setLayouts,
                                                                      .pushConstantRanges = std::array{
                                                                          PushConstantsInfo{
                                                                              .offset = 0,
                                                                              .size = sizeof(DrawPushConstants),
-                                                                             .stages = vk::ShaderStageFlagBits::eVertex,
+                                                                             .stages = vk::ShaderStageFlagBits::eAllGraphics
                                                                          }
                                                                      },
                                                                  }, &m_GraphicsQueue, "TrianglePipelineLayout");
@@ -88,8 +89,9 @@ namespace enger
                                                                      ColorAttachment{
                                                                          .format = m_Device.getImage(m_RenderTarget)->
                                                                          format_,
-                                                                         .blendEnabled = true,
-                                                                         .srcRgbBlendFactor = vk::BlendFactor::eSrcAlpha,
+                                                                         .blendEnabled = false,
+                                                                         .srcRgbBlendFactor =
+                                                                         vk::BlendFactor::eSrcAlpha,
                                                                          .dstRgbBlendFactor = vk::BlendFactor::eOne,
                                                                          .rgbBlendOp = vk::BlendOp::eAdd,
                                                                          .srcAlphaBlendFactor = vk::BlendFactor::eOne,
@@ -114,10 +116,70 @@ namespace enger
 
         // GPU scene data
         m_GPUSceneDataBuffer = m_Device.createBuffer(
-            sizeof(GPUSceneData), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            sizeof(GPUSceneData),
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             &m_GraphicsQueue, "GPUSceneDataBuffer"
         );
+
+        // Default Textures
+        uint32_t white = glm::packUnorm4x8(glm::vec4{1.0f, 1.0f, 1.0f, 1.0f});
+        m_WhiteImage = m_Device.createTexture({
+                                                  .format = vk::Format::eR8G8B8A8Unorm,
+                                                  .dimensions = {1, 1, 1},
+                                                  .usage = vk::ImageUsageFlagBits::eSampled |
+                                                           vk::ImageUsageFlagBits::eTransferDst,
+                                                  .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+                                                  .initialData = &white,
+                                              }, &m_GraphicsQueue, "WhiteImage");
+
+        uint32_t gray = glm::packUnorm4x8(glm::vec4{0.66f, 0.66f, 0.66f, 1.0f});
+        m_GrayImage = m_Device.createTexture({
+                                                 .format = vk::Format::eR8G8B8A8Unorm,
+                                                 .dimensions = {1, 1, 1},
+                                                 .usage = vk::ImageUsageFlagBits::eSampled |
+                                                          vk::ImageUsageFlagBits::eTransferDst,
+                                                 .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+                                                 .initialData = &gray,
+                                             }, &m_GraphicsQueue, "GrayImage");
+
+        uint32_t black = glm::packUnorm4x8(glm::vec4{0.0f, 0.0f, 0.0f, 1.0f});
+        m_BlackImage = m_Device.createTexture({
+                                                  .format = vk::Format::eR8G8B8A8Unorm,
+                                                  .dimensions = {1, 1, 1},
+                                                  .usage = vk::ImageUsageFlagBits::eSampled |
+                                                           vk::ImageUsageFlagBits::eTransferDst,
+                                                  .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+                                                  .initialData = &black,
+                                              }, &m_GraphicsQueue, "BlackImage"); {
+            // checkerboard image
+            uint32_t magenta = glm::packUnorm4x8(glm::vec4{1.0f, 0.0f, 1.0f, 1.0f});
+            std::array<uint32_t, 16 * 16> pixels;
+            for (int x = 0; x < 16; ++x)
+            {
+                for (int y = 0; y < 16; ++y)
+                {
+                    pixels[y * 16 + x] = (x & 1) ^ (y & 1) ? magenta : black;
+                }
+            }
+            m_ErrorCheckerboardImage = m_Device.createTexture({
+                                                                  .format = vk::Format::eR8G8B8A8Unorm,
+                                                                  .dimensions = {16, 16, 1},
+                                                                  .usage = vk::ImageUsageFlagBits::eSampled |
+                                                                           vk::ImageUsageFlagBits::eTransferDst,
+                                                                  .memoryProperties =
+                                                                  vk::MemoryPropertyFlagBits::eDeviceLocal,
+                                                                  .initialData = pixels.data(),
+                                                              }, &m_GraphicsQueue, "ErrorCheckerboardImage");
+
+            m_DefaultSamplerLinear = m_Device.createSampler(
+                vk::Filter::eLinear, vk::Filter::eLinear, &m_GraphicsQueue, "DefaultSamplerLinear"
+            );
+
+            m_DefaultSamplerNearest = m_Device.createSampler(
+                vk::Filter::eNearest, vk::Filter::eNearest, &m_GraphicsQueue, "DefaultSamplerNearest"
+            );
+        }
     }
 
     void Renderer::draw(framing::FrameContext& fctx)
@@ -170,6 +232,8 @@ namespace enger
         };
         cmd.beginRendering(renderingInfo);
         cmd.bindGraphicsPipeline(m_GraphicsPipeline);
+        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipelineLayout, 0,
+                               {{m_Device.bindlessDescriptorSet()}});
 
         // dynamic state
         vk::Viewport viewport{
@@ -188,10 +252,12 @@ namespace enger
         DrawPushConstants pushConstants{
             .worldMatrix = projection * view,
             .vertexBufferDeviceAddress = m_Device.getBuffer(m_TestMeshes[2]->meshBuffers.vertexBuffer)->deviceAddress_,
-            .sceneDataBDA = m_Device.getBuffer(m_GPUSceneDataBuffer)->deviceAddress_,
+            //.sceneDataBDA = m_Device.getBuffer(m_GPUSceneDataBuffer)->deviceAddress_,
+            .textureIndex = m_ErrorCheckerboardImage.index(),
+            .samplerIndex = m_DefaultSamplerNearest.index(),
         };
-        cmd.pushConstants(m_GraphicsPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(DrawPushConstants),
-                          &pushConstants);
+        cmd.pushConstants(m_GraphicsPipelineLayout, vk::ShaderStageFlagBits::eAllGraphics,
+                          0, sizeof(DrawPushConstants), &pushConstants);
         cmd.bindIndexBuffer(m_TestMeshes[2].get()->meshBuffers.indexBuffer, 0, vk::IndexType::eUint32);
 
         cmd.drawIndexed(m_TestMeshes[2]->surfaces[0].indexCount, 1, m_TestMeshes[2]->surfaces[0].startIndex, 0, 0);

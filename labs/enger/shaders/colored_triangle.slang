@@ -10,16 +10,21 @@ struct Vertex
 struct VSOutput
 {
     float4 position : SV_Position;
-    float3 color;
-    float2 uv;
+    float3 color : COLOR0;
+    float2 uv : TEXCOORD0;
 };
 
 struct PushConstant
 {
     float4x4 renderMatrix;
     Vertex* vertexBuffer;
+    uint textureIndex;
+    uint samplerIndex;
 };
 [[vk::push_constant]] PushConstant pc;
+
+[[vk::binding(1, 0)]] Texture2D textures[];
+[[vk::binding(2, 0)]] SamplerState samplers[];
 
 [shader("vertex")]
 VSOutput vertexMain(uint vertexId : SV_VulkanVertexID)
@@ -36,5 +41,5 @@ VSOutput vertexMain(uint vertexId : SV_VulkanVertexID)
 [shader("fragment")]
 float4 fragmentMain(VSOutput input)
 {
-    return float4(input.color, 1.0f);
+    return textures[pc.textureIndex].Sample(samplers[pc.samplerIndex], input.uv);
 }

@@ -434,18 +434,17 @@ namespace enger
         {
             if (image.isStorageImage())
             {
-                updateBindlessStorageImage(handle.index(), image.view_);
+                updateBindlessStorageImage(handle.index(), m_TexturePool.get(handle)->view_);
             }
             else if (image.isSampledImage())
             {
-                updateBindlessSampledImage(handle.index(), image.view_);
+                updateBindlessSampledImage(handle.index(), m_TexturePool.get(handle)->view_);
             }
         }
 
         if (desc.initialData)
         {
             assert(aspectFlags == vk::ImageAspectFlagBits::eColor && "Non-color aspect for initial data");
-            assert(desc.usage & vk::ImageUsageFlagBits::eColorAttachment && "Non-color usage for initial data");
             assert(desc.usage & vk::ImageUsageFlagBits::eTransferDst && "Non-transfer dst usage for initial data (can't upload)");
             assert(desc.type == vk::ImageType::e2D && "Non-2D image for initial data");
             queue = queue ? queue : &m_GraphicsQueue;
@@ -547,6 +546,35 @@ namespace enger
         return {this, queue, handle};
     }
 
+    Holder<SamplerHandle> Device::createSampler(vk::Filter magFilter, vk::Filter minFilter, Queue* queue,
+        std::string_view debugName)
+    {
+        vk::SamplerCreateInfo samplerCI{
+            .magFilter = magFilter,
+            .minFilter = minFilter,
+            .mipmapMode = vk::SamplerMipmapMode::eLinear,
+            .addressModeU = vk::SamplerAddressMode::eRepeat,
+            .addressModeV = vk::SamplerAddressMode::eRepeat,
+            .addressModeW = vk::SamplerAddressMode::eRepeat,
+            .maxAnisotropy = 1.0f,
+            .compareEnable = vk::False,
+            .compareOp = vk::CompareOp::eAlways,
+        };
+        vk::Sampler sampler = vkCheck(m_Device->createSampler(samplerCI));
+        if (!debugName.empty())
+        {
+            setDebugName(*m_Device, sampler, debugName);
+        }
+
+        auto handle = m_SamplerPool.create(std::move(sampler));
+        if (m_UseBindless)
+        {
+            updateBindlessSampler(handle.index(), *m_SamplerPool.get(handle));
+        }
+
+        return {this, queue, handle};
+    }
+
     void Device::destroyComputePipeline(ComputePipelineHandle handle, Queue* queue)
     {
         auto pipeline = *m_ComputePipelinePool.get(handle);
@@ -632,6 +660,18 @@ namespace enger
         });
 
         m_ShaderModulePool.destroy(handle);
+    }
+
+    void Device::destroySampler(SamplerHandle handle, Queue* queue)
+    {
+        auto& sampler = *m_SamplerPool.get(handle);
+        queue = queue ? queue : &m_GraphicsQueue;
+
+        queue->deferredDestroy([=, device = *m_Device, sampler = sampler]() {
+            device.destroySampler(sampler);
+        });
+
+        m_SamplerPool.destroy(handle);
     }
 
     UniqueCommandPool Device::createUniqueCommandPool(CommandPoolFlags flags, uint32_t queueFamilyIndex,
@@ -802,7 +842,7 @@ namespace enger
         };
         vk::DescriptorPoolCreateInfo poolCI{
             .flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind | vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-            .maxSets = 10'000,
+            .maxSets = 1,
             .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
             .pPoolSizes = poolSizes.data(),
         };
@@ -855,6 +895,26 @@ namespace enger
             .dstArrayElement = index,
             .descriptorCount = 1,
             .descriptorType = vk::DescriptorType::eSampledImage,
+            .pImageInfo = &imageInfo,
+        };
+
+        m_Device->updateDescriptorSets(1, &write, 0, nullptr);
+    }
+
+    void Device::updateBindlessSampler(uint32_t index, vk::Sampler sampler)
+    {
+        assert(m_GlobalDescriptorSet);
+
+        vk::DescriptorImageInfo imageInfo{
+            .sampler = sampler,
+        };
+
+        vk::WriteDescriptorSet write{
+            .dstSet = *m_GlobalDescriptorSet,
+            .dstBinding = 2,
+            .dstArrayElement = index,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eSampler,
             .pImageInfo = &imageInfo,
         };
 

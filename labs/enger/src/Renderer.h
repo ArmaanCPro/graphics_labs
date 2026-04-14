@@ -37,9 +37,11 @@ namespace enger
 
     struct DrawPushConstants
     {
-        glm::mat4 worldMatrix;
-        vk::DeviceAddress vertexBufferDeviceAddress;
-        vk::DeviceAddress sceneDataBDA;
+        alignas(16) glm::mat4 worldMatrix;
+        alignas(8) vk::DeviceAddress vertexBufferDeviceAddress;
+        //vk::DeviceAddress sceneDataBDA;
+        alignas(4) uint32_t textureIndex;
+        alignas(4) uint32_t samplerIndex;
     };
 
     class Renderer
@@ -71,6 +73,14 @@ namespace enger
         Holder<GraphicsPipelineHandle> m_GraphicsPipeline;
 
         Holder<BufferHandle> m_GPUSceneDataBuffer;
+
+        Holder<TextureHandle> m_WhiteImage;
+        Holder<TextureHandle> m_BlackImage;
+        Holder<TextureHandle> m_GrayImage;
+        Holder<TextureHandle> m_ErrorCheckerboardImage;
+
+        Holder<SamplerHandle> m_DefaultSamplerLinear;
+        Holder<SamplerHandle> m_DefaultSamplerNearest;
 
         std::vector<std::shared_ptr<MeshAsset>> m_TestMeshes;
     };
