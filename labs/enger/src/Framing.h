@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
+
 #include "vulkan/Commands.h"
 #include "vulkan/SwapChain.h"
 
@@ -24,10 +26,15 @@ namespace enger::framing
     class FrameOrchestrator
     {
     public:
-        FrameOrchestrator(Device& device, enger::SwapChain& swapchain, GlfwWindow& window);
+        FrameOrchestrator(Device& device, SwapChain& swapchain, GlfwWindow& window);
         ~FrameOrchestrator();
 
-        std::optional<FrameContext> beginFrame();
+        enum class BeginFrameError
+        {
+            SwapchainRecreateRequired,
+            Other
+        };
+        std::expected<FrameContext, BeginFrameError> beginFrame();
         void endFrame(FrameContext& fctx);
 
         void onWindowResize(uint32_t width, uint32_t height);
@@ -41,11 +48,11 @@ namespace enger::framing
         SwapChain& m_Swapchain;
         GlfwWindow& m_Window;
 
-        std::array<enger::SubmitHandle, enger::framing::FRAMES_IN_FLIGHT> m_LastFrameSubmits = {0, 0};
-        std::array<enger::UniqueCommandPool, enger::framing::FRAMES_IN_FLIGHT> m_CommandPools;
-        std::array<enger::CommandBuffer, enger::framing::FRAMES_IN_FLIGHT> m_CommandBuffers;
+        std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits = {0, 0};
+        std::array<UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;
+        std::array<CommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
-        std::array<vk::UniqueSemaphore, enger::framing::FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
+        std::array<vk::UniqueSemaphore, FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
         std::vector<vk::UniqueSemaphore> m_RenderFinishedSemaphores;
 
         uint32_t m_CurrentFrame = 0;

@@ -89,5 +89,9 @@ namespace enger
 
         GLTFMetallic_Roughness m_GLTFMetallic_Roughness;
         MaterialInstance m_DefaultMaterial;
+
+        bool m_ShouldResize = false;
+        uint32_t m_PendingWidth = 0;
+        uint32_t m_PendingHeight = 0;
     };
 }

@@ -36,7 +36,7 @@ int main()
         resizeEventBus.push({width, height});
     });
 
-    std::vector<const char *> instanceExtensions;
+    std::vector<const char*> instanceExtensions;
 #ifndef NDEBUG
     instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
@@ -55,42 +55,60 @@ int main()
 
     auto device = enger::Device{instance.instance(), surface.surface(), requiredDeviceExtensions};
 
-    auto swapchain = enger::SwapChain{device, surface.surface(), window,
-                                      vk::PresentModeKHR::eMailbox};
+    auto swapchain = enger::SwapChain{
+        device, surface.surface(), window,
+        vk::PresentModeKHR::eMailbox
+    };
 
     enger::Renderer renderer{device, swapchain};
     enger::ImguiLayer imguiLayer{instance, device, window, swapchain};
 
     enger::framing::FrameOrchestrator frameOrchestrator{device, swapchain, window};
 
+    bool shouldRender = true;
+
     while (!window.shouldClose())
     {
         window.poll();
 
-        if (resizeEventBus.size() > 0)
+        if (!resizeEventBus.empty())
         {
             auto event = resizeEventBus.top();
-            while (resizeEventBus.size() > 0)
+            while (!resizeEventBus.empty())
             {
                 resizeEventBus.pop();
+            }
+
+            if (event.newWidth == 0 || event.newHeight == 0)
+            {
+                shouldRender = false;
+                continue;
             }
 
             frameOrchestrator.onWindowResize(event.newWidth, event.newHeight);
             renderer.onResize(event.newWidth, event.newHeight);
             imguiLayer.onResize(event.newWidth, event.newHeight);
+
+            shouldRender = true;
         }
 
-        if (auto optfctx = frameOrchestrator.beginFrame())
+        if (!shouldRender)
         {
-            auto fctx = std::move(*optfctx);
-            renderer.draw(fctx);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
+
+        auto fctx = frameOrchestrator.beginFrame();
+        if (fctx.has_value())
+        {
+            renderer.draw(fctx.value());
 
             imguiLayer.beginFrame();
             // we could remove imguiLayer.draw() and put our own imgui drawing here
             imguiLayer.draw();
-            imguiLayer.endFrame(fctx);
+            imguiLayer.endFrame(fctx.value());
 
-            frameOrchestrator.endFrame(fctx);
+            frameOrchestrator.endFrame(fctx.value());
 
             imguiLayer.postRenderFinished();
         }

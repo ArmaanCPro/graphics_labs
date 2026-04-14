@@ -119,9 +119,6 @@ namespace enger
     {
         ImGui::Render();
 
-        frameContext.cmd.transitionImage(frameContext.swapchainImageHandle,
-            vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
-
         vk::RenderingAttachmentInfo colorAttachmentInfo{
             .imageView = m_Device.getImage(frameContext.swapchainImageHandle)->view_,
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,

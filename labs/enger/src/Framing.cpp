@@ -5,7 +5,7 @@
 
 #include "vulkan/QueueSubmitBuilder.h"
 
-namespace enger
+namespace enger::framing
 {
     framing::FrameOrchestrator::FrameOrchestrator(Device& device, enger::SwapChain& swapchain, GlfwWindow& window)
         :
@@ -34,7 +34,7 @@ namespace enger
         m_RenderFinishedSemaphores.reserve(swapchain.numSwapChainImages());
         for (uint32_t i = 0; i < swapchain.numSwapChainImages(); ++i)
         {
-            m_RenderFinishedSemaphores.push_back(enger::vkCheck(device.device().createSemaphoreUnique({})));
+            m_RenderFinishedSemaphores.push_back(vkCheck(device.device().createSemaphoreUnique({})));
             enger::setDebugName(device.device(), *m_RenderFinishedSemaphores[i],
                          "FrameRenderFinishedSemaphore" + std::to_string(i));
         }
@@ -45,22 +45,15 @@ namespace enger
         vkCheck(m_Device.device().waitIdle());
     }
 
-    std::optional<framing::FrameContext> framing::FrameOrchestrator::beginFrame()
+    std::expected<framing::FrameContext, FrameOrchestrator::BeginFrameError> framing::FrameOrchestrator::beginFrame()
     {
-        if (!m_ShouldRender)
-        {
-            // throttle
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            return std::nullopt;
-        }
-
         m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
         m_GraphicsQueue.flushDeletionQueue();
 
         if (m_ShouldRecreateSwapchain)
         {
             recreateSwapchain();
-            //return std::nullopt;
+            return std::unexpected{BeginFrameError::SwapchainRecreateRequired};
         }
 
         uint32_t swapchainImageIndex = 0;
@@ -74,20 +67,20 @@ namespace enger
         if (acquireResult == vk::Result::eErrorOutOfDateKHR)
         {
             m_ShouldRecreateSwapchain = true;
-            return std::nullopt;
+            return std::unexpected{BeginFrameError::SwapchainRecreateRequired};
         }
 
         enger::CommandBuffer& cmd = m_CommandBuffers[m_CurrentFrame];
         cmd.reset();
         cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-        return std::make_optional<FrameContext>(
-            cmd,
-            swapchainImageIndex,
-            m_Swapchain.swapChainImageHandle(swapchainImageIndex),
-            m_Swapchain.swapChainExtent(),
-            m_CurrentFrame
-        );
+        return FrameContext{
+            .cmd = cmd,
+            .swapchainImageIndex = swapchainImageIndex,
+            .swapchainImageHandle = m_Swapchain.swapChainImageHandle(swapchainImageIndex),
+            .swapchainExtent = m_Swapchain.swapChainExtent(),
+            .frameIndex = m_CurrentFrame
+        };
     }
 
     void framing::FrameOrchestrator::endFrame(FrameContext& fctx)
@@ -101,13 +94,13 @@ namespace enger
         cmd.end();
 
         enger::QueueSubmitBuilder submission{};
-        submission.waitBinary(*m_ImageAvailableSemaphores[m_CurrentFrame],
+        submission.waitBinary(*m_ImageAvailableSemaphores[fctx.frameIndex],
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput);
         submission.signalBinary(*m_RenderFinishedSemaphores[fctx.swapchainImageIndex],
                                 vk::PipelineStageFlagBits2::eColorAttachmentOutput);
         submission.addCmd(cmd);
 
-        m_LastFrameSubmits[m_CurrentFrame] = m_GraphicsQueue.submit(submission.build());
+        m_LastFrameSubmits[fctx.frameIndex] = m_GraphicsQueue.submit(submission.build());
         auto presentResult = m_Swapchain.present(
             {{*m_RenderFinishedSemaphores[fctx.swapchainImageIndex]}},
             fctx.swapchainImageIndex,
@@ -122,17 +115,9 @@ namespace enger
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
     }
 
-    void framing::FrameOrchestrator::onWindowResize(uint32_t width, uint32_t height)
+    void framing::FrameOrchestrator::onWindowResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height)
     {
-        if (width == 0 || height == 0)
-        {
-            m_ShouldRender = false;
-        }
-        else
-        {
-            m_ShouldRender = true;
-            m_ShouldRecreateSwapchain = true;
-        }
+        m_ShouldRecreateSwapchain = true;
     }
 
     void framing::FrameOrchestrator::recreateSwapchain()
@@ -145,6 +130,7 @@ namespace enger
         m_Swapchain.recreate(width, height);
 
         m_RenderFinishedSemaphores.clear();
+        m_RenderFinishedSemaphores.reserve(m_Swapchain.numSwapChainImages());
         for (uint32_t i = 0; i < m_Swapchain.numSwapChainImages(); ++i)
         {
             m_RenderFinishedSemaphores.push_back(enger::vkCheck(m_Device.device().createSemaphoreUnique({})));

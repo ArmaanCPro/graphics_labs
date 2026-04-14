@@ -143,6 +143,12 @@ namespace enger
 
     void Renderer::draw(framing::FrameContext& fctx)
     {
+        if (m_ShouldResize)
+        {
+            createRenderTextures(m_PendingWidth, m_PendingHeight);
+            m_ShouldResize = false;
+        }
+
         auto& cmd = fctx.cmd;
 
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
@@ -153,7 +159,7 @@ namespace enger
         vk::RenderingAttachmentInfo colorAttachmentInfo{
             .imageView = m_Device.getImage(m_RenderTarget)->view_,
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
         };
         vk::RenderingAttachmentInfo depthAttachmentInfo{
@@ -223,11 +229,16 @@ namespace enger
                             vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
         cmd.blitImage(m_RenderTarget, fctx.swapchainImageHandle);
+
+        // Leave the swapchain image in a usable state for UI
+        cmd.transitionImage(fctx.swapchainImageHandle, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
     }
 
     void Renderer::onResize(uint32_t width, uint32_t height)
     {
-        createRenderTextures(width, height);
+        m_PendingWidth = width;
+        m_PendingHeight = height;
+        m_ShouldResize = true;
     }
 
     void Renderer::updateScene()
