@@ -8,6 +8,8 @@
 
 #include <glm/glm.hpp>
 
+#include "SceneGraph.h"
+
 namespace enger
 {
     // Describes vertex data.
@@ -27,11 +29,17 @@ namespace enger
         Holder<BufferHandle> indexBuffer;
     };
 
+    struct GLTFMaterial
+    {
+        MaterialInstance& material;
+    };
+
     // Defines the indices of a surface. A surface is a sub-mesh: a unique draw call.
     struct GeoSurface
     {
         uint32_t startIndex;
         uint32_t indexCount;
+        std::shared_ptr<GLTFMaterial> material;
     };
 
     // Describes a mesh consisting of different sub-meshes, all stored in a single vertex & index buffer.

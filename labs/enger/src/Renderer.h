@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <fastgltf/types.hpp>
 
 #include "Imgui.h"
 #include "vulkan/Descriptors.h"
@@ -13,6 +14,7 @@
 
 #include "Framing.h"
 #include "MeshLoader.h"
+#include "SceneGraph.h"
 
 namespace enger
 {
@@ -39,8 +41,10 @@ namespace enger
     {
         alignas(16) glm::mat4 worldMatrix;
         alignas(8) vk::DeviceAddress vertexBufferDeviceAddress;
-        //vk::DeviceAddress sceneDataBDA;
-        alignas(4) uint32_t textureIndex;
+        alignas(8) vk::DeviceAddress sceneDataBDA;
+        alignas(8) vk::DeviceAddress materialBDA;
+        alignas(4) uint32_t colorTextureIndex;
+        alignas(4) uint32_t metallicRoughnessTextureIndex;
         alignas(4) uint32_t samplerIndex;
     };
 
@@ -54,6 +58,7 @@ namespace enger
         void onResize(uint32_t width, uint32_t height);
 
     private:
+        void updateScene();
 
         void createRenderTextures(uint32_t width, uint32_t height);
 
@@ -66,12 +71,7 @@ namespace enger
         Holder<TextureHandle> m_RenderTarget;
         Holder<TextureHandle> m_DepthBuffer;
 
-        Holder<PipelineLayoutHandle> m_GradientPipelineLayout;
-        Holder<ComputePipelineHandle> m_GradientPipeline;
-
-        Holder<PipelineLayoutHandle> m_GraphicsPipelineLayout;
-        Holder<GraphicsPipelineHandle> m_GraphicsPipeline;
-
+        GPUSceneData m_SceneData;
         Holder<BufferHandle> m_GPUSceneDataBuffer;
 
         Holder<TextureHandle> m_WhiteImage;
@@ -83,5 +83,11 @@ namespace enger
         Holder<SamplerHandle> m_DefaultSamplerNearest;
 
         std::vector<std::shared_ptr<MeshAsset>> m_TestMeshes;
+
+        DrawContext m_MainDrawContext;
+        std::unordered_map<std::string, std::shared_ptr<Node>> m_LoadedNodes;
+
+        GLTFMetallic_Roughness m_GLTFMetallic_Roughness;
+        MaterialInstance m_DefaultMaterial;
     };
 }
