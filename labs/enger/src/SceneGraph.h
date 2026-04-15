@@ -44,7 +44,7 @@ namespace enger
     struct MaterialPipeline
     {
         Holder<GraphicsPipelineHandle> pipeline;
-        Holder<PipelineLayoutHandle> pipelineLayout;
+        PipelineLayoutHandle pipelineLayout;
     };
 
     struct MaterialInstance

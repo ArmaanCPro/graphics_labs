@@ -12,6 +12,7 @@
 #include "SceneGraph.h"
 
 #include "MeshLoader.h"
+#include "vulkan/PushConstantRanges.h"
 
 namespace enger
 {
@@ -76,16 +77,12 @@ namespace enger
         stats.triangleCount = 0;
         auto start = std::chrono::high_resolution_clock::now();
         
-        // Currently, all render objects are opaque
-        assert(dctx.opaqueSurfaces.size() > 0);
-        // TODO right now the pipeline layout system is very unsturdy. I need a global bindless pipeline layout (meaning 1 descriptor set layout and 1 push constant range)
-        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, dctx.opaqueSurfaces[0].material->pipeline->pipelineLayout, 0,
-                    {{m_Device.bindlessDescriptorSet()}});
+        cmd.bindDescriptorSetsBindless(vk::PipelineBindPoint::eGraphics);
 
         auto draw = [&](const RenderObject& drawObj) {
             cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
 
-            DrawPushConstants pc{
+            GraphicsPushConstants pc{
                 .worldMatrix = drawObj.transform,
                 .vertexBufferDeviceAddress = m_Device.getBuffer(drawObj.vertexBuffer)->deviceAddress_,
                 .sceneDataBDA = m_Device.getBuffer(drawObj.material->resources.dataBuffer)->deviceAddress_,

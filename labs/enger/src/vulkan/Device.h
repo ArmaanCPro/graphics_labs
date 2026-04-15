@@ -150,6 +150,16 @@ namespace enger
             return *m_GlobalDescriptorSet;
         }
 
+        [[nodiscard]] PipelineLayoutHandle bindlessComputePipelineLayout()
+        {
+            return m_BindlessComputePipelineLayout;
+        }
+
+        [[nodiscard]] PipelineLayoutHandle bindlessGraphicsPipelineLayout()
+        {
+            return m_BindlessGraphicsPipelineLayout;
+        }
+
         void waitIdle()
         {
             vkCheck(m_Device->waitIdle());
@@ -182,7 +192,10 @@ namespace enger
         vk::UniqueDescriptorPool m_BindlessPool;
         vk::UniqueDescriptorSet m_GlobalDescriptorSet;
 
-        void initBindlessDescriptors();
+        Holder<PipelineLayoutHandle> m_BindlessComputePipelineLayout;
+        Holder<PipelineLayoutHandle> m_BindlessGraphicsPipelineLayout;
+
+        void initBindless();
 
         // consider adding this on resource deletion, and writing VK_NULL_HANDLE/nullptr for robustness2
         void updateBindlessStorageImage(uint32_t index, vk::ImageView view);

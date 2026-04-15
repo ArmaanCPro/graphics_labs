@@ -5,6 +5,7 @@
 #include <span>
 
 #include "Descriptors.h"
+#include "PushConstantRanges.h"
 
 namespace enger
 {
@@ -147,7 +148,7 @@ namespace enger
 
         if (m_UseBindless)
         {
-            initBindlessDescriptors();
+            initBindless();
         }
     }
 
@@ -783,7 +784,7 @@ namespace enger
         m_TexturePool.destroy(handle);
     }
 
-    void Device::initBindlessDescriptors()
+    void Device::initBindless()
     {
         assert(m_Device);
 
@@ -861,6 +862,26 @@ namespace enger
         };
         m_GlobalDescriptorSet = std::move(vkCheck(m_Device->allocateDescriptorSetsUnique(allocCI)).front());
         setDebugName(*m_Device, *m_GlobalDescriptorSet, "Bindless Descriptor Set");
+
+        // Create Pipeline Layouts
+        PushConstantsInfo computePCI{
+            .offset = 0,
+            .size = sizeof(ComputePushConstants),
+            .stages = vk::ShaderStageFlagBits::eCompute,
+        };
+        m_BindlessComputePipelineLayout = createPipelineLayout({
+            .descriptorLayouts = {{m_BindlessLayoutHandle}},
+            .pushConstantRanges = {{computePCI}},
+        }, &m_GraphicsQueue, "Bindless Compute Pipeline Layout");
+        PushConstantsInfo graphicsPCI{
+            .offset = 0,
+            .size = sizeof(GraphicsPushConstants),
+            .stages = vk::ShaderStageFlagBits::eAllGraphics,
+        };
+        m_BindlessGraphicsPipelineLayout = createPipelineLayout({
+            .descriptorLayouts = {{m_BindlessLayoutHandle}},
+            .pushConstantRanges = {{graphicsPCI}},
+        }, &m_GraphicsQueue, "Bindless Graphics Pipeline Layout");
     }
 
     void Device::updateBindlessStorageImage(uint32_t index, vk::ImageView view)

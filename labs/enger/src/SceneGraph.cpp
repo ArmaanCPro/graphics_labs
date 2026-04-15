@@ -46,20 +46,7 @@ namespace enger
         Holder<ShaderModuleHandle> shaderModule = device.createShaderModule(std::move(expectedShaderData.value()),
             nullptr, "GLTFMetallic_Roughness: MeshShaderModule");
 
-        PushConstantsInfo pushConstantRange = {
-            .offset = 0,
-            .size = sizeof(DrawPushConstants),
-            .stages = vk::ShaderStageFlagBits::eAllGraphics
-        };
-        opaquePipeline.pipelineLayout = device.createPipelineLayout(PipelineLayoutDesc{
-            .descriptorLayouts = {{device.bindlessDescriptorSetLayout()}},
-            .pushConstantRanges = {{pushConstantRange}},
-        }, nullptr, "GLTFMetallic_Roughness: OpaquePipelineLayout");
-        transparentPipeline.pipelineLayout = device.createPipelineLayout(PipelineLayoutDesc{
-            .descriptorLayouts = {{device.bindlessDescriptorSetLayout()}},
-            .pushConstantRanges = {{pushConstantRange}},
-        }, nullptr, "GLTFMetallic_Roughness: TransparentPipelineLayout");
-
+        opaquePipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
         opaquePipeline.pipeline = device.createGraphicsPipeline(GraphicsPipelineDesc{
             .pipelineLayout = opaquePipeline.pipelineLayout,
             .vertexShaderModule = shaderModule,
@@ -81,6 +68,7 @@ namespace enger
             .frontFace = vk::FrontFace::eCounterClockwise,
         }, nullptr, "GLTFMetallic_Roughness: OpaquePipeline");
 
+        transparentPipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
         transparentPipeline.pipeline = device.createGraphicsPipeline(GraphicsPipelineDesc{
             .pipelineLayout = transparentPipeline.pipelineLayout,
             .vertexShaderModule = shaderModule,

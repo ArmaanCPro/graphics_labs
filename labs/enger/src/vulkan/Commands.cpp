@@ -89,7 +89,9 @@ namespace enger
             .newLayout = dstLayout,
             .image = image->image_,
             .subresourceRange = vk::ImageSubresourceRange{
-                .aspectMask = dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal ? vk::ImageAspectFlagBits::eDepth : vk::ImageAspectFlagBits::eColor,
+                .aspectMask = dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                  ? vk::ImageAspectFlagBits::eDepth
+                                  : vk::ImageAspectFlagBits::eColor,
                 .baseMipLevel = 0,
                 .levelCount = vk::RemainingMipLevels,
                 .baseArrayLayer = 0,
@@ -113,8 +115,8 @@ namespace enger
         auto* dstImage = m_Device->getImage(dstTexHandle);
         assert(dstImage != nullptr);
 
-        vk::Extent2D srcExtent = { srcImage->extent_.width, srcImage->extent_.height };
-        vk::Extent2D dstExtent = { dstImage->extent_.width, dstImage->extent_.height };
+        vk::Extent2D srcExtent = {srcImage->extent_.width, srcImage->extent_.height};
+        vk::Extent2D dstExtent = {dstImage->extent_.width, dstImage->extent_.height};
 
         vk::ImageBlit2 blitRegion{};
         blitRegion.srcOffsets[1].x = srcExtent.width;
@@ -146,7 +148,8 @@ namespace enger
         m_CommandBuffer.blitImage2(blitInfo);
     }
 
-    void CommandBuffer::clearColorImage(TextureHandle texHandle, vk::ClearColorValue color, vk::ImageAspectFlags aspectMask)
+    void CommandBuffer::clearColorImage(TextureHandle texHandle, vk::ClearColorValue color,
+                                        vk::ImageAspectFlags aspectMask)
     {
         assert(m_Device != nullptr);
         auto* image = m_Device->getImage(texHandle);
@@ -182,7 +185,8 @@ namespace enger
         auto* imageObj = m_Device->getImage(image);
         assert(imageObj != nullptr);
 
-        m_CommandBuffer.copyBufferToImage(bufferObj->buffer_, imageObj->image_, vk::ImageLayout::eTransferDstOptimal, 1, &region);
+        m_CommandBuffer.copyBufferToImage(bufferObj->buffer_, imageObj->image_, vk::ImageLayout::eTransferDstOptimal, 1,
+                                          &region);
     }
 
     void CommandBuffer::setViewport(vk::Viewport& viewport)
@@ -195,7 +199,7 @@ namespace enger
         m_CommandBuffer.setScissor(0, 1, &scissor);
     }
 
-    void CommandBuffer::beginRendering(vk::RenderingInfo &renderingInfo)
+    void CommandBuffer::beginRendering(vk::RenderingInfo& renderingInfo)
     {
         m_CommandBuffer.beginRendering(renderingInfo);
     }
@@ -233,8 +237,29 @@ namespace enger
         m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, firstSet, descriptorSets, nullptr);
     }
 
+    void CommandBuffer::bindDescriptorSetsBindless(vk::PipelineBindPoint bindPoint)
+    {
+        assert(m_Device != nullptr);
+        assert(m_Device->bindlessDescriptorSet());
+        PipelineLayout* layout = nullptr;
+
+        switch (bindPoint)
+        {
+            case vk::PipelineBindPoint::eGraphics:
+                layout = m_Device->getPipelineLayout(m_Device->bindlessGraphicsPipelineLayout());
+                break;
+            case vk::PipelineBindPoint::eCompute:
+                layout = m_Device->getPipelineLayout(m_Device->bindlessComputePipelineLayout());
+            default:
+                layout = nullptr;
+        }
+        assert(layout);
+        m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, 0,
+            m_Device->bindlessDescriptorSet(), nullptr);
+    }
+
     void CommandBuffer::pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages,
-                                      uint32_t offset, uint32_t size, const void *data)
+                                      uint32_t offset, uint32_t size, const void* data)
     {
         assert(m_Device != nullptr);
         auto* layout = m_Device->getPipelineLayout(pipelineLayout);
@@ -263,13 +288,14 @@ namespace enger
     }
 
     void CommandBuffer::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
-        int32_t vertexOffset, uint32_t firstInstance)
+                                    int32_t vertexOffset, uint32_t firstInstance)
     {
         m_CommandBuffer.drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
 
-    CommandBuffer::CommandBuffer(Device *device, vk::CommandBuffer commandBuffer)
+    CommandBuffer::CommandBuffer(Device* device, vk::CommandBuffer commandBuffer)
         :
-        m_Device(device), m_CommandBuffer(commandBuffer)
+        m_Device(device),
+        m_CommandBuffer(commandBuffer)
     {}
 }
