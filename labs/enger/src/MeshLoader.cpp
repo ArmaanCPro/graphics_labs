@@ -273,7 +273,7 @@ namespace enger
         auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
         if (!data)
         {
-            std::println("Failed to load gltf file: {}", filePath.string());
+            std::cerr << "Failed to load gltf file: " <<  filePath.string();
             return std::nullopt;
         }
 

@@ -111,6 +111,8 @@ namespace enger
 
         m_DefaultMaterial = m_GLTFMetallic_Roughness.writeMaterial(MaterialPass::MainColor,
                                                                    std::move(materialResources));
+
+        loadScene("assets/structure.glb");
     }
 
     void SceneManager::loadScene(const std::filesystem::path& filePath)
