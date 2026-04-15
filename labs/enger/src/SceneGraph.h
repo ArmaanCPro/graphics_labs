@@ -3,12 +3,15 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 
+#include "MeshLoader.h"
 #include "vulkan/vk.h"
 
 #include "Resources.h"
 
 namespace enger
 {
+    // MATERIALS
+
     enum class MaterialPass : uint8_t
     {
         MainColor,
@@ -33,7 +36,7 @@ namespace enger
         TextureHandle metallicRoughnessImage;
         SamplerHandle metallicRoughnessSampler;
         BufferHandle dataBuffer;
-        Holder<BufferHandle> materialConstantsBuffer; // this is a handle to a buffer of MaterialConstants
+        BufferHandle materialConstantsBuffer; // this is a handle to a buffer of MaterialConstants
         uint32_t materialConstantsBufferOffset;
     };
 
@@ -51,6 +54,10 @@ namespace enger
         MaterialPass passType;
     };
 
+    struct GLTFMaterial
+    {
+        MaterialInstance material;
+    };
 
     // Houses everything pertinent to materials. A helper.
     struct GLTFMetallic_Roughness
@@ -86,7 +93,6 @@ namespace enger
     public:
         virtual ~IRenderable() = default;
 
-    private:
         virtual void draw(const glm::mat4& topMatrix, DrawContext& ctx) = 0;
     };
 
@@ -124,5 +130,40 @@ namespace enger
         std::shared_ptr<MeshAsset> mesh;
 
         void draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
+    };
+
+    // Encompasses all GLTF data, and holds its own Nodes. Basically represents an entire glTF File (Scene)
+    class LoadedGLTF : public IRenderable
+    {
+    public:
+        explicit LoadedGLTF(Device& device) : device(device) {}
+
+        // Storage/Handles to all the data on a glTF file
+        std::unordered_map<std::string, std::shared_ptr<MeshAsset>> meshes_;
+        std::unordered_map<std::string, std::shared_ptr<Node>> nodes_;
+        std::unordered_map<std::string, TextureHandle> images_;
+        std::unordered_map<std::string, std::shared_ptr<GLTFMaterial>> materials_;
+
+        // nodes that don't have a parent. Files are in a tree-like structure, so there will be roots
+        std::vector<std::shared_ptr<Node>> topNodes_;
+
+        std::vector<SamplerHandle> samplers_;
+
+        Holder<BufferHandle> materialDataBuffer;
+
+        virtual ~LoadedGLTF() override { clearAll(); };
+
+        void draw(const glm::mat4& topMatrix, DrawContext& ctx) override
+        {
+            for (auto& n : topNodes_)
+            {
+                n->draw(topMatrix, ctx);
+            }
+        }
+
+    private:
+        Device& device;
+
+        void clearAll() {}
     };
 }

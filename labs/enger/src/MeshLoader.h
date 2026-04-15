@@ -3,15 +3,14 @@
 #include "vulkan/vk.h"
 #include "Resources.h"
 
-#include <unordered_map>
 #include <filesystem>
 
 #include <glm/glm.hpp>
 
-#include "SceneGraph.h"
-
 namespace enger
 {
+    struct GLTFMaterial;
+
     // Describes vertex data.
     struct Vertex
     {
@@ -29,10 +28,6 @@ namespace enger
         Holder<BufferHandle> indexBuffer;
     };
 
-    struct GLTFMaterial
-    {
-        MaterialInstance& material;
-    };
 
     // Defines the indices of a surface. A surface is a sub-mesh: a unique draw call.
     struct GeoSurface
@@ -51,5 +46,9 @@ namespace enger
     };
 
     class Device;
-    std::optional<std::vector<std::shared_ptr<MeshAsset>>> LoadMeshes(Device& device, const std::filesystem::path& filePath);
+    class LoadedGLTF;
+    class SceneManager;
+
+    std::optional<std::shared_ptr<LoadedGLTF> > LoadMeshes(Device& device, SceneManager& sceneManager,
+                                                           const std::filesystem::path& filePath);
 }

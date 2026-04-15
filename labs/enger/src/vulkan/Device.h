@@ -73,8 +73,8 @@ namespace enger
         Holder<ShaderModuleHandle> createShaderModule(std::span<const uint32_t> code, Queue* queue,
                                                       std::string_view debugName = "");
 
-        Holder<SamplerHandle> createSampler(vk::Filter magFilter, vk::Filter minFilter, Queue* queue,
-                                            std::string_view debugName = "");
+        Holder<SamplerHandle> createSampler(SamplerDesc desc,
+                                            Queue* queue, std::string_view debugName = "");
 
         void destroyComputePipeline(ComputePipelineHandle handle, Queue* queue);
 

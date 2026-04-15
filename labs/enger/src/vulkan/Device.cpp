@@ -546,20 +546,24 @@ namespace enger
         return {this, queue, handle};
     }
 
-    Holder<SamplerHandle> Device::createSampler(vk::Filter magFilter, vk::Filter minFilter, Queue* queue,
-        std::string_view debugName)
+    Holder<SamplerHandle> Device::createSampler(SamplerDesc desc,
+                                                Queue* queue, std::string_view debugName)
     {
         vk::SamplerCreateInfo samplerCI{
-            .magFilter = magFilter,
-            .minFilter = minFilter,
-            .mipmapMode = vk::SamplerMipmapMode::eLinear,
-            .addressModeU = vk::SamplerAddressMode::eRepeat,
-            .addressModeV = vk::SamplerAddressMode::eRepeat,
-            .addressModeW = vk::SamplerAddressMode::eRepeat,
-            .maxAnisotropy = 1.0f,
+            .magFilter = desc.magFilter,
+            .minFilter = desc.minFilter,
+            .mipmapMode = desc.mipmapMode,
+            .addressModeU = desc.addressModeU,
+            .addressModeV = desc.addressModeV,
+            .addressModeW = desc.addressModeW,
+            .anisotropyEnable = desc.anisotropyEnable,
+            .maxAnisotropy = desc.maxAnisotropy,
             .compareEnable = vk::False,
             .compareOp = vk::CompareOp::eAlways,
+            .minLod = desc.minLod,
+            .maxLod = desc.maxLod,
         };
+
         vk::Sampler sampler = vkCheck(m_Device->createSampler(samplerCI));
         if (!debugName.empty())
         {

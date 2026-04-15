@@ -30,7 +30,7 @@ function(compile_slang_shaders target shader_dir output_dir)
         set(SPV_OUT "${output_dir}/${SHADER_STEM}.spv")
 
         set(OPT_FLAG $<IF:$<CONFIG:Debug>,-O0,-O2>)
-        set(DEBUG_FLAGS $<$<CONFIG:Debug>:-g3>)
+        set(DEBUG_FLAGS $<IF:$<CONFIG:Debug>,-g3,-g0>)
 
         add_custom_command(
                 OUTPUT "${SPV_OUT}"

@@ -27,14 +27,15 @@ namespace enger
     private:
         Device& m_Device;
 
-        std::vector<std::shared_ptr<MeshAsset>> m_TestMeshes;
+        std::shared_ptr<LoadedGLTF> m_TestMeshes;
 
         DrawContext m_DrawContext;
-        std::unordered_map<std::string, std::shared_ptr<Node>> m_LoadedNodes;
+        std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> m_LoadedScenes;
 
         GPUSceneData m_SceneData;
         Holder<BufferHandle> m_GPUSceneDataBuffer;
 
+    public:
         Holder<TextureHandle> m_WhiteImage;
         Holder<TextureHandle> m_BlackImage;
         Holder<TextureHandle> m_GrayImage;

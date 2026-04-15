@@ -12,13 +12,6 @@ namespace enger
     SceneManager::SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat)
         : m_Device(device)
     {
-        auto expectedMeshes = LoadMeshes(device, "assets/basicmesh.glb");
-        if (!expectedMeshes)
-        {
-            std::cerr << "Failed to load meshes" << std::endl;
-            std::terminate();
-        }
-        m_TestMeshes = expectedMeshes.value();
 
         // Default Textures
         uint32_t white = glm::packUnorm4x8(glm::vec4{1.0f, 1.0f, 1.0f, 1.0f});
@@ -70,23 +63,27 @@ namespace enger
                                                                   .initialData = pixels.data(),
                                                               }, nullptr, "ErrorCheckerboardImage");
 
-            m_DefaultSamplerLinear = m_Device.createSampler(
-                vk::Filter::eLinear, vk::Filter::eLinear, nullptr, "DefaultSamplerLinear"
-            );
+            m_DefaultSamplerLinear = m_Device.createSampler({
+                                                                .magFilter = vk::Filter::eLinear,
+                                                                .minFilter = vk::Filter::eLinear,
+                                                            }, nullptr, "DefaultSamplerLinear");
 
-            m_DefaultSamplerNearest = m_Device.createSampler(
-                vk::Filter::eNearest, vk::Filter::eNearest, nullptr, "DefaultSamplerNearest"
-            );
+            m_DefaultSamplerNearest = m_Device.createSampler({
+                                                                 .magFilter = vk::Filter::eNearest,
+                                                                 .minFilter = vk::Filter::eNearest,
+                                                             }, nullptr, "DefaultSamplerNearest");
         }
 
         m_GPUSceneDataBuffer = m_Device.createBuffer(sizeof(GPUSceneData),
-            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            nullptr, "GPUSceneData");
+                                                     vk::BufferUsageFlagBits::eUniformBuffer |
+                                                     vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                                                     vk::MemoryPropertyFlagBits::eHostVisible |
+                                                     vk::MemoryPropertyFlagBits::eHostCoherent,
+                                                     nullptr, "GPUSceneData");
 
         // MATERIALS
         m_GLTFMetallic_Roughness.buildPipelines(m_Device, renderFormat,
-            depthFormat);
+                                                depthFormat);
 
         MaterialResources materialResources;
         materialResources.colorImage = m_WhiteImage;
@@ -97,20 +94,26 @@ namespace enger
         materialResources.dataBuffer = m_GPUSceneDataBuffer;
 
         auto materialConstants = m_Device.createBuffer(sizeof(MaterialConstants),
-            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            nullptr, "MaterialConstants"
+                                                       vk::BufferUsageFlagBits::eUniformBuffer |
+                                                       vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                                                       vk::MemoryPropertyFlagBits::eHostVisible |
+                                                       vk::MemoryPropertyFlagBits::eHostCoherent,
+                                                       nullptr, "MaterialConstants"
         );
-        MaterialConstants materialConstantsData{.colorFactors = glm::vec4(1),
-            .metallicRoughnessFactors = glm::vec4(1, 0.5, 0, 0)};
+        MaterialConstants materialConstantsData{
+            .colorFactors = glm::vec4(1),
+            .metallicRoughnessFactors = glm::vec4(1, 0.5, 0, 0)
+        };
         m_Device.getBuffer(materialConstants)->bufferSubData(m_Device.allocator(), 0, sizeof(MaterialConstants),
                                                              &materialConstantsData);
 
         materialResources.materialConstantsBuffer = std::move(materialConstants);
 
-        m_DefaultMaterial = m_GLTFMetallic_Roughness.writeMaterial(MaterialPass::MainColor, std::move(materialResources));
+        m_DefaultMaterial = m_GLTFMetallic_Roughness.writeMaterial(MaterialPass::MainColor,
+                                                                   std::move(materialResources));
 
-        for (auto& m : m_TestMeshes)
+        /*
+        for (auto& m: m_TestMeshes)
         {
             std::shared_ptr<MeshNode> newNode = std::make_shared<MeshNode>();
             newNode->mesh = m;
@@ -118,26 +121,42 @@ namespace enger
             newNode->localTransform = glm::mat4(1.0f);
             newNode->worldTransform = glm::mat4(1.0f);
 
-            for (auto& s : newNode->mesh->surfaces)
+            for (auto& s: newNode->mesh->surfaces)
             {
                 s.material = std::move(std::make_shared<GLTFMaterial>(m_DefaultMaterial));
             }
 
             m_LoadedNodes[m->name] = std::move(newNode);
+        } */
+
+        auto expectedMeshes = LoadMeshes(device, *this, "assets/basicmesh.glb");
+        if (!expectedMeshes)
+        {
+            std::cerr << "Failed to load meshes" << std::endl;
+            std::terminate();
         }
+        m_TestMeshes = expectedMeshes.value();
+        m_LoadedScenes["Suzanne"] = m_TestMeshes;
+
+        auto structureFile = LoadMeshes(device, *this, "assets/structure.glb");
+        assert(structureFile.has_value());
+        m_LoadedScenes["structure"] = structureFile.value();
     }
 
     const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera)
     {
         m_DrawContext.opaqueSurfaces.clear();
 
-        m_LoadedNodes["Suzanne"]->draw(glm::mat4(1.0f), m_DrawContext);
+        for (auto& [name, scene] : m_LoadedScenes)
+        {
+            scene->draw(glm::mat4(1.0f), m_DrawContext);
+        }
 
         glm::mat4 view = camera.viewMatrix();
         m_SceneData.view = view;
         m_SceneData.proj = glm::perspective(glm::radians(70.0f),
-            width / height,
-            10000.0f, 0.1f);
+                                            width / height,
+                                            10000.0f, 0.1f);
 
         m_SceneData.viewProj = m_SceneData.proj * m_SceneData.view;
 
@@ -145,16 +164,18 @@ namespace enger
         m_SceneData.sunlightColor = glm::vec4(0.8f, 0.6f, 0.7f, 1.0f);
         m_SceneData.sunlightDirection = glm::vec4(0.0f, 1.0f, 0.5f, 1.0f);
 
+        /*
         for (int x = -3; x < 3; x++)
         {
             glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3{0.2f});
             glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3{x, 1, 0});
 
-            m_LoadedNodes["Cube"]->draw(translation * scale, m_DrawContext);
+            m_LoadedScenes["Cube"]->draw(translation * scale, m_DrawContext);
         }
+        */
 
         m_Device.getBuffer(m_GPUSceneDataBuffer)->bufferSubData(m_Device.allocator(), 0, sizeof(GPUSceneData),
-            &m_SceneData);
+                                                                &m_SceneData);
 
         return m_DrawContext;
     }

@@ -34,6 +34,20 @@ namespace enger
         const void* initialData = nullptr;
     };
 
+    struct SamplerDesc
+    {
+        vk::Filter magFilter = vk::Filter::eLinear;
+        vk::Filter minFilter = vk::Filter::eLinear;
+        vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear;
+        vk::SamplerAddressMode addressModeU = vk::SamplerAddressMode::eRepeat;
+        vk::SamplerAddressMode addressModeV = vk::SamplerAddressMode::eRepeat;
+        vk::SamplerAddressMode addressModeW = vk::SamplerAddressMode::eRepeat;
+        bool anisotropyEnable = false;
+        float maxAnisotropy = 16.0f;
+        float minLod = 0.0f;
+        float maxLod = vk::LodClampNone;
+    };
+
     struct VulkanImage final
     {
         // clang-format off
