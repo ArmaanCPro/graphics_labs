@@ -123,14 +123,13 @@ int main()
             renderer.render(fctx.value(), dctx, stats);
 
             imguiLayer.beginFrame();
-            // we could remove imguiLayer.draw() and put our own imgui drawing here
-            imguiLayer.draw();
             ImGui::Begin("Stats");
-            ImGui::Text("Frame Time %f ms", stats.frameTime);
-            ImGui::Text("Draw Time %f ms", stats.meshDrawTime);
-            ImGui::Text("Update Time %f ms", stats.sceneUpdateTime);
-            ImGui::Text("Triangles: %d", stats.triangleCount);
-            ImGui::Text("Draw Calls: %d", stats.drawCalls);
+            ImGui::Text("FPS: %.1f", 1000.0f / stats.frameTime);
+            ImGui::Text("Frame Time: %.2f ms", stats.frameTime);
+            ImGui::Text("Draw Time: %.2f ms", stats.meshDrawTime);
+            ImGui::Text("Update Time: %.2f ms", stats.sceneUpdateTime);
+            ImGui::Text("Triangles: %i", stats.triangleCount);
+            ImGui::Text("Draw Calls: %i", stats.drawCalls);
             ImGui::End();
             imguiLayer.endFrame(fctx.value());
 
@@ -140,7 +139,7 @@ int main()
         }
 
         auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         stats.frameTime = elapsed.count() / 1000.0f;
     }
 

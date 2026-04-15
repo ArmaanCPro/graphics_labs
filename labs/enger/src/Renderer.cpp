@@ -116,7 +116,7 @@ namespace enger
         cmd.endRendering();
 
         auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         stats.meshDrawTime = elapsed.count() / 1000.0f;
 
         // transition to blit

@@ -172,7 +172,7 @@ namespace enger
                                                                 &m_SceneData);
 
         auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         stats.sceneUpdateTime = elapsed.count() / 1000.0f;
 
         return m_DrawContext;

@@ -21,8 +21,6 @@ namespace enger
         virtual ~UILayer() = default;
 
         virtual void beginFrame() = 0;
-        // This could be a user-defined draw function later, but for now it is built-in.
-        virtual void draw() = 0;
         virtual void endFrame(framing::FrameContext& fctx) = 0;
 
         virtual void postRenderFinished() = 0;
@@ -37,7 +35,6 @@ namespace enger
         ~ImguiLayer() override;
 
         void beginFrame() override;
-        void draw() override;
         void endFrame(framing::FrameContext& fctx) override;
 
         // not sure if this is needed or can be merged into endFrame(...)
