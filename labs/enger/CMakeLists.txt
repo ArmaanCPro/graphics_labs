@@ -9,6 +9,7 @@ target_link_libraries(enger PRIVATE
         glfw glm::glm
         Vulkan::Headers GPUOpen::VulkanMemoryAllocator
         imgui::imgui fastgltf::fastgltf
+        nfd::nfd
 )
 
 target_include_directories(enger PRIVATE ${Stb_INCLUDE_DIR})

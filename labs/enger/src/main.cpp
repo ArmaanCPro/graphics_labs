@@ -18,7 +18,8 @@
 #include "Framing.h"
 #include "SceneManager.h"
 #include "Stats.h"
-#include "vulkan/QueueSubmitBuilder.h"
+
+#include "FileLoader.h"
 
 constexpr auto WIDTH = 800;
 constexpr auto HEIGHT = 600;
@@ -31,7 +32,11 @@ struct ResizeEvent
 
 int main()
 {
+    NFD_Init();
+
     enger::GlfwWindow window{WIDTH, HEIGHT, "Enger"};
+
+    enger::NFDEFileLoader fileLoader{};
 
     std::stack<ResizeEvent> resizeEventBus;
 
@@ -130,6 +135,22 @@ int main()
             ImGui::Text("Update Time: %.2f ms", stats.sceneUpdateTime);
             ImGui::Text("Triangles: %i", stats.triangleCount);
             ImGui::Text("Draw Calls: %i", stats.drawCalls);
+
+            if (ImGui::Button("Import glTF"))
+            {
+                std::array<enger::FileItem, 2> fileItems = { enger::FileItem{"glTF", "gltf"}, enger::FileItem{"Binary glTF", "glb"}};
+
+                auto path = fileLoader.openDialog(fileItems);
+                if (!path)
+                {
+                    std::cerr << "Failed to open file dialog" << fileLoader.getLastError() << std::endl;
+                }
+                else
+                {
+                    std::cout << "Selected file: " << path->string() << std::endl;
+                    //sceneManager.loadScene(*path);
+                }
+            }
             ImGui::End();
             imguiLayer.endFrame(fctx.value());
 

@@ -15,6 +15,7 @@
       ]
     },
     "fastgltf",
-    "stb"
+    "stb",
+    "nativefiledialog-extended"
   ]
 }
