@@ -4,8 +4,72 @@
 
 #include "GpuResourceTypes.h"
 
+namespace
+{
+    std::pair<vk::AccessFlags2, vk::PipelineStageFlags2> getTransitionAccessAndStage(vk::ImageLayout layout)
+    {
+        vk::AccessFlags2 access = vk::AccessFlagBits2::eMemoryWrite;
+        vk::PipelineStageFlags2 stage = vk::PipelineStageFlagBits2::eAllCommands;
+        if (layout == vk::ImageLayout::eTransferSrcOptimal)
+        {
+            access = vk::AccessFlagBits2::eTransferRead;
+            stage = vk::PipelineStageFlagBits2::eTransfer;
+        }
+        else if (layout == vk::ImageLayout::eTransferDstOptimal)
+        {
+            access = vk::AccessFlagBits2::eTransferWrite;
+            stage = vk::PipelineStageFlagBits2::eTransfer;
+        }
+        else if (layout == vk::ImageLayout::eColorAttachmentOptimal)
+        {
+            access = vk::AccessFlagBits2::eColorAttachmentRead;
+            stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+        }
+        else if (layout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
+        {
+            access = vk::AccessFlagBits2::eDepthStencilAttachmentRead;
+            stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
+        }
+        return {access, stage};
+    }
+}
+
 namespace enger
 {
+    void TransitionImageBuilder::add(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout)
+    {
+        assert(imageCount_ < kMaxTransitionImages);
+        auto* image = device_.getImage(texHandle);
+        assert(image);
+
+        auto [srcAccess, srcStage] = getTransitionAccessAndStage(srcLayout);
+        auto [dstAccess, dstStage] = getTransitionAccessAndStage(dstLayout);
+
+        imageBarriers_[imageCount_++] = vk::ImageMemoryBarrier2{
+            .srcAccessMask = srcAccess,
+            .dstAccessMask = dstAccess,
+            .oldLayout = srcLayout,
+            .newLayout = dstLayout,
+            .image = image->image_,
+            .subresourceRange = vk::ImageSubresourceRange{
+                .aspectMask = dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                  ? vk::ImageAspectFlagBits::eDepth
+                                  : vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = vk::RemainingMipLevels,
+            }
+        };
+    }
+
+    vk::DependencyInfo TransitionImageBuilder::build()
+    {
+        vk::DependencyInfo dependencyInfo{
+            .imageMemoryBarrierCount = imageCount_,
+            .pImageMemoryBarriers = imageBarriers_.data(),
+        };
+        return dependencyInfo;
+    }
+
     void CommandBuffer::begin(vk::CommandBufferUsageFlags flags)
     {
         vkCheck(m_CommandBuffer.begin(vk::CommandBufferBeginInfo{
@@ -29,56 +93,8 @@ namespace enger
         auto* image = m_Device->getImage(texHandle);
         assert(image != nullptr);
 
-        vk::AccessFlags2 srcAccess = vk::AccessFlagBits2::eMemoryWrite;
-        vk::PipelineStageFlags2 srcStage = vk::PipelineStageFlagBits2::eAllCommands;
-        if (srcLayout == vk::ImageLayout::eTransferSrcOptimal)
-        {
-            srcAccess = vk::AccessFlagBits2::eTransferRead;
-            srcStage = vk::PipelineStageFlagBits2::eTransfer;
-        }
-        else if (srcLayout == vk::ImageLayout::eTransferDstOptimal)
-        {
-            srcAccess = vk::AccessFlagBits2::eTransferWrite;
-            srcStage = vk::PipelineStageFlagBits2::eTransfer;
-        }
-        else if (srcLayout == vk::ImageLayout::eColorAttachmentOptimal)
-        {
-            srcAccess = vk::AccessFlagBits2::eColorAttachmentRead;
-            srcStage = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-        }
-        else if (srcLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
-        {
-            srcAccess = vk::AccessFlagBits2::eDepthStencilAttachmentRead;
-            srcStage = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
-        }
-
-        vk::AccessFlags2 dstAccess = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
-        vk::PipelineStageFlags2 dstStage = vk::PipelineStageFlagBits2::eAllCommands;
-        if (dstLayout == vk::ImageLayout::eTransferSrcOptimal)
-        {
-            dstAccess = vk::AccessFlagBits2::eTransferRead;
-            dstStage = vk::PipelineStageFlagBits2::eTransfer;
-        }
-        else if (dstLayout == vk::ImageLayout::eTransferDstOptimal)
-        {
-            dstAccess = vk::AccessFlagBits2::eTransferWrite;
-            dstStage = vk::PipelineStageFlagBits2::eTransfer;
-        }
-        else if (dstLayout == vk::ImageLayout::eColorAttachmentOptimal)
-        {
-            dstAccess = vk::AccessFlagBits2::eColorAttachmentWrite;
-            dstStage = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-        }
-        else if (dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
-        {
-            dstAccess = vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
-            dstStage = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
-        }
-        else if (dstLayout == vk::ImageLayout::ePresentSrcKHR)
-        {
-            dstAccess = vk::AccessFlagBits2::eNone;
-            dstStage = vk::PipelineStageFlagBits2::eTopOfPipe;
-        }
+        auto [srcAccess, srcStage] = getTransitionAccessAndStage(srcLayout);
+        auto [dstAccess, dstStage] = getTransitionAccessAndStage(dstLayout);
 
         vk::ImageMemoryBarrier2 barrier{
             .srcStageMask = srcStage,
@@ -105,6 +121,53 @@ namespace enger
         };
 
         m_CommandBuffer.pipelineBarrier2(dependencyInfo);
+    }
+
+    void CommandBuffer::transitionImages(std::span<const TransitionImageInfo> infos)
+    {
+        assert(m_Device != nullptr);
+        assert(infos.size() <= kMaxTransitionImages);
+
+        std::array<vk::ImageMemoryBarrier2, kMaxTransitionImages> barriers;
+        for (uint32_t i = 0; i < infos.size(); ++i)
+        {
+            const auto info = infos[i];
+            const auto* image = m_Device->getImage(info.texHandle);
+            assert(image != nullptr);
+
+            auto [srcAccess, srcStage] = getTransitionAccessAndStage(info.srcLayout);
+            auto [dstAccess, dstStage] = getTransitionAccessAndStage(info.dstLayout);
+
+            barriers[i] = vk::ImageMemoryBarrier2{
+                .srcStageMask = srcStage,
+                .srcAccessMask = srcAccess,
+                .dstStageMask = dstStage,
+                .dstAccessMask = dstAccess,
+                .oldLayout = info.srcLayout,
+                .newLayout = info.dstLayout,
+                .image = image->image_,
+                .subresourceRange = vk::ImageSubresourceRange{
+                    .aspectMask = info.dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                      ? vk::ImageAspectFlagBits::eDepth
+                                      : vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = vk::RemainingMipLevels,
+                    .baseArrayLayer = 0,
+                    .layerCount = vk::RemainingArrayLayers,
+                }
+            };
+        }
+
+        vk::DependencyInfo dependencyInfo{
+            .imageMemoryBarrierCount = static_cast<uint32_t>(infos.size()),
+            .pImageMemoryBarriers = barriers.data(),
+        };
+        m_CommandBuffer.pipelineBarrier2(dependencyInfo);
+    }
+
+    void CommandBuffer::transitionImages(vk::DependencyInfo info)
+    {
+        m_CommandBuffer.pipelineBarrier2(info);
     }
 
     void CommandBuffer::blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle)
@@ -255,7 +318,7 @@ namespace enger
         }
         assert(layout);
         m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, 0,
-            m_Device->bindlessDescriptorSet(), nullptr);
+                                           m_Device->bindlessDescriptorSet(), nullptr);
     }
 
     void CommandBuffer::pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages,

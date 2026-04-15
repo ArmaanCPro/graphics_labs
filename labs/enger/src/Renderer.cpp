@@ -15,6 +15,8 @@
 #include "MeshLoader.h"
 #include "vulkan/PushConstantRanges.h"
 
+#include "vulkan/Commands.h"
+
 namespace enger
 {
     Renderer::Renderer(Device& device, SwapChain& swapchain) :
@@ -36,10 +38,11 @@ namespace enger
 
         auto& cmd = fctx.cmd;
 
-        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
-        cmd.transitionImage(m_DepthBuffer, vk::ImageLayout::eUndefined,
-                            vk::ImageLayout::eDepthStencilAttachmentOptimal);
-        cmd.transitionImage(m_MsaaRenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+        cmd.transitionImages(std::array{
+            TransitionImageInfo{m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral},
+            TransitionImageInfo{m_DepthBuffer, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal},
+            TransitionImageInfo{m_MsaaRenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal}
+        });
 
         // Geometry Drawing
         vk::RenderingAttachmentInfo colorAttachmentInfo{
@@ -126,8 +129,10 @@ namespace enger
 
         cmd.endRendering();
 
-        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
-        cmd.transitionImage(fctx.swapchainImageHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+        cmd.transitionImages(std::array{
+            TransitionImageInfo{m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal},
+            TransitionImageInfo{fctx.swapchainImageHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal},
+        });
         cmd.blitImage(m_RenderTarget, fctx.swapchainImageHandle);
 
         cmd.transitionImage(fctx.swapchainImageHandle, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);

@@ -26,8 +26,28 @@ namespace enger
         //Secondary,
     };
 
+    static constexpr auto kMaxTransitionImages = 12;
+    class TransitionImageBuilder final
+    {
+    public:
+        TransitionImageBuilder(Device& device) : device_(device) {}
+        void add(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout);
+        vk::DependencyInfo build();
+        void clear() { imageCount_ = 0; }
+    private:
+        Device& device_;
+        std::array<vk::ImageMemoryBarrier2, kMaxTransitionImages> imageBarriers_;
+        uint32_t imageCount_ = 0;
+    };
+    struct TransitionImageInfo final
+    {
+        TextureHandle texHandle;
+        vk::ImageLayout srcLayout{};
+        vk::ImageLayout dstLayout{};
+    };
+
     // TODO improve the overall API & impl. Remove friend classes
-    class CommandBuffer
+    class CommandBuffer final
     {
         friend class Device;
     public:
@@ -45,6 +65,10 @@ namespace enger
         void end();
         void reset();
         void transitionImage(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout);
+
+        void transitionImages(std::span<const TransitionImageInfo> infos);
+        void transitionImages(vk::DependencyInfo info);
+
         void blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle);
         void clearColorImage(TextureHandle texHandle, vk::ClearColorValue color, vk::ImageAspectFlags aspectMask);
 
@@ -72,7 +96,7 @@ namespace enger
 
     private:
         CommandBuffer(Device* device, vk::CommandBuffer commandBuffer);
-        Device* m_Device;
+        Device* m_Device = nullptr;
         vk::CommandBuffer m_CommandBuffer;
     };
 }
