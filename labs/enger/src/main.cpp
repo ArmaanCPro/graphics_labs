@@ -138,17 +138,17 @@ int main()
 
             if (ImGui::Button("Import glTF"))
             {
-                std::array<enger::FileItem, 2> fileItems = { enger::FileItem{"glTF", "gltf"}, enger::FileItem{"Binary glTF", "glb"}};
+                std::array<enger::FileItem, 1> fileItems = { enger::FileItem{"glTF", "gltf,glb"} };
 
                 auto path = fileLoader.openDialog(fileItems);
-                if (!path)
+                if (!path.has_value() && path.error() != enger::OpenDialogError::Cancelled)
                 {
                     std::cerr << "Failed to open file dialog" << fileLoader.getLastError() << std::endl;
                 }
-                else
+                else if (path.has_value())
                 {
-                    std::cout << "Selected file: " << path->string() << std::endl;
-                    //sceneManager.loadScene(*path);
+                    std::cout << "Selected file: " << path.value().string() << std::endl;
+                    sceneManager.loadScene(*path);
                 }
             }
             ImGui::End();

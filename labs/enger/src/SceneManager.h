@@ -21,6 +21,8 @@ namespace enger
     public:
         SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples);
 
+        void loadScene(const std::filesystem::path& filePath);
+
         [[nodiscard]] const DrawContext& updateScene(float width, float height, const Camera& camera, EngineStats& stats);
 
         [[nodiscard]] const DrawContext& drawContext() const { return m_DrawContext; }

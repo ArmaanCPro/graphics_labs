@@ -111,27 +111,16 @@ namespace enger
 
         m_DefaultMaterial = m_GLTFMetallic_Roughness.writeMaterial(MaterialPass::MainColor,
                                                                    std::move(materialResources));
+    }
 
-        /*
-        for (auto& m: m_TestMeshes)
+    void SceneManager::loadScene(const std::filesystem::path& filePath)
+    {
+        auto file = LoadGltf(m_Device, *this, filePath);
+        if (file.has_value())
         {
-            std::shared_ptr<MeshNode> newNode = std::make_shared<MeshNode>();
-            newNode->mesh = m;
-
-            newNode->localTransform = glm::mat4(1.0f);
-            newNode->worldTransform = glm::mat4(1.0f);
-
-            for (auto& s: newNode->mesh->surfaces)
-            {
-                s.material = std::move(std::make_shared<GLTFMaterial>(m_DefaultMaterial));
-            }
-
-            m_LoadedNodes[m->name] = std::move(newNode);
-        } */
-
-        auto structureFile = LoadGltf(device, *this, "assets/structure.glb");
-        assert(structureFile.has_value());
-        m_LoadedScenes["structure"] = structureFile.value();
+            m_LoadedScenes.clear();
+            m_LoadedScenes[file.value()->name_] = file.value();
+        }
     }
 
     const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera, EngineStats& stats)

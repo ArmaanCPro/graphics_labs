@@ -151,7 +151,9 @@ namespace enger
 
         std::vector<Holder<SamplerHandle>> samplers_;
 
-        Holder<BufferHandle> materialDataBuffer;
+        Holder<BufferHandle> materialDataBuffer_;
+
+        std::string name_;
 
         void draw(const glm::mat4& topMatrix, DrawContext& ctx) override
         {

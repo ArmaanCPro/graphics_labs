@@ -330,7 +330,7 @@ namespace enger
             }
         }
 
-        file.materialDataBuffer = device.createBuffer(sizeof(MaterialConstants) * gltf.materials.size(),
+        file.materialDataBuffer_ = device.createBuffer(sizeof(MaterialConstants) * gltf.materials.size(),
                                                       vk::BufferUsageFlagBits::eUniformBuffer |
                                                       vk::BufferUsageFlagBits::eShaderDeviceAddress,
                                                       vk::MemoryPropertyFlagBits::eHostVisible |
@@ -350,7 +350,7 @@ namespace enger
             constants.metallicRoughnessFactors.x = material.pbrData.metallicFactor;
             constants.metallicRoughnessFactors.y = material.pbrData.roughnessFactor;
 
-            device.getBuffer(file.materialDataBuffer)->bufferSubData(device.allocator(),
+            device.getBuffer(file.materialDataBuffer_)->bufferSubData(device.allocator(),
                                                                      dataIndex * sizeof(MaterialConstants),
                                                                      sizeof(MaterialConstants), &constants);
 
@@ -369,7 +369,7 @@ namespace enger
 
             materialResources.dataBuffer = sceneManager.sceneDataBuffer();
 
-            materialResources.materialConstantsBuffer = file.materialDataBuffer;
+            materialResources.materialConstantsBuffer = file.materialDataBuffer_;
             materialResources.materialConstantsBufferOffset = dataIndex * sizeof(MaterialConstants);
 
             // get texture data
@@ -547,6 +547,19 @@ namespace enger
                 file.topNodes_.push_back(node);
                 node->refreshTransform(glm::mat4(1.0f));
             }
+        }
+
+        if (gltf.defaultScene.has_value() && !gltf.scenes[gltf.defaultScene.value()].name.empty())
+        {
+            file.name_ = gltf.scenes[gltf.defaultScene.value()].name;
+        }
+        else if (!gltf.scenes.empty() && !gltf.scenes[0].name.empty())
+        {
+            file.name_ = gltf.scenes[0].name;
+        }
+        else
+        {
+            file.name_ = filePath.stem().string();
         }
 
         return scene;
