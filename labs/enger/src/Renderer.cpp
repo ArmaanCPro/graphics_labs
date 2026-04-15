@@ -155,7 +155,7 @@ namespace enger
                 .format = vk::Format::eR16G16B16A16Sfloat,
                 .dimensions = {width, height, 1},
                 .samples = m_MsaaSamples,
-                .usage = vk::ImageUsageFlagBits::eColorAttachment,
+                .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
                 .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
             },
             &m_GraphicsQueue, "Msaa Render Target"
