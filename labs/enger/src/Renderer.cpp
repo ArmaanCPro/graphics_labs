@@ -1,5 +1,6 @@
 #include "Renderer.h"
 
+#include <execution>
 #include <expected>
 #include <fstream>
 #include <filesystem>
@@ -79,8 +80,29 @@ namespace enger
         
         cmd.bindDescriptorSetsBindless(vk::PipelineBindPoint::eGraphics);
 
+        // sort each geometry draw by index buffer
+        std::vector<uint32_t> opaqueDraws;
+        opaqueDraws.reserve(dctx.opaqueSurfaces.size());
+        for (uint32_t i = 0; i < dctx.opaqueSurfaces.size(); ++i)
+        {
+            opaqueDraws.push_back(i);
+        }
+        /*
+         * For the current scene (structure.glb) sorting is almost 2x slower than non-sorted.
+         *std::sort(std::execution::par, opaqueDraws.begin(), opaqueDraws.end(), [&](uint32_t a, uint32_t b) {
+            const auto& A = dctx.opaqueSurfaces[a];
+            const auto& B = dctx.opaqueSurfaces[b];
+            return A.indexBuffer < B.indexBuffer;
+        });*/
+
+        BufferHandle lastIndexBuffer;
+
         auto draw = [&](const RenderObject& drawObj) {
-            cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
+            if (drawObj.indexBuffer != lastIndexBuffer)
+            {
+                lastIndexBuffer = drawObj.indexBuffer;
+                cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
+            }
 
             GraphicsPushConstants pc{
                 .worldMatrix = drawObj.transform,
@@ -101,9 +123,9 @@ namespace enger
 
         if (!dctx.opaqueSurfaces.empty())
             cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
-        for (const RenderObject& drawObj : dctx.opaqueSurfaces)
+        for (auto& r : opaqueDraws)
         {
-            draw(drawObj);
+            draw(dctx.opaqueSurfaces[r]);
         }
 
         if (!dctx.transparentSurfaces.empty())
