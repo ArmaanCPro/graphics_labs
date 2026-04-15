@@ -48,6 +48,13 @@ void Camera::attachInputToWindow(enger::GlfwWindow& window)
                 velocity_.x = -1.0f;
             if (key == GLFW_KEY_D)
                 velocity_.x = 1.0f;
+
+            if (mods == GLFW_MOD_SHIFT)
+            {
+                static constexpr float kSpeedBoost = 3.0f;
+                velocity_ *= kSpeedBoost;
+                velocity_ = glm::clamp(velocity_, -kSpeedBoost, kSpeedBoost);
+            }
         }
 
         if (action == GLFW_RELEASE)
@@ -56,6 +63,9 @@ void Camera::attachInputToWindow(enger::GlfwWindow& window)
                 velocity_.z = 0.0f;
             if (key == GLFW_KEY_A || key == GLFW_KEY_D)
                 velocity_.x = 0.0f;
+
+            if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT)
+                velocity_ = glm::clamp(velocity_, -1.0f, 1.0f);
         }
     });
 
