@@ -20,16 +20,6 @@ namespace enger
 {
     constexpr uint32_t FRAMES_IN_FLIGHT = 2;
 
-    struct GPUSceneData
-    {
-        alignas(16) glm::mat4 view;
-        glm::mat4 proj;
-        glm::mat4 viewProj;
-        glm::vec4 ambientColor;
-        glm::vec4 sunlightDirection; // w for sun power
-        glm::vec4 sunlightColor;
-    };
-
     struct ComputePushConstants
     {
         alignas(16) glm::vec4 data1;
@@ -54,13 +44,14 @@ namespace enger
     public:
         Renderer(Device& device, SwapChain& swapchain);
 
-        void render(framing::FrameContext& frameContext);
+        void render(framing::FrameContext& frameContext, const DrawContext& dctx);
 
         void onResize(uint32_t width, uint32_t height);
 
-    private:
-        void updateScene();
+        vk::Format renderFormat() const { return m_Device.getImage(m_RenderTarget)->format_; }
+        vk::Format depthFormat() const { return m_Device.getImage(m_DepthBuffer)->format_; }
 
+    private:
         void createRenderTextures(uint32_t width, uint32_t height);
 
         Device& m_Device;
@@ -71,25 +62,6 @@ namespace enger
 
         Holder<TextureHandle> m_RenderTarget;
         Holder<TextureHandle> m_DepthBuffer;
-
-        GPUSceneData m_SceneData;
-        Holder<BufferHandle> m_GPUSceneDataBuffer;
-
-        Holder<TextureHandle> m_WhiteImage;
-        Holder<TextureHandle> m_BlackImage;
-        Holder<TextureHandle> m_GrayImage;
-        Holder<TextureHandle> m_ErrorCheckerboardImage;
-
-        Holder<SamplerHandle> m_DefaultSamplerLinear;
-        Holder<SamplerHandle> m_DefaultSamplerNearest;
-
-        std::vector<std::shared_ptr<MeshAsset>> m_TestMeshes;
-
-        DrawContext m_MainDrawContext;
-        std::unordered_map<std::string, std::shared_ptr<Node>> m_LoadedNodes;
-
-        GLTFMetallic_Roughness m_GLTFMetallic_Roughness;
-        MaterialInstance m_DefaultMaterial;
 
         bool m_ShouldResize = false;
         uint32_t m_PendingWidth = 0;

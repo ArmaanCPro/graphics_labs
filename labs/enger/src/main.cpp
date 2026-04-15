@@ -7,6 +7,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include "Camera.h"
 #include "GlfwWindow.h"
 #include "Renderer.h"
 #include "vulkan/Device.h"
@@ -15,6 +16,7 @@
 #include "vulkan/SwapChain.h"
 
 #include "Framing.h"
+#include "SceneManager.h"
 #include "vulkan/QueueSubmitBuilder.h"
 
 constexpr auto WIDTH = 800;
@@ -60,10 +62,18 @@ int main()
         vk::PresentModeKHR::eMailbox
     };
 
+    Camera camera{window};
+    camera.velocity_ = glm::vec3{0.0f, 0.0f, 0.0f};
+    camera.position_ = glm::vec3{0.0f, 0.0f, 5.0f};
+    camera.pitch_ = 0;
+    camera.yaw_ = 0;
+
     enger::Renderer renderer{device, swapchain};
     enger::ImguiLayer imguiLayer{instance, device, window, swapchain};
 
     enger::framing::FrameOrchestrator frameOrchestrator{device, swapchain, window};
+
+    enger::SceneManager sceneManager{device, renderer.renderFormat(), renderer.depthFormat()};
 
     bool shouldRender = true;
 
@@ -92,6 +102,10 @@ int main()
             shouldRender = true;
         }
 
+        camera.update();
+        const auto& dctx = sceneManager.updateScene(static_cast<float>(swapchain.swapChainExtent().width),
+            static_cast<float>(swapchain.swapChainExtent().height), camera);
+
         if (!shouldRender)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -101,7 +115,7 @@ int main()
         auto fctx = frameOrchestrator.beginFrame();
         if (fctx.has_value())
         {
-            renderer.render(fctx.value());
+            renderer.render(fctx.value(), dctx);
 
             imguiLayer.beginFrame();
             // we could remove imguiLayer.draw() and put our own imgui drawing here

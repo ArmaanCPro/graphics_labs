@@ -18,6 +18,9 @@ namespace enger
 
             m_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
 
+            glfwSetInputMode(m_Window, GLFW_CURSOR_DISABLED, GLFW_TRUE);
+            glfwSetInputMode(m_Window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
             glfwSetWindowUserPointer(m_Window, this);
 
             glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* window, int width, int height) {
@@ -25,6 +28,30 @@ namespace enger
                 if (self->m_ResizeCallback)
                 {
                     self->m_ResizeCallback(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+                }
+            });
+
+            glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+                auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+                if (self->m_InputCallback)
+                {
+                    self->m_InputCallback(key, scancode, action, mods);
+                }
+            });
+
+            glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods) {
+                auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+                if (self->m_MouseCallback)
+                {
+                    self->m_MouseCallback(button, action, mods);
+                }
+            });
+
+            glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double xpos, double ypos) {
+                auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+                if (self->m_CursorPosCallback)
+                {
+                    self->m_CursorPosCallback(xpos, ypos);
                 }
             });
         }
@@ -56,9 +83,42 @@ namespace enger
             return xscale; // usually same as the y-scale
         }
 
+        std::pair<float, float> getCursorPos() const
+        {
+            double xpos, ypos;
+            glfwGetCursorPos(m_Window, &xpos, &ypos);
+            return {static_cast<float>(xpos), static_cast<float>(ypos)};
+        }
+
         void setResizeCallback(std::function<void(uint32_t, uint32_t)> callback)
         {
             m_ResizeCallback = std::move(callback);
+        }
+
+        void setInputCallback(std::function<void(int key, int scancode, int action, int mods)> callback)
+        {
+            m_InputCallback = std::move(callback);
+        }
+
+        void setMouseCallback(std::function<void(int button, int action, int mods)> callback)
+        {
+            m_MouseCallback = std::move(callback);
+        }
+
+        void setCursorPosCallback(std::function<void(double xpos, double ypos)> callback)
+        {
+            m_CursorPosCallback = std::move(callback);
+        }
+
+        void disableCursor() const
+        {
+            glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetInputMode(m_Window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        }
+        void enableCursor() const
+        {
+            glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetInputMode(m_Window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
         }
 
         GLFWwindow* nativeHandle() const
@@ -80,5 +140,8 @@ namespace enger
         GLFWwindow* m_Window = nullptr;
 
         std::function<void(uint32_t, uint32_t)> m_ResizeCallback;
+        std::function<void(int key, int scancode, int action, int mods)> m_InputCallback;
+        std::function<void(int button, int action, int mods)> m_MouseCallback;
+        std::function<void(double xpos, double ypos)> m_CursorPosCallback;
     };
 }
