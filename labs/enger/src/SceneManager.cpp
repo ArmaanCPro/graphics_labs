@@ -129,16 +129,7 @@ namespace enger
             m_LoadedNodes[m->name] = std::move(newNode);
         } */
 
-        auto expectedMeshes = LoadMeshes(device, *this, "assets/basicmesh.glb");
-        if (!expectedMeshes)
-        {
-            std::cerr << "Failed to load meshes" << std::endl;
-            std::terminate();
-        }
-        m_TestMeshes = expectedMeshes.value();
-        m_LoadedScenes["Suzanne"] = m_TestMeshes;
-
-        auto structureFile = LoadMeshes(device, *this, "assets/structure.glb");
+        auto structureFile = LoadGltf(device, *this, "assets/structure.glb");
         assert(structureFile.has_value());
         m_LoadedScenes["structure"] = structureFile.value();
     }
@@ -146,6 +137,7 @@ namespace enger
     const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera)
     {
         m_DrawContext.opaqueSurfaces.clear();
+        m_DrawContext.transparentSurfaces.clear();
 
         for (auto& [name, scene] : m_LoadedScenes)
         {

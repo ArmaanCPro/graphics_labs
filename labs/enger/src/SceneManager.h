@@ -27,8 +27,6 @@ namespace enger
     private:
         Device& m_Device;
 
-        std::shared_ptr<LoadedGLTF> m_TestMeshes;
-
         DrawContext m_DrawContext;
         std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> m_LoadedScenes;
 

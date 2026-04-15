@@ -49,6 +49,6 @@ namespace enger
     class LoadedGLTF;
     class SceneManager;
 
-    std::optional<std::shared_ptr<LoadedGLTF> > LoadMeshes(Device& device, SceneManager& sceneManager,
+    std::optional<std::shared_ptr<LoadedGLTF> > LoadGltf(Device& device, SceneManager& sceneManager,
                                                            const std::filesystem::path& filePath);
 }

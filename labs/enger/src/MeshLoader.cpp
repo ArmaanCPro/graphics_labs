@@ -71,6 +71,158 @@ namespace enger
         return surface;
     }
 
+    Holder<TextureHandle> loadImage(Device& device, fastgltf::Asset& asset, fastgltf::Image& image)
+    {
+        Holder<TextureHandle> newImage;
+
+        int width, height, nrChannels;
+        std::visit(
+            fastgltf::visitor{
+                [&](auto&) {
+                    std::cerr << "loadImage: Unhandled image data type: " << typeid(image).name();
+                },
+                [&](fastgltf::sources::URI& filePath) {
+                    assert(filePath.fileByteOffset == 0);
+                    assert(filePath.uri.isLocalPath());
+
+                    const std::string path(filePath.uri.path().begin(),
+                                           filePath.uri.path().end());
+                    unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
+                    if (data)
+                    {
+                        vk::Extent3D imageExtent{
+                            .width = static_cast<uint32_t>(width),
+                            .height = static_cast<uint32_t>(height),
+                            .depth = 1,
+                        };
+
+                        newImage = device.createTexture({
+                                                            .format = vk::Format::eR8G8B8A8Unorm,
+                                                            .dimensions = imageExtent,
+                                                            .usage = vk::ImageUsageFlagBits::eSampled |
+                                                                     vk::ImageUsageFlagBits::eTransferDst,
+                                                            .initialData = data,
+                                                        }, nullptr);
+
+                        stbi_image_free(data);
+                    }
+                },
+                [&](fastgltf::sources::Vector& vector) {
+                    unsigned char* data = stbi_load_from_memory(
+                        reinterpret_cast<stbi_uc const*>(
+                            vector.bytes.data()), static_cast<int>(vector.bytes.size()),
+                        &width, &height, &nrChannels, 4);
+
+                    if (data)
+                    {
+                        vk::Extent3D imageExtent{
+                            .width = static_cast<uint32_t>(width),
+                            .height = static_cast<uint32_t>(height),
+                            .depth = 1,
+                        };
+                        newImage = device.createTexture({
+                                                            .format = vk::Format::eR8G8B8A8Unorm,
+                                                            .dimensions = imageExtent,
+                                                            .usage = vk::ImageUsageFlagBits::eSampled
+                                                                     | vk::ImageUsageFlagBits::eTransferDst,
+                                                            .initialData = data,
+                                                        }, nullptr);
+
+                        stbi_image_free(data);
+                    }
+                },
+                [&](fastgltf::sources::BufferView& view) {
+                    auto& bufferView = asset.bufferViews[view.bufferViewIndex];
+                    auto& buffer = asset.buffers[bufferView.bufferIndex];
+
+                    std::visit(fastgltf::visitor{
+                                   [&](auto&) {
+                                       std::cerr << "loadImage: Unhandled buffer data type: " << typeid(image).name();
+                                   },
+                                   [&](fastgltf::sources::Array& array) {
+                                       unsigned char* data = stbi_load_from_memory(
+                                           reinterpret_cast<stbi_uc const*>(
+                                               array.bytes.data() + bufferView.byteOffset),
+                                           static_cast<int>(bufferView.byteLength),
+                                           &width, &height, &nrChannels, 4);
+
+                                       if (data)
+                                       {
+                                           vk::Extent3D imageExtent{
+                                               .width = static_cast<uint32_t>(width),
+                                               .height = static_cast<uint32_t>(height),
+                                               .depth = 1,
+                                           };
+                                           newImage = device.createTexture({
+                                                                               .format = vk::Format::eR8G8B8A8Unorm,
+                                                                               .dimensions = imageExtent,
+                                                                               .usage = vk::ImageUsageFlagBits::eSampled
+                                                                                   | vk::ImageUsageFlagBits::eTransferDst,
+                                                                               .initialData = data,
+                                                                           }, nullptr);
+
+                                           stbi_image_free(data);
+                                       }
+                                   },
+                                   [&](fastgltf::sources::ByteView& byteView) {
+                                       unsigned char* data = stbi_load_from_memory(
+                                           reinterpret_cast<stbi_uc const*>(
+                                               byteView.bytes.data() + bufferView.byteOffset),
+                                           static_cast<int>(bufferView.byteLength),
+                                           &width, &height, &nrChannels, 4);
+
+                                       if (data)
+                                       {
+                                           vk::Extent3D imageExtent{
+                                               .width = static_cast<uint32_t>(width),
+                                               .height = static_cast<uint32_t>(height),
+                                               .depth = 1,
+                                           };
+                                           newImage = device.createTexture({
+                                                                               .format = vk::Format::eR8G8B8A8Unorm,
+                                                                               .dimensions = imageExtent,
+                                                                               .usage = vk::ImageUsageFlagBits::eSampled
+                                                                                   | vk::ImageUsageFlagBits::eTransferDst,
+                                                                               .initialData = data,
+                                                                           }, nullptr);
+
+                                           stbi_image_free(data);
+                                       }
+                                   },
+                                   [&](fastgltf::sources::Vector& vector) {
+                                       unsigned char* data = stbi_load_from_memory(
+                                           reinterpret_cast<stbi_uc const*>(
+                                               vector.bytes.data() + bufferView.byteOffset),
+                                           static_cast<int>(bufferView.byteLength), &width, &height,
+                                           &nrChannels, 4);
+
+                                       if (data)
+                                       {
+                                           vk::Extent3D imageExtent{
+                                               .width = static_cast<uint32_t>(width),
+                                               .height = static_cast<uint32_t>(height),
+                                               .depth = 1,
+                                           };
+                                           newImage = device.createTexture({
+                                                                               .format = vk::Format::eR8G8B8A8Unorm,
+                                                                               .dimensions = imageExtent,
+                                                                               .usage = vk::ImageUsageFlagBits::eSampled
+                                                                                   | vk::ImageUsageFlagBits::eTransferDst,
+                                                                               .initialData = data,
+                                                                           }, nullptr);
+
+                                           stbi_image_free(data);
+                                       }
+                                   }
+                               }, buffer.data);
+                },
+            },
+            image.data
+        );
+
+        return newImage;
+    }
+
     vk::Filter extractFilter(fastgltf::Filter filter)
     {
         switch (filter)
@@ -110,13 +262,13 @@ namespace enger
         return vk::SamplerMipmapMode::eLinear;
     }
 
-    std::optional<std::shared_ptr<LoadedGLTF> > LoadMeshes(
+    std::optional<std::shared_ptr<LoadedGLTF> > LoadGltf(
         Device& device, SceneManager& sceneManager, const std::filesystem::path& filePath)
     {
         std::println("Loading GLTF: {}", filePath.string());
 
-        std::shared_ptr<LoadedGLTF> scene = std::make_shared<LoadedGLTF>(device);
-        LoadedGLTF& file = *scene.get();
+        std::shared_ptr<LoadedGLTF> scene = std::make_shared<LoadedGLTF>(device, &sceneManager);
+        LoadedGLTF& file = *scene;
 
         auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
         if (!data)
@@ -145,9 +297,15 @@ namespace enger
 
         auto& gltf = asset.get();
 
-        for ([[maybe_unused]] fastgltf::Sampler& sampler : gltf.samplers)
+        for (fastgltf::Sampler& sampler: gltf.samplers)
         {
-            file.samplers_.push_back(sceneManager.m_DefaultSamplerLinear);
+            file.samplers_.push_back(device.createSampler(SamplerDesc{
+                                                              .magFilter = extractFilter(sampler.magFilter.value()),
+                                                              .minFilter = extractFilter(sampler.minFilter.value()),
+                                                              .mipmapMode = extractMipmapMode(
+                                                                  sampler.minFilter.value_or(
+                                                                      fastgltf::Filter::Nearest)),
+                                                          }, nullptr));
         }
 
         // temporal arrays for all the objects to use while creating the GLTF data
@@ -157,10 +315,19 @@ namespace enger
         std::vector<std::shared_ptr<GLTFMaterial> > materials;
 
         // load textures
-        for ([[maybe_unused]] fastgltf::Texture& texture: gltf.textures)
+        for (fastgltf::Image& image: gltf.images)
         {
-            // temporarily use checkerboard error image
-            images.push_back(sceneManager.m_ErrorCheckerboardImage);
+            auto img = loadImage(device, gltf, image);
+            if (img.valid())
+            {
+                images.push_back(img);
+                file.images_[image.name.c_str()] = std::move(img);
+            }
+            else
+            {
+                images.push_back(sceneManager.m_ErrorCheckerboardImage);
+                std::cerr << "Failed to load image: " << image.name << std::endl;
+            }
         }
 
         file.materialDataBuffer = device.createBuffer(sizeof(MaterialConstants) * gltf.materials.size(),
@@ -170,13 +337,11 @@ namespace enger
                                                       vk::MemoryPropertyFlagBits::eHostCoherent,
                                                       nullptr, "MaterialConstants FOR MESH LOADER");
 
-        //MaterialConstants* sceneMaterialConstants = static_cast<MaterialConstants*>(device.getBuffer(
-        //    file.materialDataBuffer)->mappedMemory_);
         int dataIndex = 0;
 
         for (fastgltf::Material& material: gltf.materials)
         {
-            MaterialConstants constants;
+            MaterialConstants constants{};
             constants.colorFactors.x = material.pbrData.baseColorFactor[0];
             constants.colorFactors.y = material.pbrData.baseColorFactor[1];
             constants.colorFactors.z = material.pbrData.baseColorFactor[2];
@@ -186,12 +351,11 @@ namespace enger
             constants.metallicRoughnessFactors.y = material.pbrData.roughnessFactor;
 
             device.getBuffer(file.materialDataBuffer)->bufferSubData(device.allocator(),
-                dataIndex * sizeof(MaterialConstants), sizeof(MaterialConstants), &constants);
-
-            //sceneMaterialConstants[dataIndex] = constants;
+                                                                     dataIndex * sizeof(MaterialConstants),
+                                                                     sizeof(MaterialConstants), &constants);
 
             MaterialPass passType = MaterialPass::MainColor;
-            if (material.alphaMode == fastgltf::AlphaMode::Blend)
+            if (material.alphaMode == fastgltf::AlphaMode::Blend || material.alphaMode == fastgltf::AlphaMode::Mask)
             {
                 passType = MaterialPass::Transparent;
             }
@@ -205,7 +369,7 @@ namespace enger
 
             materialResources.dataBuffer = sceneManager.sceneDataBuffer();
 
-            materialResources.materialConstantsBuffer = std::move(file.materialDataBuffer);
+            materialResources.materialConstantsBuffer = file.materialDataBuffer;
             materialResources.materialConstantsBufferOffset = dataIndex * sizeof(MaterialConstants);
 
             // get texture data
@@ -223,7 +387,7 @@ namespace enger
             newMaterial->material = sceneManager.m_GLTFMetallic_Roughness.writeMaterial(
                 passType, std::move(materialResources));
             materials.push_back(newMaterial);
-            file.materials_[material.name.c_str()] = newMaterial;
+            file.materials_[material.name.c_str()] = std::move(newMaterial);
 
             dataIndex++;
         }

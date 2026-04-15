@@ -58,9 +58,9 @@ namespace enger
             .layerCount = 1,
             .colorAttachmentCount = 1,
             .pColorAttachments = &colorAttachmentInfo,
+            .pDepthAttachment = &depthAttachmentInfo,
         };
         cmd.beginRendering(renderingInfo);
-
 
         // dynamic state
         vk::Viewport viewport{
@@ -74,14 +74,12 @@ namespace enger
         
         // Currently, all render objects are opaque
         assert(dctx.opaqueSurfaces.size() > 0);
-        cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
         // TODO right now the pipeline layout system is very unsturdy. I need a global bindless pipeline layout (meaning 1 descriptor set layout and 1 push constant range)
         cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, dctx.opaqueSurfaces[0].material->pipeline->pipelineLayout, 0,
                     {{m_Device.bindlessDescriptorSet()}});
 
-        for (const RenderObject& drawObj : dctx.opaqueSurfaces)
-        {
-            fctx.cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
+        auto draw = [&](const RenderObject& drawObj) {
+            cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
 
             DrawPushConstants pc{
                 .worldMatrix = drawObj.transform,
@@ -92,10 +90,23 @@ namespace enger
                 .metallicRoughnessTextureIndex = drawObj.material->resources.metallicRoughnessImage.index(),
                 .samplerIndex = drawObj.material->resources.colorSampler.index(),
             };
-            fctx.cmd.pushConstants(drawObj.material->pipeline->pipelineLayout,
-                vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(pc), &pc);
+            cmd.pushConstants(drawObj.material->pipeline->pipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(pc), &pc);
 
-            fctx.cmd.drawIndexed(drawObj.indexCount, 1, drawObj.firstIndex, 0, 0);
+            cmd.drawIndexed(drawObj.indexCount, 1, drawObj.firstIndex, 0, 0);
+        };
+
+        if (!dctx.opaqueSurfaces.empty())
+            cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
+        for (const RenderObject& drawObj : dctx.opaqueSurfaces)
+        {
+            draw(drawObj);
+        }
+
+        if (!dctx.transparentSurfaces.empty())
+            cmd.bindGraphicsPipeline(dctx.transparentSurfaces[0].material->pipeline->pipeline);
+        for (const RenderObject& drawObj : dctx.transparentSurfaces)
+        {
+            draw(drawObj);
         }
 
         cmd.endRendering();

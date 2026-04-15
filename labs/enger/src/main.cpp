@@ -64,7 +64,7 @@ int main()
 
     Camera camera{window};
     camera.velocity_ = glm::vec3{0.0f, 0.0f, 0.0f};
-    camera.position_ = glm::vec3{0.0f, 0.0f, 5.0f};
+    camera.position_ = glm::vec3(30.0f, 0.0f, -85.0f);
     camera.pitch_ = 0;
     camera.yaw_ = 0;
 

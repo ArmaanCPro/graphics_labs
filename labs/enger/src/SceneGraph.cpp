@@ -11,6 +11,7 @@
 #include "Renderer.h"
 
 #include "MeshLoader.h"
+#include "SceneManager.h"
 
 namespace enger
 {
@@ -84,8 +85,10 @@ namespace enger
             .pipelineLayout = transparentPipeline.pipelineLayout,
             .vertexShaderModule = shaderModule,
             .fragmentShaderModule = shaderModule,
-            .depthTestEnable = false,
+            .depthTestEnable = true,
+            .depthWriteEnable = false,
 
+            .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
             .colorAttachments = {
                 ColorAttachment{ // enable additive blending
                     .format = drawFormat,
@@ -99,6 +102,8 @@ namespace enger
                 },
             },
             .colorAttachmentCount = 1,
+
+            .depthFormat = depthFormat,
 
             .cullMode = vk::CullModeFlagBits::eBack,
             .frontFace = vk::FrontFace::eCounterClockwise,

@@ -37,7 +37,7 @@ namespace enger
         SamplerHandle metallicRoughnessSampler;
         BufferHandle dataBuffer;
         BufferHandle materialConstantsBuffer; // this is a handle to a buffer of MaterialConstants
-        uint32_t materialConstantsBufferOffset;
+        uint32_t materialConstantsBufferOffset = 0;
     };
 
     // We will have 2 pipelines, one for opaque and one for transparent objects.
@@ -49,9 +49,9 @@ namespace enger
 
     struct MaterialInstance
     {
-        MaterialPipeline* pipeline;
+        MaterialPipeline* pipeline = nullptr;
         MaterialResources resources;
-        MaterialPass passType;
+        MaterialPass passType = MaterialPass::Other;
     };
 
     struct GLTFMaterial
@@ -72,19 +72,20 @@ namespace enger
     // A low level struct containing pertinent GPU information for a renderable object.
     struct RenderObject
     {
-        uint32_t firstIndex;
-        uint32_t indexCount;
+        uint32_t firstIndex = 0;
+        uint32_t indexCount = 0;
         BufferHandle indexBuffer;
         BufferHandle vertexBuffer;
 
-        MaterialInstance* material;
+        MaterialInstance* material = nullptr;
 
-        glm::mat4 transform;
+        glm::mat4 transform = glm::mat4(1.0f);
     };
 
     struct DrawContext
     {
         std::vector<RenderObject> opaqueSurfaces;
+        std::vector<RenderObject> transparentSurfaces;
     };
 
     // Base class for a renderable dynamic object.
@@ -132,26 +133,25 @@ namespace enger
         void draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
     };
 
+    class SceneManager;
     // Encompasses all GLTF data, and holds its own Nodes. Basically represents an entire glTF File (Scene)
     class LoadedGLTF : public IRenderable
     {
     public:
-        explicit LoadedGLTF(Device& device) : device(device) {}
+        explicit LoadedGLTF(Device& device, SceneManager* sceneManager) : m_Device(device), m_SceneManager(sceneManager) {}
 
         // Storage/Handles to all the data on a glTF file
         std::unordered_map<std::string, std::shared_ptr<MeshAsset>> meshes_;
         std::unordered_map<std::string, std::shared_ptr<Node>> nodes_;
-        std::unordered_map<std::string, TextureHandle> images_;
+        std::unordered_map<std::string, Holder<TextureHandle>> images_;
         std::unordered_map<std::string, std::shared_ptr<GLTFMaterial>> materials_;
 
         // nodes that don't have a parent. Files are in a tree-like structure, so there will be roots
         std::vector<std::shared_ptr<Node>> topNodes_;
 
-        std::vector<SamplerHandle> samplers_;
+        std::vector<Holder<SamplerHandle>> samplers_;
 
         Holder<BufferHandle> materialDataBuffer;
-
-        virtual ~LoadedGLTF() override { clearAll(); };
 
         void draw(const glm::mat4& topMatrix, DrawContext& ctx) override
         {
@@ -162,8 +162,7 @@ namespace enger
         }
 
     private:
-        Device& device;
-
-        void clearAll() {}
+        Device& m_Device;
+        SceneManager* m_SceneManager;
     };
 }
