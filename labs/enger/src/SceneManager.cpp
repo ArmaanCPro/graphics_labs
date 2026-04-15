@@ -134,8 +134,10 @@ namespace enger
         m_LoadedScenes["structure"] = structureFile.value();
     }
 
-    const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera)
+    const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera, EngineStats& stats)
     {
+        auto start = std::chrono::high_resolution_clock::now();
+
         m_DrawContext.opaqueSurfaces.clear();
         m_DrawContext.transparentSurfaces.clear();
 
@@ -168,6 +170,10 @@ namespace enger
 
         m_Device.getBuffer(m_GPUSceneDataBuffer)->bufferSubData(m_Device.allocator(), 0, sizeof(GPUSceneData),
                                                                 &m_SceneData);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        stats.sceneUpdateTime = elapsed.count() / 1000.0f;
 
         return m_DrawContext;
     }

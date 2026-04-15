@@ -16,6 +16,8 @@
 #include "MeshLoader.h"
 #include "SceneGraph.h"
 
+#include "Stats.h"
+
 namespace enger
 {
     constexpr uint32_t FRAMES_IN_FLIGHT = 2;
@@ -44,7 +46,7 @@ namespace enger
     public:
         Renderer(Device& device, SwapChain& swapchain);
 
-        void render(framing::FrameContext& frameContext, const DrawContext& dctx);
+        void render(framing::FrameContext& frameContext, const DrawContext& dctx, EngineStats& stats);
 
         void onResize(uint32_t width, uint32_t height);
 

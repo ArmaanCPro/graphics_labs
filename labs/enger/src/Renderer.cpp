@@ -24,7 +24,7 @@ namespace enger
         createRenderTextures(m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height);
     }
 
-    void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx)
+    void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx, EngineStats& stats)
     {
         if (m_ShouldResize)
         {
@@ -71,6 +71,10 @@ namespace enger
         vk::Rect2D scissor{0, 0, drawExtent.width, drawExtent.height};
         cmd.setViewport(viewport);
         cmd.setScissor(scissor);
+
+        stats.drawCalls = 0;
+        stats.triangleCount = 0;
+        auto start = std::chrono::high_resolution_clock::now();
         
         // Currently, all render objects are opaque
         assert(dctx.opaqueSurfaces.size() > 0);
@@ -93,6 +97,9 @@ namespace enger
             cmd.pushConstants(drawObj.material->pipeline->pipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(pc), &pc);
 
             cmd.drawIndexed(drawObj.indexCount, 1, drawObj.firstIndex, 0, 0);
+
+            stats.drawCalls++;
+            stats.triangleCount += drawObj.indexCount / 3;
         };
 
         if (!dctx.opaqueSurfaces.empty())
@@ -110,6 +117,10 @@ namespace enger
         }
 
         cmd.endRendering();
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        stats.meshDrawTime = elapsed.count() / 1000.0f;
 
         // transition to blit
         cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eColorAttachmentOptimal,

@@ -17,6 +17,7 @@
 
 #include "Framing.h"
 #include "SceneManager.h"
+#include "Stats.h"
 #include "vulkan/QueueSubmitBuilder.h"
 
 constexpr auto WIDTH = 800;
@@ -75,11 +76,15 @@ int main()
 
     enger::SceneManager sceneManager{device, renderer.renderFormat(), renderer.depthFormat()};
 
+    EngineStats stats{};
+
     bool shouldRender = true;
 
     while (!window.shouldClose())
     {
         window.poll();
+
+        const auto start = std::chrono::high_resolution_clock::now();
 
         if (!resizeEventBus.empty())
         {
@@ -104,7 +109,7 @@ int main()
 
         camera.update();
         const auto& dctx = sceneManager.updateScene(static_cast<float>(swapchain.swapChainExtent().width),
-            static_cast<float>(swapchain.swapChainExtent().height), camera);
+                                                    static_cast<float>(swapchain.swapChainExtent().height), camera, stats);
 
         if (!shouldRender)
         {
@@ -115,17 +120,28 @@ int main()
         auto fctx = frameOrchestrator.beginFrame();
         if (fctx.has_value())
         {
-            renderer.render(fctx.value(), dctx);
+            renderer.render(fctx.value(), dctx, stats);
 
             imguiLayer.beginFrame();
             // we could remove imguiLayer.draw() and put our own imgui drawing here
             imguiLayer.draw();
+            ImGui::Begin("Stats");
+            ImGui::Text("Frame Time %f ms", stats.frameTime);
+            ImGui::Text("Draw Time %f ms", stats.meshDrawTime);
+            ImGui::Text("Update Time %f ms", stats.sceneUpdateTime);
+            ImGui::Text("Triangles: %d", stats.triangleCount);
+            ImGui::Text("Draw Calls: %d", stats.drawCalls);
+            ImGui::End();
             imguiLayer.endFrame(fctx.value());
 
             frameOrchestrator.endFrame(fctx.value());
 
             imguiLayer.postRenderFinished();
         }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        stats.frameTime = elapsed.count() / 1000.0f;
     }
 
     device.waitIdle();
