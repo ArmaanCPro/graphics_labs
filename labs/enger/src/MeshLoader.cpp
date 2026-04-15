@@ -342,10 +342,10 @@ namespace enger
         for (fastgltf::Material& material: gltf.materials)
         {
             MaterialConstants constants{};
-            constants.colorFactors.x = material.pbrData.baseColorFactor[0];
-            constants.colorFactors.y = material.pbrData.baseColorFactor[1];
-            constants.colorFactors.z = material.pbrData.baseColorFactor[2];
-            constants.colorFactors.w = material.pbrData.baseColorFactor[3];
+            constants.colorFactors.r = material.pbrData.baseColorFactor[0];
+            constants.colorFactors.g = material.pbrData.baseColorFactor[1];
+            constants.colorFactors.b = material.pbrData.baseColorFactor[2];
+            constants.colorFactors.a = material.pbrData.baseColorFactor[3];
 
             constants.metallicRoughnessFactors.x = material.pbrData.metallicFactor;
             constants.metallicRoughnessFactors.y = material.pbrData.roughnessFactor;
@@ -355,7 +355,7 @@ namespace enger
                                                                      sizeof(MaterialConstants), &constants);
 
             MaterialPass passType = MaterialPass::MainColor;
-            if (material.alphaMode == fastgltf::AlphaMode::Blend || material.alphaMode == fastgltf::AlphaMode::Mask)
+            if (material.alphaMode == fastgltf::AlphaMode::Blend)
             {
                 passType = MaterialPass::Transparent;
             }

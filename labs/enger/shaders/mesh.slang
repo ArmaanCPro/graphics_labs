@@ -45,7 +45,7 @@ struct VSOutput
 {
     float4 position : SV_POSITION;
     float3 normal : NORMAL;
-    float3 color : COLOR0;
+    float4 color : COLOR0;
     float2 uv : TEXCOORD0;
 }
 
@@ -60,7 +60,7 @@ VSOutput vertexMain(uint vertexId : SV_VulkanVertexID)
     output.position = mul(pc.scene->viewProj, mul(pc.renderMatrix, position));
 
     output.normal = mul(pc.renderMatrix, float4(v.normal, 0.0)).xyz;
-    output.color = v.color.rgb * pc.material->colorFactors.rgb;
+    output.color = v.color * pc.material->colorFactors;
     output.uv = float2(v.uv_x, v.uv_y);
 
     return output;
@@ -75,9 +75,9 @@ float4 fragmentMain(VSOutput input) : SV_Target
     float lightValue = max(dot(input.normal, pc.scene->sunlightDirection.xyz), 0.1);
 
     // diffuse
-    float3 color = input.color * textures[pc.colorTextureIndex].Sample(samplers[pc.samplerIndex], input.uv).rgb;
-    float3 ambient = color * pc.scene->ambientColor.rgb;
+    float4 color = input.color * textures[pc.colorTextureIndex].Sample(samplers[pc.samplerIndex], input.uv);
+    float4 ambient = color * pc.scene->ambientColor;
 
-    return float4(color * lightValue * pc.scene->sunlightColor.w + ambient, 1.0);
+    return float4(color.rgb * lightValue * pc.scene->sunlightColor.w + ambient.rgb, color.a);
 }
 

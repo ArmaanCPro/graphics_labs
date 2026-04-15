@@ -124,7 +124,10 @@ namespace enger
             obj.transform = nodeMatrix;
             obj.vertexBuffer = mesh->meshBuffers.vertexBuffer;
 
-            ctx.opaqueSurfaces.push_back(std::move(obj));
+            if (obj.material->passType == MaterialPass::Transparent)
+                ctx.transparentSurfaces.push_back(std::move(obj));
+            else if (obj.material->passType == MaterialPass::MainColor)
+                ctx.opaqueSurfaces.push_back(std::move(obj));
         }
 
         Node::draw(topMatrix, ctx);
