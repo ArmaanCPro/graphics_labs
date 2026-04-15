@@ -19,7 +19,7 @@ namespace enger
     class SceneManager
     {
     public:
-        SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat);
+        SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples);
 
         [[nodiscard]] const DrawContext& updateScene(float width, float height, const Camera& camera, EngineStats& stats);
 

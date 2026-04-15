@@ -34,7 +34,7 @@ namespace enger
         return data;
     }
 
-    void GLTFMetallic_Roughness::buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat)
+    void GLTFMetallic_Roughness::buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples)
     {
         auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
         if (!expectedShaderData)
@@ -66,6 +66,8 @@ namespace enger
 
             .cullMode = vk::CullModeFlagBits::eBack,
             .frontFace = vk::FrontFace::eCounterClockwise,
+
+            .sampleCount = msaaSamples,
         }, nullptr, "GLTFMetallic_Roughness: OpaquePipeline");
 
         transparentPipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
@@ -95,6 +97,8 @@ namespace enger
 
             .cullMode = vk::CullModeFlagBits::eBack,
             .frontFace = vk::FrontFace::eCounterClockwise,
+
+            .sampleCount = msaaSamples,
         }, nullptr, "GLTFMetallic_Roughness: TransparentPipeline");
     }
 

@@ -36,25 +36,29 @@ namespace enger
 
         auto& cmd = fctx.cmd;
 
-        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
         cmd.transitionImage(m_DepthBuffer, vk::ImageLayout::eUndefined,
                             vk::ImageLayout::eDepthStencilAttachmentOptimal);
+        cmd.transitionImage(m_MsaaRenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 
         // Geometry Drawing
         vk::RenderingAttachmentInfo colorAttachmentInfo{
-            .imageView = m_Device.getImage(m_RenderTarget)->view_,
+            .imageView = m_Device.getImage(m_MsaaRenderTarget)->view_,
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .resolveMode = vk::ResolveModeFlagBits::eAverage,
+            .resolveImageView = m_Device.getImage(m_RenderTarget)->view_,
+            .resolveImageLayout = vk::ImageLayout::eGeneral,
             .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
         };
         vk::RenderingAttachmentInfo depthAttachmentInfo{
             .imageView = m_Device.getImage(m_DepthBuffer)->view_,
             .imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
             .clearValue = vk::ClearValue{vk::ClearDepthStencilValue{0.0f, 0}},
         };
-        auto drawExtent = m_Device.getImage(m_RenderTarget)->extent_;
+        auto drawExtent = m_Device.getImage(m_MsaaRenderTarget)->extent_;
         vk::RenderingInfo renderingInfo{
             .renderArea = vk::Rect2D{0, 0, drawExtent.width, drawExtent.height},
             .layerCount = 1,
@@ -122,20 +126,18 @@ namespace enger
 
         cmd.endRendering();
 
+        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
+        cmd.transitionImage(fctx.swapchainImageHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+        cmd.blitImage(m_RenderTarget, fctx.swapchainImageHandle);
+
+        cmd.transitionImage(fctx.swapchainImageHandle, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         stats.meshDrawTime = elapsed.count() / 1000.0f;
 
-        // transition to blit
-        cmd.transitionImage(m_RenderTarget, vk::ImageLayout::eColorAttachmentOptimal,
-                            vk::ImageLayout::eTransferSrcOptimal);
-        cmd.transitionImage(fctx.swapchainImageHandle,
-                            vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
-
-        cmd.blitImage(m_RenderTarget, fctx.swapchainImageHandle);
-
-        // Leave the swapchain image in a usable state for UI
-        cmd.transitionImage(fctx.swapchainImageHandle, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+        // MSAA Resolve handled the blit from msaa render target to render target
+        // We still blit from render target to swapchain
     }
 
     void Renderer::onResize(uint32_t width, uint32_t height)
@@ -148,13 +150,22 @@ namespace enger
     void Renderer::createRenderTextures(uint32_t width, uint32_t height)
     {
         // Create textures
+        m_MsaaRenderTarget = m_Device.createTexture(
+            {
+                .format = vk::Format::eR16G16B16A16Sfloat,
+                .dimensions = {width, height, 1},
+                .samples = m_MsaaSamples,
+                .usage = vk::ImageUsageFlagBits::eColorAttachment,
+                .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+            },
+            &m_GraphicsQueue, "Msaa Render Target"
+        );
         m_RenderTarget = m_Device.createTexture(
             {
                 .format = vk::Format::eR16G16B16A16Sfloat,
                 .dimensions = {width, height, 1},
-                .usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eColorAttachment,
+                .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc,
                 .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                .initialData = nullptr,
             },
             &m_GraphicsQueue,
             "RenderTarget"
@@ -163,9 +174,9 @@ namespace enger
             {
                 .format = vk::Format::eD32Sfloat,
                 .dimensions = {width, height, 1},
-                .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                .samples = m_MsaaSamples,
+                .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
                 .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                .initialData = nullptr,
             },
             &m_GraphicsQueue,
             "DepthBuffer"

@@ -31,6 +31,7 @@ namespace enger
 
         vk::Format renderFormat() const { return m_Device.getImage(m_RenderTarget)->format_; }
         vk::Format depthFormat() const { return m_Device.getImage(m_DepthBuffer)->format_; }
+        vk::SampleCountFlagBits msaaSamples() const { return m_MsaaSamples; }
 
     private:
         void createRenderTextures(uint32_t width, uint32_t height);
@@ -41,8 +42,13 @@ namespace enger
 
         uint32_t m_CurrentFrame = 0;
 
+        // Rendering happens on this texture.
+        Holder<TextureHandle> m_MsaaRenderTarget;
+        // This is an intermediate target that gets resolved to from the Msaa target and blitted to the swapchain. Required because image format and swapchain format are different.
         Holder<TextureHandle> m_RenderTarget;
         Holder<TextureHandle> m_DepthBuffer;
+
+        static constexpr vk::SampleCountFlagBits m_MsaaSamples = vk::SampleCountFlagBits::e4;
 
         bool m_ShouldResize = false;
         uint32_t m_PendingWidth = 0;

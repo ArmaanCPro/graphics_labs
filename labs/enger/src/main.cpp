@@ -74,7 +74,7 @@ int main()
 
     enger::framing::FrameOrchestrator frameOrchestrator{device, swapchain, window};
 
-    enger::SceneManager sceneManager{device, renderer.renderFormat(), renderer.depthFormat()};
+    enger::SceneManager sceneManager{device, renderer.renderFormat(), renderer.depthFormat(), renderer.msaaSamples()};
 
     EngineStats stats{};
 

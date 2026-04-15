@@ -9,7 +9,7 @@
 
 namespace enger
 {
-    SceneManager::SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat)
+    SceneManager::SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples)
         : m_Device(device)
     {
 
@@ -83,7 +83,7 @@ namespace enger
 
         // MATERIALS
         m_GLTFMetallic_Roughness.buildPipelines(m_Device, renderFormat,
-                                                depthFormat);
+                                                depthFormat, msaaSamples);
 
         MaterialResources materialResources;
         materialResources.colorImage = m_WhiteImage;

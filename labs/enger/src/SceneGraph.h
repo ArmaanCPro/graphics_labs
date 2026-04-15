@@ -65,7 +65,7 @@ namespace enger
         MaterialPipeline opaquePipeline;
         MaterialPipeline transparentPipeline;
 
-        void buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat);
+        void buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples);
         MaterialInstance writeMaterial(MaterialPass pass, MaterialResources&& resources);
     };
 
