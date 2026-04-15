@@ -42,8 +42,8 @@ namespace enger
         vk::SamplerAddressMode addressModeU = vk::SamplerAddressMode::eRepeat;
         vk::SamplerAddressMode addressModeV = vk::SamplerAddressMode::eRepeat;
         vk::SamplerAddressMode addressModeW = vk::SamplerAddressMode::eRepeat;
-        bool anisotropyEnable = false;
-        float maxAnisotropy = 16.0f;
+        bool anisotropyEnable = true;
+        float maxAnisotropy = 16.0f; // maybe consider dropping to 8.0f as the default
         float minLod = 0.0f;
         float maxLod = vk::LodClampNone;
     };

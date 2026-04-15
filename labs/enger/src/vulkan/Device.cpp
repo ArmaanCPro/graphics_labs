@@ -61,12 +61,18 @@ namespace enger
                                             && features.get<vk::PhysicalDeviceVulkan12Features>().bufferDeviceAddress
                                             && features.get<vk::PhysicalDeviceVulkan12Features>().timelineSemaphore
                                             && features.get<vk::PhysicalDeviceVulkan12Features>().descriptorIndexing
-                                            && features.get<vk::PhysicalDeviceVulkan12Features>().shaderStorageImageArrayNonUniformIndexing
-                                            && features.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingStorageImageUpdateAfterBind
-                                            && features.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingSampledImageUpdateAfterBind
+                                            && features.get<vk::PhysicalDeviceVulkan12Features>().
+                                            shaderStorageImageArrayNonUniformIndexing
+                                            && features.get<vk::PhysicalDeviceVulkan12Features>().
+                                            descriptorBindingStorageImageUpdateAfterBind
+                                            && features.get<vk::PhysicalDeviceVulkan12Features>().
+                                            descriptorBindingSampledImageUpdateAfterBind
                                             && features.get<vk::PhysicalDeviceVulkan12Features>().runtimeDescriptorArray
-                                            && features.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingPartiallyBound
-                                            && features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+                                            && features.get<vk::PhysicalDeviceVulkan12Features>().
+                                            descriptorBindingPartiallyBound
+                                            && features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().
+                                            extendedDynamicState
+                                            && features.get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy;
 
             if (!supportsVulkan14 || !supportsDesiredQueues || !supportsAllRequiredExtensions || !
                 supportsRequiredFeatures)
@@ -79,7 +85,8 @@ namespace enger
         return sortedDevices;
     }
 
-    Device::Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions, bool useBindless)
+    Device::Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions,
+                   bool useBindless)
         :
         m_UseBindless(useBindless)
     {
@@ -119,11 +126,16 @@ namespace enger
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features,
             vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features,
             vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
-            {},
-            {.descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
-                .descriptorBindingSampledImageUpdateAfterBind = true, .descriptorBindingStorageImageUpdateAfterBind = true,
+            {.features = {
+                .samplerAnisotropy = true
+            }},
+            {
+                .descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
+                .descriptorBindingSampledImageUpdateAfterBind = true,
+                .descriptorBindingStorageImageUpdateAfterBind = true,
                 .descriptorBindingPartiallyBound = true, .runtimeDescriptorArray = true,
-                .timelineSemaphore = true, .bufferDeviceAddress = true },
+                .timelineSemaphore = true, .bufferDeviceAddress = true
+            },
             {.synchronization2 = true, .dynamicRendering = true},
             {},
             {.extendedDynamicState = true}
@@ -157,7 +169,8 @@ namespace enger
         vkCheck(m_Device->waitIdle());
     }
 
-    void Device::waitSemaphores(std::span<const vk::Semaphore> semaphores, std::span<const uint64_t> waitValues, uint64_t timeout)
+    void Device::waitSemaphores(std::span<const vk::Semaphore> semaphores, std::span<const uint64_t> waitValues,
+                                uint64_t timeout)
     {
         assert(semaphores.size() == waitValues.size());
 
@@ -446,7 +459,9 @@ namespace enger
         if (desc.initialData)
         {
             assert(aspectFlags == vk::ImageAspectFlagBits::eColor && "Non-color aspect for initial data");
-            assert(desc.usage & vk::ImageUsageFlagBits::eTransferDst && "Non-transfer dst usage for initial data (can't upload)");
+            assert(
+                desc.usage & vk::ImageUsageFlagBits::eTransferDst &&
+                "Non-transfer dst usage for initial data (can't upload)");
             assert(desc.type == vk::ImageType::e2D && "Non-2D image for initial data");
             queue = queue ? queue : &m_GraphicsQueue;
             queue->uploadTexture2DData(handle, desc.initialData, desc.dimensions, desc.mipLevels, desc.arrayLayers,
@@ -558,7 +573,7 @@ namespace enger
             .addressModeV = desc.addressModeV,
             .addressModeW = desc.addressModeW,
             .anisotropyEnable = desc.anisotropyEnable,
-            .maxAnisotropy = desc.maxAnisotropy,
+            .maxAnisotropy = std::min(desc.maxAnisotropy, m_PhysicalDevice.getProperties().limits.maxSamplerAnisotropy),
             .compareEnable = vk::False,
             .compareOp = vk::CompareOp::eAlways,
             .minLod = desc.minLod,
@@ -812,7 +827,7 @@ namespace enger
 
         std::array<vk::DescriptorBindingFlags, binding.size()> flags;
         flags.fill(vk::DescriptorBindingFlagBits::ePartiallyBound
-                                           | vk::DescriptorBindingFlagBits::eUpdateAfterBind);
+                   | vk::DescriptorBindingFlagBits::eUpdateAfterBind);
 
         vk::DescriptorSetLayoutBindingFlagsCreateInfo flagsCI{
             .bindingCount = static_cast<uint32_t>(flags.size()),
@@ -828,7 +843,7 @@ namespace enger
         auto layout = vkCheck(m_Device->createDescriptorSetLayout(layoutCI));
         setDebugName(*m_Device, layout, "Bindless Descriptor Set Layout");
         auto handle = m_DescriptorSetLayoutPool.create(std::move(layout));
-        m_BindlessLayoutHandle = { this, &m_GraphicsQueue, handle };
+        m_BindlessLayoutHandle = {this, &m_GraphicsQueue, handle};
 
         // Create Descriptor Pool
         std::array poolSizes = {
@@ -846,7 +861,8 @@ namespace enger
             }
         };
         vk::DescriptorPoolCreateInfo poolCI{
-            .flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind | vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+            .flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind |
+                     vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
             .maxSets = 1,
             .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
             .pPoolSizes = poolSizes.data(),
@@ -870,18 +886,19 @@ namespace enger
             .stages = vk::ShaderStageFlagBits::eCompute,
         };
         m_BindlessComputePipelineLayout = createPipelineLayout({
-            .descriptorLayouts = {{m_BindlessLayoutHandle}},
-            .pushConstantRanges = {{computePCI}},
-        }, &m_GraphicsQueue, "Bindless Compute Pipeline Layout");
+                                                                   .descriptorLayouts = {{m_BindlessLayoutHandle}},
+                                                                   .pushConstantRanges = {{computePCI}},
+                                                               }, &m_GraphicsQueue, "Bindless Compute Pipeline Layout");
         PushConstantsInfo graphicsPCI{
             .offset = 0,
             .size = sizeof(GraphicsPushConstants),
             .stages = vk::ShaderStageFlagBits::eAllGraphics,
         };
         m_BindlessGraphicsPipelineLayout = createPipelineLayout({
-            .descriptorLayouts = {{m_BindlessLayoutHandle}},
-            .pushConstantRanges = {{graphicsPCI}},
-        }, &m_GraphicsQueue, "Bindless Graphics Pipeline Layout");
+                                                                    .descriptorLayouts = {{m_BindlessLayoutHandle}},
+                                                                    .pushConstantRanges = {{graphicsPCI}},
+                                                                }, &m_GraphicsQueue,
+                                                                "Bindless Graphics Pipeline Layout");
     }
 
     void Device::updateBindlessStorageImage(uint32_t index, vk::ImageView view)
