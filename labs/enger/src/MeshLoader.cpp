@@ -71,7 +71,7 @@ namespace enger
         return surface;
     }
 
-    Holder<TextureHandle> loadImage(Device& device, fastgltf::Asset& asset, fastgltf::Image& image)
+    Holder<TextureHandle> loadImage(Device& device, fastgltf::Asset& asset, fastgltf::Image& image, const std::filesystem::path& gltfPath)
     {
         Holder<TextureHandle> newImage;
 
@@ -87,7 +87,10 @@ namespace enger
 
                     const std::string path(filePath.uri.path().begin(),
                                            filePath.uri.path().end());
-                    unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
+                    const std::filesystem::path fullPath = gltfPath.parent_path() / path;
+                    auto canonicalPath = std::filesystem::canonical(fullPath);
+
+                    unsigned char* data = stbi_load(canonicalPath.string().c_str(), &width, &height, &nrChannels, 4);
                     if (data)
                     {
                         vk::Extent3D imageExtent{
@@ -100,7 +103,9 @@ namespace enger
                                                             .format = vk::Format::eR8G8B8A8Unorm,
                                                             .dimensions = imageExtent,
                                                             .usage = vk::ImageUsageFlagBits::eSampled |
-                                                                     vk::ImageUsageFlagBits::eTransferDst,
+                                                                     vk::ImageUsageFlagBits::eTransferDst |
+                                                                     vk::ImageUsageFlagBits::eTransferSrc,
+                                                            .generateMipMaps = true,
                                                             .initialData = data,
                                                         }, nullptr);
 
@@ -124,7 +129,9 @@ namespace enger
                                                             .format = vk::Format::eR8G8B8A8Unorm,
                                                             .dimensions = imageExtent,
                                                             .usage = vk::ImageUsageFlagBits::eSampled
-                                                                     | vk::ImageUsageFlagBits::eTransferDst,
+                                                                     | vk::ImageUsageFlagBits::eTransferDst
+                                                                     | vk::ImageUsageFlagBits::eTransferSrc,
+                                                            .generateMipMaps = true,
                                                             .initialData = data,
                                                         }, nullptr);
 
@@ -157,7 +164,9 @@ namespace enger
                                                                                .format = vk::Format::eR8G8B8A8Unorm,
                                                                                .dimensions = imageExtent,
                                                                                .usage = vk::ImageUsageFlagBits::eSampled
-                                                                                   | vk::ImageUsageFlagBits::eTransferDst,
+                                                                                   | vk::ImageUsageFlagBits::eTransferDst
+                                                                                   | vk::ImageUsageFlagBits::eTransferSrc,
+                                                                               .generateMipMaps = true,
                                                                                .initialData = data,
                                                                            }, nullptr);
 
@@ -182,7 +191,9 @@ namespace enger
                                                                                .format = vk::Format::eR8G8B8A8Unorm,
                                                                                .dimensions = imageExtent,
                                                                                .usage = vk::ImageUsageFlagBits::eSampled
-                                                                                   | vk::ImageUsageFlagBits::eTransferDst,
+                                                                                   | vk::ImageUsageFlagBits::eTransferDst
+                                                                                   | vk::ImageUsageFlagBits::eTransferSrc,
+                                                                               .generateMipMaps = true,
                                                                                .initialData = data,
                                                                            }, nullptr);
 
@@ -207,7 +218,9 @@ namespace enger
                                                                                .format = vk::Format::eR8G8B8A8Unorm,
                                                                                .dimensions = imageExtent,
                                                                                .usage = vk::ImageUsageFlagBits::eSampled
-                                                                                   | vk::ImageUsageFlagBits::eTransferDst,
+                                                                                   | vk::ImageUsageFlagBits::eTransferDst
+                                                                                   | vk::ImageUsageFlagBits::eTransferSrc,
+                                                                               .generateMipMaps = true,
                                                                                .initialData = data,
                                                                            }, nullptr);
 
@@ -273,7 +286,7 @@ namespace enger
         auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
         if (!data)
         {
-            std::cerr << "Failed to load gltf file: " <<  filePath.string();
+            std::cerr << "Failed to load gltf file: " << filePath.string();
             return std::nullopt;
         }
 
@@ -300,11 +313,11 @@ namespace enger
         for (fastgltf::Sampler& sampler: gltf.samplers)
         {
             file.samplers_.push_back(device.createSampler(SamplerDesc{
-                                                              .magFilter = extractFilter(sampler.magFilter.value()),
-                                                              .minFilter = extractFilter(sampler.minFilter.value()),
+                                                              .magFilter = extractFilter(sampler.magFilter.value_or(fastgltf::Filter::Linear)),
+                                                              .minFilter = extractFilter(sampler.minFilter.value_or(fastgltf::Filter::Linear)),
                                                               .mipmapMode = extractMipmapMode(
                                                                   sampler.minFilter.value_or(
-                                                                      fastgltf::Filter::Nearest)),
+                                                                      fastgltf::Filter::Linear)),
                                                           }, nullptr));
         }
 
@@ -317,7 +330,7 @@ namespace enger
         // load textures
         for (fastgltf::Image& image: gltf.images)
         {
-            auto img = loadImage(device, gltf, image);
+            auto img = loadImage(device, gltf, image, filePath);
             if (img.valid())
             {
                 images.push_back(img);
@@ -331,11 +344,11 @@ namespace enger
         }
 
         file.materialDataBuffer_ = device.createBuffer(sizeof(MaterialConstants) * gltf.materials.size(),
-                                                      vk::BufferUsageFlagBits::eUniformBuffer |
-                                                      vk::BufferUsageFlagBits::eShaderDeviceAddress,
-                                                      vk::MemoryPropertyFlagBits::eHostVisible |
-                                                      vk::MemoryPropertyFlagBits::eHostCoherent,
-                                                      nullptr, "MaterialConstants FOR MESH LOADER");
+                                                       vk::BufferUsageFlagBits::eUniformBuffer |
+                                                       vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                                                       vk::MemoryPropertyFlagBits::eHostVisible |
+                                                       vk::MemoryPropertyFlagBits::eHostCoherent,
+                                                       nullptr, "MaterialConstants FOR MESH LOADER");
 
         int dataIndex = 0;
 
@@ -351,8 +364,8 @@ namespace enger
             constants.metallicRoughnessFactors.y = material.pbrData.roughnessFactor;
 
             device.getBuffer(file.materialDataBuffer_)->bufferSubData(device.allocator(),
-                                                                     dataIndex * sizeof(MaterialConstants),
-                                                                     sizeof(MaterialConstants), &constants);
+                                                                      dataIndex * sizeof(MaterialConstants),
+                                                                      sizeof(MaterialConstants), &constants);
 
             MaterialPass passType = MaterialPass::MainColor;
             if (material.alphaMode == fastgltf::AlphaMode::Blend)
@@ -375,12 +388,17 @@ namespace enger
             // get texture data
             if (material.pbrData.baseColorTexture.has_value())
             {
-                size_t img = gltf.textures[material.pbrData.baseColorTexture.value().textureIndex].imageIndex.value();
-                size_t sampler = gltf.textures[material.pbrData.baseColorTexture.value().textureIndex].samplerIndex.
-                    value();
+                auto img = gltf.textures[material.pbrData.baseColorTexture.value().textureIndex].imageIndex;
+                auto sampler = gltf.textures[material.pbrData.baseColorTexture.value().textureIndex].samplerIndex;
 
-                materialResources.colorImage = images[img];
-                materialResources.colorSampler = file.samplers_[sampler];
+                if (img.has_value())
+                {
+                    materialResources.colorImage = images[img.value()];
+                }
+                if (sampler.has_value())
+                {
+                    materialResources.colorSampler = file.samplers_[sampler.value()];
+                }
             }
 
             std::shared_ptr<GLTFMaterial> newMaterial = std::make_shared<GLTFMaterial>();

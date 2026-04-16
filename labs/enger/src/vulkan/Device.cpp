@@ -405,11 +405,24 @@ namespace enger
         assert(desc.dimensions.height > 0);
         assert(desc.dimensions.depth > 0);
 
+        assert(desc.mipLevels == 1 && "Manual mip specification not yet supported");
+
+        auto mipLevels = desc.mipLevels;
+        if (desc.generateMipMaps)
+        {
+            assert(desc.initialData && "Initial data must be provided to generate mip maps");
+            assert(desc.mipLevels == 1 && "Cannot manually specify mip levels when generating mip maps");
+            assert(desc.usage & vk::ImageUsageFlagBits::eTransferDst && "Mipmapped textures must have transfer dst usage.");
+            assert(desc.usage & vk::ImageUsageFlagBits::eTransferSrc && "Mipmapped textures must have transfer src usage.");
+
+            mipLevels = static_cast<uint32_t>(std::log2(std::max(desc.dimensions.width, desc.dimensions.height))) + 1;
+        }
+
         vk::ImageCreateInfo imageCI{
             .imageType = vk::ImageType::e2D,
             .format = desc.format,
             .extent = desc.dimensions,
-            .mipLevels = desc.mipLevels,
+            .mipLevels = mipLevels,
             .arrayLayers = desc.arrayLayers,
             .samples = desc.samples,
             .tiling = vk::ImageTiling::eOptimal,
@@ -432,7 +445,7 @@ namespace enger
             .image = image.image_,
             .viewType = vk::ImageViewType::e2D,
             .format = desc.format,
-            .subresourceRange = {aspectFlags, 0, desc.mipLevels, 0, desc.arrayLayers},
+            .subresourceRange = {aspectFlags, 0, mipLevels, 0, desc.arrayLayers},
         };
 
         vkCheck(m_Device->createImageView(&viewCI, nullptr, &image.view_));
@@ -464,7 +477,7 @@ namespace enger
                 "Non-transfer dst usage for initial data (can't upload)");
             assert(desc.type == vk::ImageType::e2D && "Non-2D image for initial data");
             queue = queue ? queue : &m_GraphicsQueue;
-            queue->uploadTexture2DData(handle, desc.initialData, desc.dimensions, desc.mipLevels, desc.arrayLayers,
+            queue->uploadTexture2DData(handle, desc.initialData, desc.dimensions, mipLevels, desc.arrayLayers,
                                        desc.format);
         }
 

@@ -74,6 +74,8 @@ namespace enger
         [[nodiscard]] vk::Queue queue() const { return m_Queue; }
 
     private:
+        void generateMipmaps(CommandBuffer& cmd, TextureHandle handle, vk::Extent2D dimensions, uint32_t mipLevels);
+
         Device* m_Device;
         vk::Queue m_Queue;
         uint32_t m_FamilyIndex;

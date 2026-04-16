@@ -9,10 +9,10 @@
 
 namespace enger
 {
-    SceneManager::SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples)
+    SceneManager::SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat,
+                               vk::SampleCountFlagBits msaaSamples)
         : m_Device(device)
     {
-
         // Default Textures
         uint32_t white = glm::packUnorm4x8(glm::vec4{1.0f, 1.0f, 1.0f, 1.0f});
         m_WhiteImage = m_Device.createTexture({
@@ -57,7 +57,8 @@ namespace enger
                                                                   .format = vk::Format::eR8G8B8A8Unorm,
                                                                   .dimensions = {16, 16, 1},
                                                                   .usage = vk::ImageUsageFlagBits::eSampled |
-                                                                           vk::ImageUsageFlagBits::eTransferDst,
+                                                                           vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc,
+                                                                  .generateMipMaps = true,
                                                                   .memoryProperties =
                                                                   vk::MemoryPropertyFlagBits::eDeviceLocal,
                                                                   .initialData = pixels.data(),
@@ -132,7 +133,7 @@ namespace enger
         m_DrawContext.opaqueSurfaces.clear();
         m_DrawContext.transparentSurfaces.clear();
 
-        for (auto& [name, scene] : m_LoadedScenes)
+        for (auto& [name, scene]: m_LoadedScenes)
         {
             scene->draw(glm::mat4(1.0f), m_DrawContext);
         }

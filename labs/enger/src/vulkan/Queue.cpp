@@ -141,7 +141,7 @@ namespace enger
         m_DeletionQueue.push(std::move(func), m_CurrentSubmitCounter);
     }
 
-    void Queue::uploadTexture2DData(TextureHandle handle, const void* data, const vk::Extent3D& dimensions, [[maybe_unused]] uint32_t mipLevels,
+    void Queue::uploadTexture2DData(TextureHandle handle, const void* data, const vk::Extent3D& dimensions, uint32_t mipLevels,
                                     uint32_t arrayLayers, vk::Format imageFormat)
     {
         const size_t dataSize = dimensions.width * dimensions.height * dimensions.depth * (findBppFromFormat(imageFormat) / 8);
@@ -174,8 +174,87 @@ namespace enger
             };
 
             cmd.copyBufferToImage(stagingHandle, handle, copyRegion);
-
-            cmd.transitionImage(handle, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral);
+            if (mipLevels > 1)
+            {
+                generateMipmaps(cmd, handle, {dimensions.height, dimensions.width}, mipLevels);
+            }
+            else
+            {
+                cmd.transitionImage(handle, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral);
+            }
         });
+    }
+
+    void Queue::generateMipmaps(CommandBuffer& cmd, TextureHandle handle, vk::Extent2D dimensions, uint32_t mipLevels)
+    {
+        for (uint32_t mip = 0; mip < mipLevels; ++mip)
+        {
+            vk::Extent2D halfSize = dimensions;
+            halfSize.width /= 2;
+            halfSize.height /= 2;
+
+            // TODO expand cmd.transitionImage to support mips?
+            vk::ImageMemoryBarrier2 barrier{
+                .srcStageMask = vk::PipelineStageFlagBits2::eAllCommands,
+                .srcAccessMask = vk::AccessFlagBits2::eMemoryWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eAllCommands,
+                .dstAccessMask = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
+                .oldLayout = vk::ImageLayout::eTransferDstOptimal,
+                .newLayout = vk::ImageLayout::eTransferSrcOptimal,
+                .image = m_Device->getImage(handle)->image_,
+
+                .subresourceRange = vk::ImageSubresourceRange{
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = mip,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            };
+            vk::DependencyInfo dependencyInfo{
+                .imageMemoryBarrierCount = 1,
+                .pImageMemoryBarriers = &barrier,
+            };
+
+            cmd.get().pipelineBarrier2(dependencyInfo);
+
+            if (mip < mipLevels - 1)
+            {
+                // could also extend cmd.blitImage() here to support mips
+                vk::ImageBlit2 blitRegion{};
+                blitRegion.srcOffsets[1].x = dimensions.width;
+                blitRegion.srcOffsets[1].y = dimensions.height;
+                blitRegion.srcOffsets[1].z = 1;
+
+                blitRegion.dstOffsets[1].x = halfSize.width;
+                blitRegion.dstOffsets[1].y = halfSize.height;
+                blitRegion.dstOffsets[1].z = 1;
+
+                blitRegion.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+                blitRegion.srcSubresource.baseArrayLayer = 0;
+                blitRegion.srcSubresource.layerCount = 1;
+                blitRegion.srcSubresource.mipLevel = mip;
+
+                blitRegion.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+                blitRegion.dstSubresource.baseArrayLayer = 0;
+                blitRegion.dstSubresource.layerCount = 1;
+                blitRegion.dstSubresource.mipLevel = mip + 1;
+
+                vk::BlitImageInfo2 blitInfo{
+                    .srcImage = m_Device->getImage(handle)->image_,
+                    .srcImageLayout = vk::ImageLayout::eTransferSrcOptimal,
+                    .dstImage = m_Device->getImage(handle)->image_,
+                    .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
+                    .regionCount = 1,
+                    .pRegions = &blitRegion,
+                    .filter = vk::Filter::eLinear,
+                };
+
+                cmd.get().blitImage2(blitInfo);
+
+                dimensions = halfSize;
+            }
+        }
+        cmd.transitionImage(handle, vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eGeneral);
     }
 }

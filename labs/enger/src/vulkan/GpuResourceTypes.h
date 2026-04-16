@@ -30,6 +30,7 @@ namespace enger
         vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
         vk::ImageUsageFlags usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
         uint32_t mipLevels = 1;
+        bool generateMipMaps = false;
         vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
         const void* initialData = nullptr;
     };
