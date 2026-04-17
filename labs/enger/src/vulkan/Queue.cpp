@@ -92,22 +92,38 @@ namespace enger
         return m_CurrentSubmitCounter;
     }
 
-    SubmitHandle Queue::submitImmediateAsync(std::function<void(CommandBuffer &)> func)
+    SubmitHandle Queue::submitImmediateAsync(std::function<void(CommandBuffer &)> func, std::optional<vk::SubmitInfo2> submitInfo)
     {
         m_ImmediateCmdBuffer.reset();
         m_ImmediateCmdBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
         func(m_ImmediateCmdBuffer);
         m_ImmediateCmdBuffer.end();
 
+
         vk::CommandBufferSubmitInfo cmdInfo{
             .commandBuffer = m_ImmediateCmdBuffer.get(),
         };
-        vk::SubmitInfo2 submitInfo{
+
+        if (submitInfo.has_value())
+        {
+            if (submitInfo.value().commandBufferInfoCount == 0)
+            {
+                submitInfo.value().commandBufferInfoCount = 1;
+                submitInfo.value().pCommandBufferInfos = &cmdInfo;
+                return submit(submitInfo.value());
+            }
+            std::vector<vk::CommandBufferSubmitInfo> infos(submitInfo.value().pCommandBufferInfos, submitInfo.value().pCommandBufferInfos + submitInfo.value().commandBufferInfoCount);
+            infos.push_back(cmdInfo);
+            submitInfo.value().pCommandBufferInfos = infos.data();
+            submitInfo.value().commandBufferInfoCount += 1;
+            return submit(submitInfo.value());
+        }
+
+        vk::SubmitInfo2 si{
             .commandBufferInfoCount = 1,
             .pCommandBufferInfos = &cmdInfo,
         };
-
-        return submit(submitInfo);
+        return submit(si);
     }
 
     void Queue::submitImmediate(std::function<void(CommandBuffer &)> func, uint64_t timeout)

@@ -7,6 +7,7 @@
 namespace enger
 {
     class Device;
+    class Queue;
 
     enum class CommandPoolFlags
     {
@@ -68,6 +69,20 @@ namespace enger
 
         void transitionImages(std::span<const TransitionImageInfo> infos);
         void transitionImages(vk::DependencyInfo info);
+
+        struct TransferTextureDesc
+        {
+            TextureHandle handle;
+            vk::ImageLayout srcLayout = vk::ImageLayout::eGeneral;
+            vk::ImageLayout dstLayout = vk::ImageLayout::eGeneral;
+            std::optional<vk::AccessFlags2> srcAccess;
+            std::optional<vk::AccessFlags2> dstAccess;
+            std::optional<vk::PipelineStageFlags2> srcStage;
+            std::optional<vk::PipelineStageFlags2> dstStage;
+            Queue* srcQueue = nullptr;
+            Queue* dstQueue = nullptr;
+        };
+        void imageBarrier(TransferTextureDesc desc);
 
         void blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle);
         void clearColorImage(TextureHandle texHandle, vk::ClearColorValue color, vk::ImageAspectFlags aspectMask);

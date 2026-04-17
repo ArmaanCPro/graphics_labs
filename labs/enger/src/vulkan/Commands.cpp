@@ -3,6 +3,7 @@
 #include "Device.h"
 
 #include "GpuResourceTypes.h"
+#include "QueueSubmitBuilder.h"
 
 #include "Profiling/Profiler.h"
 
@@ -93,7 +94,8 @@ namespace enger
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImage", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImage", m_Device, m_CommandBuffer,
+                               ENGER_PROFILER_COLOR_BARRIER)
 
         auto* image = m_Device->getImage(texHandle);
         assert(image != nullptr);
@@ -132,7 +134,8 @@ namespace enger
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImages", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImages", m_Device, m_CommandBuffer,
+                               ENGER_PROFILER_COLOR_BARRIER)
 
         assert(infos.size() <= kMaxTransitionImages);
 
@@ -176,6 +179,90 @@ namespace enger
     void CommandBuffer::transitionImages(vk::DependencyInfo info)
     {
         m_CommandBuffer.pipelineBarrier2(info);
+    }
+
+    void CommandBuffer::imageBarrier(TransferTextureDesc desc)
+    {
+        assert(m_Device != nullptr);
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::imageBarrier", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+
+        auto* image = m_Device->getImage(desc.handle);
+        assert(image != nullptr);
+
+        if (!desc.srcAccess.has_value())
+            desc.srcAccess = getTransitionAccessAndStage(desc.srcLayout).first;
+        if (!desc.dstAccess.has_value())
+            desc.dstAccess = getTransitionAccessAndStage(desc.dstLayout).first;
+        if (!desc.srcStage.has_value())
+            desc.srcStage = getTransitionAccessAndStage(desc.srcLayout).second;
+        if (!desc.dstStage.has_value())
+            desc.dstStage = getTransitionAccessAndStage(desc.dstLayout).second;
+
+        if (desc.srcQueue || desc.dstQueue)
+        {
+            assert(desc.srcQueue && desc.dstQueue);
+
+            vk::ImageMemoryBarrier2 releaseBarrier{
+                .srcStageMask = desc.srcStage.value(),
+                .srcAccessMask = desc.srcAccess.value(),
+                .dstStageMask = vk::PipelineStageFlagBits2::eNone, // ignored
+                .dstAccessMask = vk::AccessFlagBits2::eNone, // ignored
+                .oldLayout = desc.srcLayout,
+                .newLayout = desc.dstLayout,
+                .srcQueueFamilyIndex = desc.srcQueue->familyIndex(),
+                .dstQueueFamilyIndex = desc.dstQueue->familyIndex(),
+                .image = image->image_,
+                .subresourceRange = vk::ImageSubresourceRange{
+                    .aspectMask = desc.dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                      ? vk::ImageAspectFlagBits::eDepth
+                                      : vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = vk::RemainingMipLevels,
+                    .baseArrayLayer = 0,
+                    .layerCount = vk::RemainingArrayLayers,
+                },
+            };
+            vk::DependencyInfo releaseInfo{
+                .imageMemoryBarrierCount = 1,
+                .pImageMemoryBarriers = &releaseBarrier,
+            };
+
+            SubmitHandle releaseSubmission = desc.srcQueue->submitImmediateAsync([&](CommandBuffer& cmd) {
+                cmd.get().pipelineBarrier2(releaseInfo);
+            });
+
+            vk::ImageMemoryBarrier2 acquireBarrier{
+                .srcStageMask = vk::PipelineStageFlagBits2::eNone, // ignored
+                .srcAccessMask = vk::AccessFlagBits2::eNone, // ignored
+                .dstStageMask = desc.dstStage.value(),
+                .dstAccessMask = desc.dstAccess.value(),
+                .oldLayout = desc.srcLayout,
+                .newLayout = desc.dstLayout,
+                .srcQueueFamilyIndex = desc.dstQueue->familyIndex(),
+                .dstQueueFamilyIndex = desc.srcQueue->familyIndex(),
+                .image = image->image_,
+                .subresourceRange = vk::ImageSubresourceRange{
+                    .aspectMask = desc.dstLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                      ? vk::ImageAspectFlagBits::eDepth
+                                      : vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = vk::RemainingMipLevels,
+                    .baseArrayLayer = 0,
+                    .layerCount = vk::RemainingArrayLayers,
+                },
+            };
+            vk::DependencyInfo acquireInfo{
+                .imageMemoryBarrierCount = 1,
+                .pImageMemoryBarriers = &acquireBarrier,
+            };
+
+            QueueSubmitBuilder acquireBuilder;
+            acquireBuilder.waitTimeline(desc.srcQueue->timelineSemaphore(), releaseSubmission, vk::PipelineStageFlagBits2::eTransfer);
+            desc.dstQueue->submitImmediateAsync([&](CommandBuffer& cmd) {
+                cmd.get().pipelineBarrier2(acquireInfo);
+            }, acquireBuilder.build());
+        }
     }
 
     void CommandBuffer::blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle)
