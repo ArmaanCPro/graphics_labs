@@ -573,6 +573,7 @@ namespace enger
             mipLevels = static_cast<uint32_t>(std::log2(std::max(desc.dimensions.width, desc.dimensions.height))) + 1;
         }
 
+        auto qfp = queue ? queue->familyIndex() : m_GraphicsQueue.familyIndex();
         vk::ImageCreateInfo imageCI{
             .imageType = vk::ImageType::e2D,
             .format = desc.format,
@@ -583,6 +584,8 @@ namespace enger
             .tiling = vk::ImageTiling::eOptimal,
             .usage = desc.usage,
             .sharingMode = vk::SharingMode::eExclusive,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &qfp,
             .initialLayout = vk::ImageLayout::eUndefined,
         };
 
@@ -647,10 +650,13 @@ namespace enger
 
         // TODO assert that sizes are within physical device limits
 
+        auto qfp = queue ? queue->familyIndex() : m_GraphicsQueue.familyIndex();
         vk::BufferCreateInfo bufferCI{
             .size = size,
             .usage = usage,
             .sharingMode = vk::SharingMode::eExclusive,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &qfp,
         };
 
         VulkanBuffer buffer = m_Allocator.createBuffer(bufferCI, memFlags);
