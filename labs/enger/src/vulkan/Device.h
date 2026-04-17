@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 
 #include "GpuResourceTypes.h"
 #include "vk.h"
@@ -24,7 +25,7 @@ namespace enger
     {
     public:
         /// Requires surface for presentation. Headless is not currently supported.
-        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions,
+        explicit Device(vk::Instance instance, vk::SurfaceKHR surface, std::vector<const char*> deviceExtensions,
                         bool useBindless = true);
 
         ~Device();
@@ -167,6 +168,10 @@ namespace enger
         }
 
     private:
+        // returns physical devices sorted from worst to best
+        std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice>& physicalDevices,
+                                                                   std::span<const char*> requiredDeviceExtensions);
+
         vk::PhysicalDevice m_PhysicalDevice;
         vk::UniqueDevice m_Device;
 
@@ -203,11 +208,16 @@ namespace enger
         void updateBindlessSampledImage(uint32_t index, vk::ImageView view);
         void updateBindlessSampler(uint32_t index, vk::Sampler sampler);
 
-    public:
 #ifdef ENABLE_PROFILING
+    public:
         TracyVkCtx m_TracyVkCtx = nullptr;
         vk::UniqueCommandPool m_TracyCommandPool;
         vk::CommandBuffer m_TracyCommandBuffer = nullptr;
+        bool m_UsingTracyHostCalibrated = false;
 #endif
+    public:
+        bool m_HasKhrCalibratedTimestamps = false;
+        bool m_HasExtCalibratedTimestamps = false;
+        bool m_HasHostQuery = false;
     };
 }

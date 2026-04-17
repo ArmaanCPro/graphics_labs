@@ -58,13 +58,13 @@ int main()
     enger::Instance instance{instanceExtensions};
 
     // maybe: don't make it vulkan specific, instead maybe map some generic extension names to vulkan specific
-    std::array requiredDeviceExtensions = {
+    std::vector requiredDeviceExtensions = {
         vk::KHRSwapchainExtensionName,
     };
 
     auto surface = enger::Surface{window, instance.instance()};
 
-    auto device = enger::Device{instance.instance(), surface.surface(), requiredDeviceExtensions};
+    auto device = enger::Device{instance.instance(), surface.surface(), std::move(requiredDeviceExtensions)};
 
     auto swapchain = enger::SwapChain{
         device, surface.surface(), window,

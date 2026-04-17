@@ -73,6 +73,7 @@ namespace enger
 
     SubmitHandle Queue::submit(vk::SubmitInfo2 submitInfo)
     {
+        ENGER_PROFILE_FUNCTION()
         m_CurrentSubmitCounter++;
         // Signal the timeline semaphore
         std::vector<vk::SemaphoreSubmitInfo> signalSemaphores(

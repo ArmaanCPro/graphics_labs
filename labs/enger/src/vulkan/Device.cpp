@@ -9,9 +9,9 @@
 
 namespace enger
 {
-    // returns physical devices sorted from worst to best
-    std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice>& physicalDevices,
-                                                               std::span<const char*> requiredDeviceExtensions)
+    std::multimap<int, vk::PhysicalDevice> Device::sortPhysicalDevices(
+        const std::vector<vk::PhysicalDevice>& physicalDevices,
+        std::span<const char*> requiredDeviceExtensions)
     {
         std::multimap<int, vk::PhysicalDevice> sortedDevices;
         for (auto& device: physicalDevices)
@@ -43,11 +43,33 @@ namespace enger
                                                                              [requiredDeviceExtension](
                                                                              const auto& availableDeviceExtension) {
                                                                                  return std::strcmp(
-                                                                                     availableDeviceExtension.
-                                                                                     extensionName,
-                                                                                     requiredDeviceExtension) == 0;
+                                                                                         availableDeviceExtension.
+                                                                                         extensionName,
+                                                                                         requiredDeviceExtension) == 0;
                                                                              });
                                                                      });
+
+            for (const auto& availableExtension: availableDeviceExtensions)
+            {
+                if (std::strcmp(availableExtension.extensionName, vk::KHRCalibratedTimestampsExtensionName) == 0)
+                {
+                    m_HasKhrCalibratedTimestamps = true;
+                    score += 10;
+                }
+                else
+                {
+                    m_HasKhrCalibratedTimestamps = false;
+                }
+                if (std::strcmp(availableExtension.extensionName, vk::EXTCalibratedTimestampsExtensionName) == 0)
+                {
+                    m_HasExtCalibratedTimestamps = true;
+                    score += 10;
+                }
+                else
+                {
+                    m_HasExtCalibratedTimestamps = false;
+                }
+            }
 
             auto features = device.getFeatures2<
                 vk::PhysicalDeviceFeatures2,
@@ -74,6 +96,12 @@ namespace enger
                                             extendedDynamicState
                                             && features.get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy;
 
+            m_HasHostQuery = features.get<vk::PhysicalDeviceVulkan12Features>().hostQueryReset;
+            if (m_HasHostQuery)
+            {
+                score += 10;
+            }
+
             if (!supportsVulkan14 || !supportsDesiredQueues || !supportsAllRequiredExtensions || !
                 supportsRequiredFeatures)
             {
@@ -85,7 +113,7 @@ namespace enger
         return sortedDevices;
     }
 
-    Device::Device(vk::Instance instance, vk::SurfaceKHR surface, std::span<const char*> deviceExtensions,
+    Device::Device(vk::Instance instance, vk::SurfaceKHR surface, std::vector<const char*> deviceExtensions,
                    bool useBindless)
         :
         m_UseBindless(useBindless)
@@ -126,22 +154,36 @@ namespace enger
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features,
             vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features,
             vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
-            {
-                .features = {
-                    .samplerAnisotropy = true
-                }
-            },
-            {
-                .descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
-                .descriptorBindingSampledImageUpdateAfterBind = true,
-                .descriptorBindingStorageImageUpdateAfterBind = true,
-                .descriptorBindingPartiallyBound = true, .runtimeDescriptorArray = true,
-                .timelineSemaphore = true, .bufferDeviceAddress = true
-            },
-            {.synchronization2 = true, .dynamicRendering = true},
-            {},
-            {.extendedDynamicState = true}
-        };
+                {
+                    .features = {
+                        .samplerAnisotropy = true
+                    }
+                },
+                {
+                    .descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
+                    .descriptorBindingSampledImageUpdateAfterBind = true,
+                    .descriptorBindingStorageImageUpdateAfterBind = true,
+                    .descriptorBindingPartiallyBound = true, .runtimeDescriptorArray = true,
+    #ifdef ENABLE_PROFILING
+                    .hostQueryReset = m_HasHostQuery && !(m_HasKhrCalibratedTimestamps || m_HasExtCalibratedTimestamps),
+    #endif
+                    .timelineSemaphore = true, .bufferDeviceAddress = true,
+                },
+                {.synchronization2 = true, .dynamicRendering = true},
+                {},
+                {.extendedDynamicState = true},
+            };
+
+#ifdef ENABLE_PROFILING
+        if (m_HasKhrCalibratedTimestamps)
+        {
+            deviceExtensions.push_back(VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+        }
+        else if (m_HasExtCalibratedTimestamps)
+        {
+            deviceExtensions.push_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+        }
+#endif
 
         vk::DeviceCreateInfo deviceCreateInfo{
             .pNext = &featureChain.get(),
@@ -166,22 +208,81 @@ namespace enger
         }
 
 #ifdef ENABLE_PROFILING
-        const vk::CommandPoolCreateInfo commandPoolCI{
-            .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient,
-            .queueFamilyIndex = m_GraphicsQueue.familyIndex(),
-        };
-        m_TracyCommandPool = vkCheck(m_Device->createCommandPoolUnique(commandPoolCI));
-        setDebugName(*m_Device, *m_TracyCommandPool, "Tracy Command Pool");
-        const vk::CommandBufferAllocateInfo commandBufferCI{
-            .commandPool = *m_TracyCommandPool,
-            .level = vk::CommandBufferLevel::ePrimary,
-            .commandBufferCount = 1,
-        };
-        m_TracyCommandBuffer = vkCheck(m_Device->allocateCommandBuffers(commandBufferCI)).front();
-        m_TracyVkCtx = TracyVkContext(instance, m_PhysicalDevice, *m_Device, m_GraphicsQueue.queue(), m_TracyCommandBuffer,
-                                                    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
-                                                    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
-        assert(m_TracyVkCtx);
+        std::vector<vk::TimeDomainKHR> timeDomainsKhr;
+        std::vector<vk::TimeDomainEXT> timeDomainsExt;
+        if (m_HasKhrCalibratedTimestamps)
+        {
+            timeDomainsKhr = vkCheck(m_PhysicalDevice.getCalibrateableTimeDomainsKHR());
+        }
+        else if (m_HasExtCalibratedTimestamps)
+        {
+            timeDomainsExt = vkCheck(m_PhysicalDevice.getCalibrateableTimeDomainsEXT());
+        }
+        const bool hasHostQuery = m_HasHostQuery && [&]() -> bool {
+            if (m_HasKhrCalibratedTimestamps)
+            {
+                for (vk::TimeDomainKHR domain : timeDomainsKhr)
+                {
+                    const auto d = static_cast<VkTimeDomainKHR>(domain);
+                    if (d == VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_KHR ||
+                        d == VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_KHR)
+                    {
+                        return true;
+                    }
+                }
+            }
+            else if (m_HasExtCalibratedTimestamps)
+            {
+                for (vk::TimeDomainEXT domain : timeDomainsExt)
+                {
+                    const auto d = static_cast<VkTimeDomainEXT>(domain);
+                    if (d == VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_EXT ||
+                        d == VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_EXT)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }();
+        if (hasHostQuery)
+        {
+            // If we have Host Query Reset, we don't need to allocate a seperate command buffer.
+            m_UsingTracyHostCalibrated = true;
+            m_TracyVkCtx = TracyVkContextHostCalibrated(instance, m_PhysicalDevice, *m_Device,
+                VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
+                VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
+        }
+        else
+        {
+            const vk::CommandPoolCreateInfo commandPoolCI{
+                .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient,
+                .queueFamilyIndex = m_GraphicsQueue.familyIndex(),
+            };
+            m_TracyCommandPool = vkCheck(m_Device->createCommandPoolUnique(commandPoolCI));
+            setDebugName(*m_Device, *m_TracyCommandPool, "Tracy Command Pool");
+            const vk::CommandBufferAllocateInfo commandBufferCI{
+                .commandPool = *m_TracyCommandPool,
+                .level = vk::CommandBufferLevel::ePrimary,
+                .commandBufferCount = 1,
+            };
+            m_TracyCommandBuffer = vkCheck(m_Device->allocateCommandBuffers(commandBufferCI)).front();
+        }
+
+        if (m_HasKhrCalibratedTimestamps || m_HasExtCalibratedTimestamps)
+        {
+            m_TracyVkCtx = TracyVkContextCalibrated(instance, m_PhysicalDevice, *m_Device, m_GraphicsQueue.queue(),
+                                                   m_TracyCommandBuffer,
+                                                   VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
+                                                   VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
+        }
+        else
+        {
+            m_TracyVkCtx = TracyVkContext(instance, m_PhysicalDevice, *m_Device, m_GraphicsQueue.queue(),
+                                          m_TracyCommandBuffer,
+                                          VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
+                                          VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
+        }
 #endif
     }
 
@@ -197,6 +298,7 @@ namespace enger
     void Device::waitSemaphores(std::span<const vk::Semaphore> semaphores, std::span<const uint64_t> waitValues,
                                 uint64_t timeout)
     {
+        ENGER_PROFILE_FUNCTION()
         assert(semaphores.size() == waitValues.size());
 
         vk::SemaphoreWaitInfo waitSemInfo{

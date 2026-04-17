@@ -85,6 +85,10 @@ namespace enger::framing
 
     void framing::FrameOrchestrator::endFrame(FrameContext& fctx)
     {
+        ENGER_PROFILE_FUNCTION();
+        auto* device = &m_Device;
+        ENGER_PROFILE_GPU_COLLECT(device, fctx.cmd.get());
+
         auto& cmd = fctx.cmd;
 
         // ImGui layer, the final layer, always leaves the swapchain in Color Attachment layout

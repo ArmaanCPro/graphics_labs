@@ -4,6 +4,8 @@
 
 #include "GpuResourceTypes.h"
 
+#include "Profiling/Profiler.h"
+
 namespace
 {
     std::pair<vk::AccessFlags2, vk::PipelineStageFlags2> getTransitionAccessAndStage(vk::ImageLayout layout)
@@ -90,6 +92,9 @@ namespace enger
     void CommandBuffer::transitionImage(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout)
     {
         assert(m_Device != nullptr);
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImage", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+
         auto* image = m_Device->getImage(texHandle);
         assert(image != nullptr);
 
@@ -126,6 +131,9 @@ namespace enger
     void CommandBuffer::transitionImages(std::span<const TransitionImageInfo> infos)
     {
         assert(m_Device != nullptr);
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImages", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+
         assert(infos.size() <= kMaxTransitionImages);
 
         std::array<vk::ImageMemoryBarrier2, kMaxTransitionImages> barriers;
@@ -173,6 +181,9 @@ namespace enger
     void CommandBuffer::blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle)
     {
         assert(m_Device != nullptr);
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::blitImage", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+
         auto* srcImage = m_Device->getImage(srcTexHandle);
         assert(srcImage != nullptr);
         auto* dstImage = m_Device->getImage(dstTexHandle);
@@ -347,6 +358,7 @@ namespace enger
 
     void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::draw", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_SUBMIT)
         m_CommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
