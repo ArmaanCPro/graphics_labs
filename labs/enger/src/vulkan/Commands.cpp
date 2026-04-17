@@ -265,6 +265,69 @@ namespace enger
         }
     }
 
+    void CommandBuffer::bufferBarrier(TransferBufferDesc desc)
+    {
+        assert(m_Device != nullptr);
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::bufferBarrier", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+
+        std::vector<vk::BufferMemoryBarrier2> releaseBarriers;
+
+        for (auto& handle : desc.handles)
+        {
+            auto* buffer = m_Device->getBuffer(handle);
+            assert(buffer != nullptr);
+            releaseBarriers.push_back(vk::BufferMemoryBarrier2{
+                .srcStageMask = desc.srcStage,
+                .srcAccessMask = desc.srcAccess,
+                .dstStageMask = vk::PipelineStageFlagBits2::eNone, // ignored
+                .dstAccessMask = vk::AccessFlagBits2::eNone, // ignored
+                .srcQueueFamilyIndex = desc.srcQueue.familyIndex(),
+                .dstQueueFamilyIndex = desc.dstQueue.familyIndex(),
+                .buffer = buffer->buffer_,
+                .offset = 0,
+                .size = buffer->size_,
+            });
+        }
+
+        vk::DependencyInfo releaseInfo{
+            .bufferMemoryBarrierCount = static_cast<uint32_t>(releaseBarriers.size()),
+            .pBufferMemoryBarriers = releaseBarriers.data(),
+        };
+
+        SubmitHandle releaseSubmission = desc.srcQueue.submitImmediateAsync([&](CommandBuffer& cmd) {
+            cmd.get().pipelineBarrier2(releaseInfo);
+        });
+
+        std::vector<vk::BufferMemoryBarrier2> acquireBarriers;
+        for (auto& handle : desc.handles)
+        {
+            auto* buffer = m_Device->getBuffer(handle);
+            acquireBarriers.push_back(vk::BufferMemoryBarrier2{
+                .srcStageMask = vk::PipelineStageFlagBits2::eNone, // ignored
+                .srcAccessMask = vk::AccessFlagBits2::eNone, // ignored
+                .dstStageMask = desc.dstStage,
+                .dstAccessMask = desc.dstAccess,
+                .srcQueueFamilyIndex = desc.srcQueue.familyIndex(),
+                .dstQueueFamilyIndex = desc.dstQueue.familyIndex(),
+                .buffer = buffer->buffer_,
+                .offset = 0,
+                .size = buffer->size_,
+            });
+        }
+
+        vk::DependencyInfo acquireInfo{
+            .bufferMemoryBarrierCount = static_cast<uint32_t>(acquireBarriers.size()),
+            .pBufferMemoryBarriers = acquireBarriers.data(),
+        };
+
+        QueueSubmitBuilder acquireBuilder;
+        acquireBuilder.waitTimeline(desc.srcQueue.timelineSemaphore(), releaseSubmission, vk::PipelineStageFlagBits2::eTransfer);
+        desc.dstQueue.submitImmediateAsync([&](CommandBuffer& cmd) {
+            cmd.get().pipelineBarrier2(acquireInfo);
+        }, acquireBuilder.build());
+    }
+
     void CommandBuffer::blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle)
     {
         assert(m_Device != nullptr);

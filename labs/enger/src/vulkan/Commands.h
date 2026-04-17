@@ -84,6 +84,18 @@ namespace enger
         };
         void imageBarrier(TransferTextureDesc desc);
 
+        struct TransferBufferDesc
+        {
+            std::span<const BufferHandle> handles;
+            vk::AccessFlags2 srcAccess = vk::AccessFlagBits2::eTransferRead;
+            vk::AccessFlags2 dstAccess = vk::AccessFlagBits2::eTransferWrite;
+            vk::PipelineStageFlags2 srcStage = vk::PipelineStageFlagBits2::eTransfer;
+            vk::PipelineStageFlags2 dstStage = vk::PipelineStageFlagBits2::eTransfer;
+            Queue& srcQueue;
+            Queue& dstQueue;
+        };
+        void bufferBarrier(TransferBufferDesc desc);
+
         void blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle);
         void clearColorImage(TextureHandle texHandle, vk::ClearColorValue color, vk::ImageAspectFlags aspectMask);
 
