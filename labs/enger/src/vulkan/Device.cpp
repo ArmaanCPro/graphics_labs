@@ -130,25 +130,36 @@ namespace enger
 
         // logical device creation
         std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_PhysicalDevice.getQueueFamilyProperties();
-        uint32_t queueIndex = ~0u;
+        uint32_t graphicsQueueIndex = ~0u;
+        uint32_t transferQueueIndex = ~0u;
         for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); ++qfpIndex)
         {
             auto& qfp = queueFamilyProperties[qfpIndex];
             if ((qfp.queueFlags & vk::QueueFlagBits::eGraphics)
                 && vkCheck(m_PhysicalDevice.getSurfaceSupportKHR(qfpIndex, surface)))
             {
-                queueIndex = qfpIndex;
-                break;
+                graphicsQueueIndex = graphicsQueueIndex == ~0 ? qfpIndex : graphicsQueueIndex;
+            }
+            else if (qfp.queueFlags & vk::QueueFlagBits::eTransfer)
+            {
+                transferQueueIndex = qfpIndex;
             }
         }
         // TODO replace this assert with something cleaner. In fact, the current cerr + terminate should be cleaner as well.
-        assert(queueIndex != ~0 && "No graphics queue family found");
+        assert(graphicsQueueIndex != ~0 && "No graphics queue family found");
 
-        float queuePriority = 1.0f;
-        vk::DeviceQueueCreateInfo queueCreateInfo{
-            .queueFamilyIndex = queueIndex,
+        float graphicsQueuePriority = 1.0f;
+        vk::DeviceQueueCreateInfo graphicsQueueCI{
+            .queueFamilyIndex = graphicsQueueIndex,
             .queueCount = 1,
-            .pQueuePriorities = &queuePriority
+            .pQueuePriorities = &graphicsQueuePriority
+        };
+
+        float transferQueuePriority = 1.0f;
+        vk::DeviceQueueCreateInfo transferQueueCI{
+            .queueFamilyIndex = transferQueueIndex,
+            .queueCount = 1,
+            .pQueuePriorities = &transferQueuePriority
         };
 
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features,
@@ -185,10 +196,17 @@ namespace enger
         }
 #endif
 
+        std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+        queueCreateInfos.push_back(graphicsQueueCI);
+        if (transferQueueIndex != ~0)
+        {
+            queueCreateInfos.push_back(transferQueueCI);
+        }
+
         vk::DeviceCreateInfo deviceCreateInfo{
             .pNext = &featureChain.get(),
-            .queueCreateInfoCount = 1,
-            .pQueueCreateInfos = &queueCreateInfo,
+            .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+            .pQueueCreateInfos = queueCreateInfos.data(),
             .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
             .ppEnabledExtensionNames = deviceExtensions.data()
         };
@@ -200,7 +218,13 @@ namespace enger
 
         m_Allocator.init(instance, m_PhysicalDevice, *m_Device);
 
-        m_GraphicsQueue = Queue(this, queueIndex, "Graphics Queue");
+        m_GraphicsQueue = Queue(this, graphicsQueueIndex, "Graphics Queue");
+
+        if (transferQueueIndex != ~0)
+        {
+            m_TransferQueue = std::make_optional<Queue>(Queue{this, transferQueueIndex,
+                "Transfer Queue"});
+        }
 
         if (m_UseBindless)
         {

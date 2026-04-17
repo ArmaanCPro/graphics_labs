@@ -182,6 +182,7 @@ namespace enger
         /// Therefore, whenever a Queue is not specified, it defaults to this queue for any operations such as
         /// resource creation or destruction synchronization.
         Queue m_GraphicsQueue;
+        std::optional<Queue> m_TransferQueue = std::nullopt;
 
         Pool<ComputePipelineTag, Pipeline> m_ComputePipelinePool;
         Pool<GraphicsPipelineTag, Pipeline> m_GraphicsPipelinePool;
