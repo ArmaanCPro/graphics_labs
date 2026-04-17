@@ -30,6 +30,10 @@ namespace enger
 
     void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx, EngineStats& stats)
     {
+        ENGER_PROFILE_FUNCTION();
+        auto* d = &m_Device;
+        ENGER_PROFILE_GPU_ZONE("Renderer::render", d, fctx.cmd.get(), ENGER_PROFILER_COLOR_SUBMIT);
+
         if (m_ShouldResize)
         {
             createRenderTextures(m_PendingWidth, m_PendingHeight);
@@ -113,10 +117,21 @@ namespace enger
             stats.triangleCount += drawObj.indexCount / 3;
         };
 
+        std::vector<BufferHandle> allVertexBuffers;
+        std::vector<BufferHandle> allIndexBuffers;
+
         if (!dctx.opaqueSurfaces.empty())
             cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
         for (auto& r : dctx.opaqueSurfaces)
         {
+            if (m_IsFirstFrame)
+            {
+                if (m_Device.transferQueue().has_value())
+                {
+                    allVertexBuffers.push_back(r.vertexBuffer);
+                    allIndexBuffers.push_back(r.indexBuffer);
+                }
+            }
             draw(r);
         }
 
@@ -124,6 +139,14 @@ namespace enger
             cmd.bindGraphicsPipeline(dctx.transparentSurfaces[0].material->pipeline->pipeline);
         for (const RenderObject& drawObj : dctx.transparentSurfaces)
         {
+            if (m_IsFirstFrame)
+            {
+                if (m_Device.transferQueue().has_value())
+                {
+                    allVertexBuffers.push_back(drawObj.vertexBuffer);
+                    allIndexBuffers.push_back(drawObj.indexBuffer);
+                }
+            }
             draw(drawObj);
         }
 
@@ -143,6 +166,30 @@ namespace enger
 
         // MSAA Resolve handled the blit from msaa render target to render target
         // We still blit from render target to swapchain
+
+        if (m_IsFirstFrame && m_Device.transferQueue().has_value())
+        {
+            cmd.bufferBarrier({
+                allVertexBuffers,
+                vk::AccessFlagBits2::eTransferWrite,
+                vk::AccessFlagBits2::eTransferRead,
+                vk::PipelineStageFlagBits2::eTransfer,
+                vk::PipelineStageFlagBits2::eAllGraphics,
+                m_Device.transferQueue().value(),
+                m_Device.graphicsQueue(),
+            });
+            allVertexBuffers.clear();
+            cmd.bufferBarrier({
+                allIndexBuffers,
+                vk::AccessFlagBits2::eTransferWrite,
+                vk::AccessFlagBits2::eIndexRead,
+                vk::PipelineStageFlagBits2::eTransfer,
+                vk::PipelineStageFlagBits2::eIndexInput,
+                m_Device.transferQueue().value(),
+                m_Device.graphicsQueue(),
+            });
+        }
+        m_IsFirstFrame = false;
     }
 
     void Renderer::onResize(uint32_t width, uint32_t height)

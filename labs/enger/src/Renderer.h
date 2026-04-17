@@ -53,5 +53,7 @@ namespace enger
         bool m_ShouldResize = false;
         uint32_t m_PendingWidth = 0;
         uint32_t m_PendingHeight = 0;
+
+        bool m_IsFirstFrame = true;
     };
 }

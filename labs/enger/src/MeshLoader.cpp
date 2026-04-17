@@ -26,23 +26,29 @@ namespace enger
 
         GPUMeshBuffers surface;
 
+        auto* queue = &device.graphicsQueue();
+        if (device.transferQueue().has_value())
+        {
+            queue = &device.transferQueue().value();
+        }
+
         surface.vertexBuffer = device.createBuffer(
             vbSize,
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst |
             vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &device.graphicsQueue(),
+            queue,
             "VertexBuffer");
         surface.indexBuffer = device.createBuffer(
             ibSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &device.graphicsQueue(),
+            queue,
             "IndexBuffer");
 
         auto staging = device.createBuffer(
             vbSize + ibSize, vk::BufferUsageFlagBits::eTransferSrc,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &device.graphicsQueue(),
+            queue,
             "StagingBuffer"
         );
 

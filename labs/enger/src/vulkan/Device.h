@@ -45,6 +45,11 @@ namespace enger
             return m_GraphicsQueue;
         }
 
+        [[nodiscard]] std::optional<Queue>& transferQueue()
+        {
+            return m_TransferQueue;
+        }
+
         [[nodiscard]] const Allocator& allocator() const
         {
             return m_Allocator;
