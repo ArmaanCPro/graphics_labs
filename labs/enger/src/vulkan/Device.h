@@ -14,6 +14,7 @@
 
 #include "Queue.h"
 
+#include "Profiling/Profiler.h"
 
 namespace enger
 {
@@ -201,5 +202,12 @@ namespace enger
         void updateBindlessStorageImage(uint32_t index, vk::ImageView view);
         void updateBindlessSampledImage(uint32_t index, vk::ImageView view);
         void updateBindlessSampler(uint32_t index, vk::Sampler sampler);
+
+    public:
+#ifdef ENABLE_PROFILING
+        TracyVkCtx m_TracyVkCtx = nullptr;
+        vk::UniqueCommandPool m_TracyCommandPool;
+        vk::CommandBuffer m_TracyCommandBuffer = nullptr;
+#endif
     };
 }

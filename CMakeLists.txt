@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 4.0)
 #set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/overlay-ports")
 
+option(ENABLE_PROFILING "Enables Profiling via Tracy" OFF)
+
 project(
         graphics_labs
         VERSION 1.0
@@ -35,5 +37,15 @@ find_package(imgui CONFIG REQUIRED)
 find_package(fastgltf CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(nfd CONFIG REQUIRED)
+
+if (ENABLE_PROFILING)
+    find_package(Tracy CONFIG REQUIRED)
+
+    # Tracy incorrectly sets the DLL path for whatever reason.
+    set_target_properties(Tracy::TracyClient PROPERTIES
+            IMPORTED_LOCATION_DEBUG "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/TracyClient.dll"
+            IMPORTED_LOCATION_RELEASE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/TracyClient.dll"
+    )
+endif()
 
 add_subdirectory(labs)

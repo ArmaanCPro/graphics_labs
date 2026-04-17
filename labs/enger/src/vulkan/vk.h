@@ -1,14 +1,5 @@
 #pragma once
 
-
-/*
- * Moved these defines to the build system
-#define VK_NO_PROTOTYPES
-#define VULKAN_HPP_NO_EXCEPTIONS
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
-*/
-
 #include <vulkan/vulkan.hpp>
 
 #include <vk_mem_alloc.h>

@@ -4,6 +4,8 @@
 #include <functional>
 #include <GLFW/glfw3.h>
 
+#include "Profiling/Profiler.h"
+
 namespace enger
 {
     class GlfwWindow
@@ -11,6 +13,7 @@ namespace enger
     public:
         GlfwWindow(uint32_t width, uint32_t height, const char* title, bool resizable = true)
         {
+            ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_CREATE)
             glfwInit();
 
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

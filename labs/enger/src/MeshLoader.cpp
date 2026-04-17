@@ -279,6 +279,8 @@ namespace enger
     std::optional<std::unique_ptr<LoadedGLTF>> LoadGltf(
         Device& device, SceneManager& sceneManager, const std::filesystem::path& filePath)
     {
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_CREATE)
+
         std::println("Loading GLTF: {}", filePath.string());
 
         std::unique_ptr<LoadedGLTF> scene = std::make_unique<LoadedGLTF>(device, &sceneManager);

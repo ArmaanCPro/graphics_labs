@@ -126,9 +126,11 @@ namespace enger
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features,
             vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features,
             vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
-            {.features = {
-                .samplerAnisotropy = true
-            }},
+            {
+                .features = {
+                    .samplerAnisotropy = true
+                }
+            },
             {
                 .descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
                 .descriptorBindingSampledImageUpdateAfterBind = true,
@@ -162,11 +164,34 @@ namespace enger
         {
             initBindless();
         }
+
+#ifdef ENABLE_PROFILING
+        const vk::CommandPoolCreateInfo commandPoolCI{
+            .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient,
+            .queueFamilyIndex = m_GraphicsQueue.familyIndex(),
+        };
+        m_TracyCommandPool = vkCheck(m_Device->createCommandPoolUnique(commandPoolCI));
+        setDebugName(*m_Device, *m_TracyCommandPool, "Tracy Command Pool");
+        const vk::CommandBufferAllocateInfo commandBufferCI{
+            .commandPool = *m_TracyCommandPool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = 1,
+        };
+        m_TracyCommandBuffer = vkCheck(m_Device->allocateCommandBuffers(commandBufferCI)).front();
+        m_TracyVkCtx = TracyVkContext(instance, m_PhysicalDevice, *m_Device, m_GraphicsQueue.queue(), m_TracyCommandBuffer,
+                                                    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
+                                                    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
+        assert(m_TracyVkCtx);
+#endif
     }
 
     Device::~Device()
     {
+        ENGER_PROFILE_FUNCTION()
         vkCheck(m_Device->waitIdle());
+#ifdef ENABLE_PROFILING
+        TracyVkDestroy(m_TracyVkCtx);
+#endif
     }
 
     void Device::waitSemaphores(std::span<const vk::Semaphore> semaphores, std::span<const uint64_t> waitValues,
@@ -412,8 +437,12 @@ namespace enger
         {
             assert(desc.initialData && "Initial data must be provided to generate mip maps");
             assert(desc.mipLevels == 1 && "Cannot manually specify mip levels when generating mip maps");
-            assert(desc.usage & vk::ImageUsageFlagBits::eTransferDst && "Mipmapped textures must have transfer dst usage.");
-            assert(desc.usage & vk::ImageUsageFlagBits::eTransferSrc && "Mipmapped textures must have transfer src usage.");
+            assert(
+                desc.usage & vk::ImageUsageFlagBits::eTransferDst &&
+                "Mipmapped textures must have transfer dst usage.");
+            assert(
+                desc.usage & vk::ImageUsageFlagBits::eTransferSrc &&
+                "Mipmapped textures must have transfer src usage.");
 
             mipLevels = static_cast<uint32_t>(std::log2(std::max(desc.dimensions.width, desc.dimensions.height))) + 1;
         }
