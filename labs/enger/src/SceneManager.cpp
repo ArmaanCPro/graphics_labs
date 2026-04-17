@@ -122,7 +122,7 @@ namespace enger
         if (file.has_value())
         {
             m_LoadedScenes.clear();
-            m_LoadedScenes[file.value()->name_] = file.value();
+            m_LoadedScenes[file.value()->name_] = std::move(file.value());
         }
     }
 

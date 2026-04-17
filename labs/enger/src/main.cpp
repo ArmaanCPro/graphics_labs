@@ -21,6 +21,9 @@
 
 #include "FileLoader.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 constexpr auto WIDTH = 800;
 constexpr auto HEIGHT = 600;
 
@@ -69,8 +72,6 @@ int main()
     };
 
     Camera camera{window};
-    camera.velocity_ = glm::vec3{0.0f, 0.0f, 0.0f};
-    camera.position_ = glm::vec3(30.0f, 0.0f, -85.0f);
     camera.pitch_ = 0;
     camera.yaw_ = 0;
 
@@ -138,7 +139,7 @@ int main()
 
             if (ImGui::Button("Import glTF"))
             {
-                std::array<enger::FileItem, 1> fileItems = { enger::FileItem{"glTF", "gltf,glb"} };
+                std::array fileItems = { enger::FileItem{"glTF", "gltf,glb"} };
 
                 auto path = fileLoader.openDialog(fileItems);
                 if (!path.has_value() && path.error() != enger::OpenDialogError::Cancelled)
@@ -151,6 +152,15 @@ int main()
                     sceneManager.loadScene(*path);
                 }
             }
+            ImGui::End();
+
+            ImGui::Begin("Camera");
+
+            ImGui::InputFloat3("Position", glm::value_ptr(camera.position_));
+            ImGui::InputFloat3("Velocity", glm::value_ptr(camera.velocity_));
+            ImGui::InputFloat("Pitch", &camera.pitch_);
+            ImGui::InputFloat("Yaw", &camera.yaw_);
+
             ImGui::End();
             imguiLayer.endFrame(fctx.value());
 

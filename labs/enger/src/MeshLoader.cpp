@@ -71,7 +71,8 @@ namespace enger
         return surface;
     }
 
-    Holder<TextureHandle> loadImage(Device& device, fastgltf::Asset& asset, fastgltf::Image& image, const std::filesystem::path& gltfPath)
+    Holder<TextureHandle> loadImage(Device& device, fastgltf::Asset& asset, fastgltf::Image& image,
+                                    const std::filesystem::path& gltfPath)
     {
         Holder<TextureHandle> newImage;
 
@@ -275,12 +276,12 @@ namespace enger
         return vk::SamplerMipmapMode::eLinear;
     }
 
-    std::optional<std::shared_ptr<LoadedGLTF> > LoadGltf(
+    std::optional<std::unique_ptr<LoadedGLTF>> LoadGltf(
         Device& device, SceneManager& sceneManager, const std::filesystem::path& filePath)
     {
         std::println("Loading GLTF: {}", filePath.string());
 
-        std::shared_ptr<LoadedGLTF> scene = std::make_shared<LoadedGLTF>(device, &sceneManager);
+        std::unique_ptr<LoadedGLTF> scene = std::make_unique<LoadedGLTF>(device, &sceneManager);
         LoadedGLTF& file = *scene;
 
         auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
@@ -313,11 +314,14 @@ namespace enger
         for (fastgltf::Sampler& sampler: gltf.samplers)
         {
             file.samplers_.push_back(device.createSampler(SamplerDesc{
-                                                              .magFilter = extractFilter(sampler.magFilter.value_or(fastgltf::Filter::Linear)),
-                                                              .minFilter = extractFilter(sampler.minFilter.value_or(fastgltf::Filter::Linear)),
+                                                              .magFilter = extractFilter(
+                                                                  sampler.magFilter.value_or(fastgltf::Filter::Linear)),
+                                                              .minFilter = extractFilter(
+                                                                  sampler.minFilter.value_or(fastgltf::Filter::Linear)),
                                                               .mipmapMode = extractMipmapMode(
                                                                   sampler.minFilter.value_or(
                                                                       fastgltf::Filter::Linear)),
+                                                              .anisotropyEnable = true,
                                                           }, nullptr));
         }
 
@@ -343,12 +347,15 @@ namespace enger
             }
         }
 
-        file.materialDataBuffer_ = device.createBuffer(sizeof(MaterialConstants) * gltf.materials.size(),
-                                                       vk::BufferUsageFlagBits::eUniformBuffer |
-                                                       vk::BufferUsageFlagBits::eShaderDeviceAddress,
-                                                       vk::MemoryPropertyFlagBits::eHostVisible |
-                                                       vk::MemoryPropertyFlagBits::eHostCoherent,
-                                                       nullptr, "MaterialConstants FOR MESH LOADER");
+        if (!gltf.materials.empty())
+        {
+            file.materialDataBuffer_ = device.createBuffer(sizeof(MaterialConstants) * gltf.materials.size(),
+                                                           vk::BufferUsageFlagBits::eUniformBuffer |
+                                                           vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                                                           vk::MemoryPropertyFlagBits::eHostVisible |
+                                                           vk::MemoryPropertyFlagBits::eHostCoherent,
+                                                           nullptr, "MaterialConstants FOR MESH LOADER");
+        }
 
         int dataIndex = 0;
 
@@ -491,11 +498,11 @@ namespace enger
                                                                   });
                 }
 
-                if (p.materialIndex.has_value())
+                if (p.materialIndex.has_value() && !materials.empty())
                 {
                     newSurface.material = materials[p.materialIndex.value()];
                 }
-                else
+                else if (!materials.empty())
                 {
                     newSurface.material = materials[0];
                 }

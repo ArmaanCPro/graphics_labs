@@ -31,7 +31,7 @@ namespace enger
         Device& m_Device;
 
         DrawContext m_DrawContext;
-        std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> m_LoadedScenes;
+        std::unordered_map<std::string, std::unique_ptr<LoadedGLTF>> m_LoadedScenes;
 
         GPUSceneData m_SceneData;
         Holder<BufferHandle> m_GPUSceneDataBuffer;

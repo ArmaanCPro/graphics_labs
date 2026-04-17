@@ -119,6 +119,7 @@ namespace enger
 
         for (auto& s : mesh->surfaces)
         {
+
             RenderObject obj;
             obj.indexCount = s.indexCount;
             obj.firstIndex = s.startIndex;
@@ -128,6 +129,8 @@ namespace enger
             obj.transform = nodeMatrix;
             obj.vertexBuffer = mesh->meshBuffers.vertexBuffer;
 
+            if (!obj.material)
+                continue;
             if (obj.material->passType == MaterialPass::Transparent)
                 ctx.transparentSurfaces.push_back(std::move(obj));
             else if (obj.material->passType == MaterialPass::MainColor)
