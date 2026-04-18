@@ -36,6 +36,8 @@ namespace enger
         bool hasExtCalibratedTimestamps = false;
         bool hasHostQuery = false;
         bool hasMaintenance9 = false;
+        bool hasRobustness2 = false;
+        bool hasNullDescriptor = false;
     };
 
     class Device
@@ -226,6 +228,8 @@ namespace enger
 
         Holder<PipelineLayoutHandle> m_BindlessComputePipelineLayout;
         Holder<PipelineLayoutHandle> m_BindlessGraphicsPipelineLayout;
+
+        Holder<SamplerHandle> m_DefaultNullSampler;
 
         void initBindless();
 

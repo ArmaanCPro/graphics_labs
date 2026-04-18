@@ -69,6 +69,11 @@ namespace enger
                     infos.hasMaintenance9 = true;
                     score += 10;
                 }
+                if (std::strcmp(availableExtension.extensionName, vk::EXTRobustness2ExtensionName) == 0)
+                {
+                    infos.hasRobustness2 = true;
+                    score += 10;
+                }
             }
 
             auto features = device.getFeatures2<
@@ -76,7 +81,8 @@ namespace enger
                 vk::PhysicalDeviceVulkan12Features,
                 vk::PhysicalDeviceVulkan13Features,
                 vk::PhysicalDeviceVulkan14Features,
-                vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+                vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
+                vk::PhysicalDeviceRobustness2FeaturesEXT>(); // currently only supporting EXT version. Consider adding KHR
 
             bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering
                                             && features.get<vk::PhysicalDeviceVulkan13Features>().synchronization2
@@ -101,6 +107,7 @@ namespace enger
             {
                 score += 10;
             }
+            infos.hasNullDescriptor = features.get<vk::PhysicalDeviceRobustness2FeaturesEXT>().nullDescriptor;
 
             if (!supportsVulkan14 || !supportsDesiredQueues || !supportsAllRequiredExtensions || !
                 supportsRequiredFeatures)
@@ -126,12 +133,18 @@ namespace enger
         const auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
         if (!sortedDevices.empty() && sortedDevices.rbegin()->first == 0)
         {
-            std::cerr << "No suitable GPU/device found!" << std::endl;
+            std::cerr << "No suitable GPU/device found! Consider updating drivers." << std::endl;
             std::terminate();
         }
         const auto [deviceInfo, physicalDevice] = sortedDevices.rbegin()->second;
         m_PhysicalDevice = physicalDevice;
         m_DeviceInfo = deviceInfo;
+
+        if (m_UseBindless)
+        {
+            // nullDescriptor isn't truly required, but highly beneficial for bindless rendering.
+            assert(m_DeviceInfo.hasRobustness2 && m_DeviceInfo.hasNullDescriptor && "For bindless rendering, NullDescriptor (from Robustness2) is required");
+        }
 
         // logical device creation
         std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_PhysicalDevice.getQueueFamilyProperties();
@@ -180,10 +193,11 @@ namespace enger
 
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features,
             vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features,
-            vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
+            vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT, vk::PhysicalDeviceRobustness2FeaturesEXT>
+            featureChain{
             {
                 .features = {
-                    .samplerAnisotropy = true
+                    .samplerAnisotropy = true,
                 }
             },
             {
@@ -202,6 +216,7 @@ namespace enger
             {.synchronization2 = true, .dynamicRendering = true},
             {},
             {.extendedDynamicState = true},
+            {.nullDescriptor = m_UseBindless && m_DeviceInfo.hasNullDescriptor}
         };
 
 #ifdef ENABLE_PROFILING
@@ -334,6 +349,9 @@ namespace enger
                                           VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
         }
 #endif
+
+        m_DefaultNullSampler = createSampler(SamplerDesc{
+        }, &m_GraphicsQueue, "Default Null Sampler");
     }
 
     Device::~Device()
@@ -836,6 +854,15 @@ namespace enger
         auto& texture = *m_TexturePool.get(handle);
         queue = queue ? queue : &m_GraphicsQueue;
 
+        if (texture.isStorageImage())
+        {
+            updateBindlessStorageImage(handle.index(), VK_NULL_HANDLE);
+        }
+        else if (texture.isSampledImage())
+        {
+            updateBindlessSampledImage(handle.index(), VK_NULL_HANDLE);
+        }
+
         queue->deferredDestroy(
             [=, device = *m_Device, allocator = &m_Allocator, image = texture.image_, view = texture.view_, allocation =
                 texture.allocation_]() {
@@ -887,6 +914,7 @@ namespace enger
         auto& sampler = *m_SamplerPool.get(handle);
         queue = queue ? queue : &m_GraphicsQueue;
 
+        updateBindlessSampler(handle.index(), VK_NULL_HANDLE);
         queue->deferredDestroy([=, device = *m_Device, sampler = sampler]() {
             device.destroySampler(sampler);
         });
@@ -1105,6 +1133,16 @@ namespace enger
     {
         assert(m_GlobalDescriptorSet);
 
+        if ((view == VK_NULL_HANDLE || view == nullptr) && !m_DeviceInfo.hasNullDescriptor)
+        {
+            // if hasNullDescriptor isn't supported, we could fallback to a default texture.
+            return;
+        }
+        if (!m_GlobalDescriptorSet) [[unlikely]]
+        {
+            return;
+        }
+
         vk::DescriptorImageInfo imageInfo{
             .imageView = view,
             .imageLayout = vk::ImageLayout::eGeneral,
@@ -1126,6 +1164,16 @@ namespace enger
     {
         assert(m_GlobalDescriptorSet);
 
+        if ((view == VK_NULL_HANDLE || view == nullptr) && !m_DeviceInfo.hasNullDescriptor)
+        {
+            // if hasNullDescriptor isn't supported, we could fallback to a default texture.
+            return;
+        }
+        if (!m_GlobalDescriptorSet) [[unlikely]]
+        {
+            return;
+        }
+
         vk::DescriptorImageInfo imageInfo{
             .imageView = view,
             .imageLayout = vk::ImageLayout::eGeneral,
@@ -1146,6 +1194,18 @@ namespace enger
     void Device::updateBindlessSampler(uint32_t index, vk::Sampler sampler)
     {
         assert(m_GlobalDescriptorSet);
+
+        if ((sampler == VK_NULL_HANDLE || sampler == nullptr))
+        {
+            // You can't write null descriptors to samplers even with Robustness2 nullDescriptor. Use a default sampler here.
+            const auto* defaultSampler = m_SamplerPool.get(m_DefaultNullSampler);
+            assert(defaultSampler);
+            sampler = *defaultSampler;
+        }
+        if (!m_GlobalDescriptorSet) [[unlikely]]
+        {
+            return;
+        }
 
         vk::DescriptorImageInfo imageInfo{
             .sampler = sampler,
