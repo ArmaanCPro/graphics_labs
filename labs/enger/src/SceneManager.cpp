@@ -1,5 +1,6 @@
 #include "SceneManager.h"
 
+#include <ranges>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -13,6 +14,7 @@ namespace enger
                                vk::SampleCountFlagBits msaaSamples)
         : m_Device(device)
     {
+        ENGER_PROFILE_FUNCTION()
         // Default Textures
         uint32_t white = glm::packUnorm4x8(glm::vec4{1.0f, 1.0f, 1.0f, 1.0f});
         m_WhiteImage = m_Device.createTexture({
@@ -128,6 +130,7 @@ namespace enger
 
     const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera, EngineStats& stats)
     {
+        ENGER_PROFILE_FUNCTION()
         auto start = std::chrono::high_resolution_clock::now();
 
         if (m_IsScenePending)
@@ -145,7 +148,7 @@ namespace enger
         m_DrawContext.opaqueSurfaces.clear();
         m_DrawContext.transparentSurfaces.clear();
 
-        for (auto& [name, scene]: m_LoadedScenes)
+        for (auto& scene : m_LoadedScenes | std::views::values)
         {
             scene->draw(glm::mat4(1.0f), m_DrawContext);
         }
@@ -161,16 +164,6 @@ namespace enger
         m_SceneData.ambientColor = glm::vec4(0.2f);
         m_SceneData.sunlightColor = glm::vec4(0.8f, 0.6f, 0.7f, 1.0f);
         m_SceneData.sunlightDirection = glm::vec4(0.0f, 1.0f, 0.5f, 1.0f);
-
-        /*
-        for (int x = -3; x < 3; x++)
-        {
-            glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3{0.2f});
-            glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3{x, 1, 0});
-
-            m_LoadedScenes["Cube"]->draw(translation * scale, m_DrawContext);
-        }
-        */
 
         m_Device.getBuffer(m_GPUSceneDataBuffer)->bufferSubData(m_Device.allocator(), 0, sizeof(GPUSceneData),
                                                                 &m_SceneData);

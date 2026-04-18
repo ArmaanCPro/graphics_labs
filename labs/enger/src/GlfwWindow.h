@@ -139,6 +139,11 @@ namespace enger
             glfwPollEvents();
         }
 
+        bool isKeyPressed(int key) const
+        {
+            return glfwGetKey(m_Window, key) == GLFW_PRESS;
+        }
+
     private:
         GLFWwindow* m_Window = nullptr;
 

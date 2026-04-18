@@ -4,6 +4,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 Camera::Camera(enger::GlfwWindow& window)
+    : m_Window(window)
 {
     attachInputToWindow(window);
     attachCursor(window);
@@ -48,6 +49,10 @@ void Camera::attachInputToWindow(enger::GlfwWindow& window)
                 velocity_.x = -1.0f;
             if (key == GLFW_KEY_D)
                 velocity_.x = 1.0f;
+            if (key == GLFW_KEY_SPACE)
+                velocity_.y = 1.0f;
+            if (key == GLFW_KEY_LEFT_CONTROL)
+                velocity_.y = -1.0f;
 
             if (mods == GLFW_MOD_SHIFT)
             {
@@ -55,7 +60,7 @@ void Camera::attachInputToWindow(enger::GlfwWindow& window)
                 velocity_ *= kSpeedBoost;
                 velocity_ = glm::clamp(velocity_, -kSpeedBoost, kSpeedBoost);
             }
-            else if (mods == GLFW_MOD_CONTROL)
+            else if (mods == GLFW_MOD_CONTROL && key != GLFW_KEY_LEFT_CONTROL)
             {
                 static constexpr float kSpeedSlow = 0.1f;
                 velocity_ *= kSpeedSlow;
@@ -73,7 +78,13 @@ void Camera::attachInputToWindow(enger::GlfwWindow& window)
             if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT)
                 velocity_ = glm::clamp(velocity_, -1.0f, 1.0f);
             if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
+            {
                 velocity_ = glm::clamp(velocity_ * 10.0f, -1.0f, 1.0f);
+            }
+            if (key == GLFW_KEY_SPACE || key == GLFW_KEY_LEFT_CONTROL)
+            {
+                velocity_.y = 0.0f;
+            }
         }
     });
 
@@ -99,6 +110,7 @@ void Camera::attachCursor(enger::GlfwWindow& window)
         {
             yaw_ += static_cast<float>(xpos - m_LastX) / 5.0f;
             pitch_ -= static_cast<float>(ypos - m_LastY) / 5.0f;
+            pitch_ = glm::clamp(pitch_, -89.0f, 89.0f);
         }
 
         m_LastX = xpos;

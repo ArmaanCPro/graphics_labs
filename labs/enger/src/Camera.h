@@ -23,6 +23,8 @@ public:
     void update();
 
 private:
+    enger::GlfwWindow& m_Window;
+
     void attachInputToWindow(enger::GlfwWindow& window);
     void attachCursor(enger::GlfwWindow& window);
 
