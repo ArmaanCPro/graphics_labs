@@ -35,8 +35,7 @@ namespace enger
         SamplerHandle colorSampler;
         TextureHandle metallicRoughnessImage;
         SamplerHandle metallicRoughnessSampler;
-        BufferHandle dataBuffer;
-        BufferHandle materialConstantsBuffer; // this is a handle to a buffer of MaterialConstants
+        BufferHandle materialConstantsBuffer;
         uint32_t materialConstantsBufferOffset = 0;
     };
 
@@ -86,6 +85,7 @@ namespace enger
     {
         std::vector<RenderObject> opaqueSurfaces;
         std::vector<RenderObject> transparentSurfaces;
+        BufferHandle sceneDataBuffer;
     };
 
     // Base class for a renderable dynamic object.

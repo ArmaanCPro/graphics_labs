@@ -103,7 +103,7 @@ namespace enger
             GraphicsPushConstants pc{
                 .worldMatrix = drawObj.transform,
                 .vertexBufferDeviceAddress = m_Device.getBuffer(drawObj.vertexBuffer)->deviceAddress_,
-                .sceneDataBDA = m_Device.getBuffer(drawObj.material->resources.dataBuffer)->deviceAddress_,
+                .sceneDataBDA = m_Device.getBuffer(dctx.sceneDataBuffer)->deviceAddress_,
                 .materialBDA = m_Device.getBuffer(drawObj.material->resources.materialConstantsBuffer)->deviceAddress_,
                 .colorTextureIndex = drawObj.material->resources.colorImage.index(),
                 .metallicRoughnessTextureIndex = drawObj.material->resources.metallicRoughnessImage.index(),

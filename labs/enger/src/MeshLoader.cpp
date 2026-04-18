@@ -379,8 +379,6 @@ namespace enger
                 materialResources.metallicRoughnessImage = sceneManager.m_WhiteImage;
                 materialResources.metallicRoughnessSampler = sceneManager.m_DefaultSamplerLinear;
 
-                materialResources.dataBuffer = sceneManager.sceneDataBuffer();
-
                 materialResources.materialConstantsBuffer = file.materialDataBuffer_;
                 materialResources.materialConstantsBufferOffset = dataIndex * sizeof(MaterialConstants);
 

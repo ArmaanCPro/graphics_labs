@@ -94,8 +94,6 @@ namespace enger
         materialResources.metallicRoughnessImage = m_WhiteImage;
         materialResources.metallicRoughnessSampler = m_DefaultSamplerLinear;
 
-        materialResources.dataBuffer = m_GPUSceneDataBuffer;
-
         auto materialConstants = m_Device.createBuffer(sizeof(MaterialConstants),
                                                        vk::BufferUsageFlagBits::eUniformBuffer |
                                                        vk::BufferUsageFlagBits::eShaderDeviceAddress,
@@ -167,6 +165,7 @@ namespace enger
 
         m_Device.getBuffer(m_GPUSceneDataBuffer)->bufferSubData(m_Device.allocator(), 0, sizeof(GPUSceneData),
                                                                 &m_SceneData);
+        m_DrawContext.sceneDataBuffer = m_GPUSceneDataBuffer;
 
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
