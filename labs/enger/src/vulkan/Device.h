@@ -21,6 +21,20 @@ namespace enger
 {
     struct DescriptorSetLayoutDesc;
 
+    struct PhysicalDeviceInfo
+    {
+        vk::PhysicalDeviceProperties2 properties{};
+        vk::PhysicalDeviceMemoryProperties2 memoryProperties{};
+        vk::PhysicalDeviceFeatures2 features{};
+        std::vector<vk::QueueFamilyProperties> queueFamilyProperties{};
+        std::vector<vk::ExtensionProperties> availableExtensions{};
+        std::vector<vk::LayerProperties> availableLayers{};
+        bool hasKhrCalibratedTimestamps = false;
+        bool hasExtCalibratedTimestamps = false;
+        bool hasHostQuery = false;
+        bool hasMaintenance9 = false;
+    };
+
     class Device
     {
     public:
@@ -172,10 +186,13 @@ namespace enger
             vkCheck(m_Device->waitIdle());
         }
 
+        const PhysicalDeviceInfo& physicalDeviceInfo() const { return m_DeviceInfo; }
+
     private:
         // returns physical devices sorted from worst to best
-        std::multimap<int, vk::PhysicalDevice> sortPhysicalDevices(const std::vector<vk::PhysicalDevice>& physicalDevices,
-                                                                   std::span<const char*> requiredDeviceExtensions);
+        static std::multimap<int, std::pair<PhysicalDeviceInfo, const vk::PhysicalDevice>> sortPhysicalDevices(
+            const std::vector<vk::PhysicalDevice>& physicalDevices,
+            std::span<const char*> requiredDeviceExtensions);
 
         vk::PhysicalDevice m_PhysicalDevice;
         vk::UniqueDevice m_Device;
@@ -221,9 +238,8 @@ namespace enger
         vk::CommandBuffer m_TracyCommandBuffer = nullptr;
         bool m_UsingTracyHostCalibrated = false;
 #endif
-    public:
-        bool m_HasKhrCalibratedTimestamps = false;
-        bool m_HasExtCalibratedTimestamps = false;
-        bool m_HasHostQuery = false;
+
+    private:
+        PhysicalDeviceInfo m_DeviceInfo;
     };
 }

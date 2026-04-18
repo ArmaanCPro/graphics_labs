@@ -9,32 +9,34 @@
 
 namespace enger
 {
-    std::multimap<int, vk::PhysicalDevice> Device::sortPhysicalDevices(
+    std::multimap<int, std::pair<PhysicalDeviceInfo, const vk::PhysicalDevice> > Device::sortPhysicalDevices(
         const std::vector<vk::PhysicalDevice>& physicalDevices,
         std::span<const char*> requiredDeviceExtensions)
     {
-        std::multimap<int, vk::PhysicalDevice> sortedDevices;
+        std::multimap<int, std::pair<PhysicalDeviceInfo, const vk::PhysicalDevice> > sortedDevices;
         for (auto& device: physicalDevices)
         {
-            auto deviceProps = device.getProperties();
-            auto deviceFeatures = device.getFeatures();
+            PhysicalDeviceInfo infos;
+            infos.properties = device.getProperties2();
+            infos.features = device.getFeatures2();
 
             uint32_t score = 0;
-            if (deviceProps.deviceType == vk::PhysicalDeviceType::eDiscreteGpu)
+            if (infos.properties.properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu)
             {
                 score += 100;
             }
 
-            bool supportsVulkan14 = deviceProps.apiVersion >= VK_API_VERSION_1_4;
+            bool supportsVulkan14 = infos.properties.properties.apiVersion >= VK_API_VERSION_1_4;
 
-            auto queueFamilies = device.getQueueFamilyProperties();
-            bool supportsDesiredQueues = std::ranges::any_of(queueFamilies,
+            infos.queueFamilyProperties = device.getQueueFamilyProperties();
+            bool supportsDesiredQueues = std::ranges::any_of(infos.queueFamilyProperties,
                                                              [](const auto& qfp) {
                                                                  return !!(qfp.queueFlags &
                                                                            vk::QueueFlagBits::eGraphics);
                                                              });
 
-            auto availableDeviceExtensions = vkCheck(device.enumerateDeviceExtensionProperties());
+            infos.availableExtensions = vkCheck(device.enumerateDeviceExtensionProperties());
+            const auto& availableDeviceExtensions = infos.availableExtensions;
             bool supportsAllRequiredExtensions = std::ranges::all_of(requiredDeviceExtensions,
                                                                      [&availableDeviceExtensions](
                                                                      const auto& requiredDeviceExtension) {
@@ -43,31 +45,29 @@ namespace enger
                                                                              [requiredDeviceExtension](
                                                                              const auto& availableDeviceExtension) {
                                                                                  return std::strcmp(
-                                                                                         availableDeviceExtension.
-                                                                                         extensionName,
-                                                                                         requiredDeviceExtension) == 0;
+                                                                                     availableDeviceExtension.
+                                                                                     extensionName,
+                                                                                     requiredDeviceExtension) == 0;
                                                                              });
                                                                      });
 
+            infos.availableLayers = vkCheck(device.enumerateDeviceLayerProperties());
             for (const auto& availableExtension: availableDeviceExtensions)
             {
                 if (std::strcmp(availableExtension.extensionName, vk::KHRCalibratedTimestampsExtensionName) == 0)
                 {
-                    m_HasKhrCalibratedTimestamps = true;
+                    infos.hasKhrCalibratedTimestamps = true;
                     score += 10;
-                }
-                else
-                {
-                    m_HasKhrCalibratedTimestamps = false;
                 }
                 if (std::strcmp(availableExtension.extensionName, vk::EXTCalibratedTimestampsExtensionName) == 0)
                 {
-                    m_HasExtCalibratedTimestamps = true;
+                    infos.hasExtCalibratedTimestamps = true;
                     score += 10;
                 }
-                else
+                if (std::strcmp(availableExtension.extensionName, vk::KHRMaintenance9ExtensionName) == 0)
                 {
-                    m_HasExtCalibratedTimestamps = false;
+                    infos.hasMaintenance9 = true;
+                    score += 10;
                 }
             }
 
@@ -96,8 +96,8 @@ namespace enger
                                             extendedDynamicState
                                             && features.get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy;
 
-            m_HasHostQuery = features.get<vk::PhysicalDeviceVulkan12Features>().hostQueryReset;
-            if (m_HasHostQuery)
+            infos.hasHostQuery = features.get<vk::PhysicalDeviceVulkan12Features>().hostQueryReset;
+            if (infos.hasHostQuery)
             {
                 score += 10;
             }
@@ -108,7 +108,9 @@ namespace enger
                 continue;
             }
 
-            sortedDevices.emplace(score, device);
+            sortedDevices.emplace(
+                score,
+                std::make_pair<PhysicalDeviceInfo, const vk::PhysicalDevice>(std::move(infos), std::move(device)));
         }
         return sortedDevices;
     }
@@ -120,13 +122,15 @@ namespace enger
     {
         // physical device selection
         const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(instance.enumeratePhysicalDevices());
-        auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
+        const auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
         if (!sortedDevices.empty() && sortedDevices.rbegin()->first == 0)
         {
             std::cerr << "No suitable GPU/device found!" << std::endl;
             std::terminate();
         }
-        m_PhysicalDevice = sortedDevices.rbegin()->second;
+        const auto [deviceInfo, physicalDevice] = sortedDevices.rbegin()->second;
+        m_PhysicalDevice = physicalDevice;
+        m_DeviceInfo = deviceInfo;
 
         // logical device creation
         std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_PhysicalDevice.getQueueFamilyProperties();
@@ -165,36 +169,45 @@ namespace enger
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan12Features,
             vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan14Features,
             vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain{
-                {
-                    .features = {
-                        .samplerAnisotropy = true
-                    }
-                },
-                {
-                    .descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
-                    .descriptorBindingSampledImageUpdateAfterBind = true,
-                    .descriptorBindingStorageImageUpdateAfterBind = true,
-                    .descriptorBindingPartiallyBound = true, .runtimeDescriptorArray = true,
-    #ifdef ENABLE_PROFILING
-                    .hostQueryReset = m_HasHostQuery && !(m_HasKhrCalibratedTimestamps || m_HasExtCalibratedTimestamps),
-    #endif
-                    .timelineSemaphore = true, .bufferDeviceAddress = true,
-                },
-                {.synchronization2 = true, .dynamicRendering = true},
-                {},
-                {.extendedDynamicState = true},
-            };
+            {
+                .features = {
+                    .samplerAnisotropy = true
+                }
+            },
+            {
+                .descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
+                .descriptorBindingSampledImageUpdateAfterBind = true,
+                .descriptorBindingStorageImageUpdateAfterBind = true,
+                .descriptorBindingPartiallyBound = true, .runtimeDescriptorArray = true,
+#ifdef ENABLE_PROFILING
+                // If using HostCalibrated, Tracy needs both Host Query & Calibrated Timestamps
+                .hostQueryReset = m_DeviceInfo.hasHostQuery && (
+                                      m_DeviceInfo.hasKhrCalibratedTimestamps || m_DeviceInfo.
+                                      hasExtCalibratedTimestamps),
+#endif
+                .timelineSemaphore = true, .bufferDeviceAddress = true,
+            },
+            {.synchronization2 = true, .dynamicRendering = true},
+            {},
+            {.extendedDynamicState = true},
+        };
 
 #ifdef ENABLE_PROFILING
-        if (m_HasKhrCalibratedTimestamps)
+        if (m_DeviceInfo.hasKhrCalibratedTimestamps)
         {
-            deviceExtensions.push_back(VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+            assert(m_DeviceInfo.hasExtCalibratedTimestamps && "Right now, Tracy needs the EXT version as well. (for me) Consider fixing");
+            deviceExtensions.push_back(vk::KHRCalibratedTimestampsExtensionName);
         }
-        else if (m_HasExtCalibratedTimestamps)
+        if (m_DeviceInfo.hasExtCalibratedTimestamps)
         {
-            deviceExtensions.push_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+            deviceExtensions.push_back(vk::EXTCalibratedTimestampsExtensionName);
         }
 #endif
+
+        if (m_DeviceInfo.hasMaintenance9)
+        {
+            deviceExtensions.push_back(vk::KHRMaintenance9ExtensionName);
+        }
 
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
         queueCreateInfos.push_back(graphicsQueueCI);
@@ -222,8 +235,10 @@ namespace enger
 
         if (transferQueueIndex != ~0)
         {
-            m_TransferQueue = std::make_optional<Queue>(Queue{this, transferQueueIndex,
-                "Transfer Queue"});
+            m_TransferQueue = std::make_optional<Queue>(Queue{
+                this, transferQueueIndex,
+                "Transfer Queue"
+            });
         }
 
         if (m_UseBindless)
@@ -234,34 +249,32 @@ namespace enger
 #ifdef ENABLE_PROFILING
         std::vector<vk::TimeDomainKHR> timeDomainsKhr;
         std::vector<vk::TimeDomainEXT> timeDomainsExt;
-        if (m_HasKhrCalibratedTimestamps)
+        if (m_DeviceInfo.hasKhrCalibratedTimestamps)
         {
             timeDomainsKhr = vkCheck(m_PhysicalDevice.getCalibrateableTimeDomainsKHR());
         }
-        else if (m_HasExtCalibratedTimestamps)
+        else if (m_DeviceInfo.hasExtCalibratedTimestamps)
         {
             timeDomainsExt = vkCheck(m_PhysicalDevice.getCalibrateableTimeDomainsEXT());
         }
-        const bool hasHostQuery = m_HasHostQuery && [&]() -> bool {
-            if (m_HasKhrCalibratedTimestamps)
+        const bool hasHostQuery = m_DeviceInfo.hasHostQuery && [&]() -> bool {
+            if (m_DeviceInfo.hasKhrCalibratedTimestamps)
             {
-                for (vk::TimeDomainKHR domain : timeDomainsKhr)
+                for (vk::TimeDomainKHR domain: timeDomainsKhr)
                 {
-                    const auto d = static_cast<VkTimeDomainKHR>(domain);
-                    if (d == VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_KHR ||
-                        d == VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_KHR)
+                    if (domain == vk::TimeDomainKHR::eClockMonotonicRaw ||
+                        domain == vk::TimeDomainKHR::eQueryPerformanceCounter)
                     {
                         return true;
                     }
                 }
             }
-            else if (m_HasExtCalibratedTimestamps)
+            else if (m_DeviceInfo.hasExtCalibratedTimestamps)
             {
-                for (vk::TimeDomainEXT domain : timeDomainsExt)
+                for (vk::TimeDomainEXT domain: timeDomainsExt)
                 {
-                    const auto d = static_cast<VkTimeDomainEXT>(domain);
-                    if (d == VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_EXT ||
-                        d == VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_EXT)
+                    if (domain == vk::TimeDomainEXT::eClockMonotonicRaw ||
+                        domain == vk::TimeDomainEXT::eQueryPerformanceCounter)
                     {
                         return true;
                     }
@@ -271,13 +284,13 @@ namespace enger
         }();
         if (hasHostQuery)
         {
-            // If we have Host Query Reset, we don't need to allocate a seperate command buffer.
+            // If we have Host Query Reset, we don't need to allocate a separate command buffer.
             m_UsingTracyHostCalibrated = true;
             m_TracyVkCtx = TracyVkContextHostCalibrated(instance, m_PhysicalDevice, *m_Device,
-                VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
-                VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
+                                                        VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
+                                                        VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
         }
-        else
+        else // allocate the command buffers
         {
             const vk::CommandPoolCreateInfo commandPoolCI{
                 .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient,
@@ -293,14 +306,15 @@ namespace enger
             m_TracyCommandBuffer = vkCheck(m_Device->allocateCommandBuffers(commandBufferCI)).front();
         }
 
-        if (m_HasKhrCalibratedTimestamps || m_HasExtCalibratedTimestamps)
+        if (!m_UsingTracyHostCalibrated && (m_DeviceInfo.hasKhrCalibratedTimestamps || m_DeviceInfo.
+                                            hasExtCalibratedTimestamps))
         {
             m_TracyVkCtx = TracyVkContextCalibrated(instance, m_PhysicalDevice, *m_Device, m_GraphicsQueue.queue(),
-                                                   m_TracyCommandBuffer,
-                                                   VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
-                                                   VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
+                                                    m_TracyCommandBuffer,
+                                                    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
+                                                    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr);
         }
-        else
+        else if (!m_UsingTracyHostCalibrated)
         {
             m_TracyVkCtx = TracyVkContext(instance, m_PhysicalDevice, *m_Device, m_GraphicsQueue.queue(),
                                           m_TracyCommandBuffer,
