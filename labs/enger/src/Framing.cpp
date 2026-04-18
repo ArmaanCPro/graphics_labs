@@ -124,7 +124,7 @@ namespace enger::framing
 
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
 
-        ENGER_PROFILE_FRAME("Frame");
+        ENGER_PROFILE_FRAME();
     }
 
     void framing::FrameOrchestrator::onWindowResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height)

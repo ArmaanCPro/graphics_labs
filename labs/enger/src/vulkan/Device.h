@@ -16,6 +16,9 @@
 #include "Queue.h"
 
 #include "Profiling/Profiler.h"
+#ifdef ENABLE_PROFILING
+#include <Tracy/TracyVulkan.hpp>
+#endif
 
 namespace enger
 {
@@ -242,4 +245,31 @@ namespace enger
     private:
         PhysicalDeviceInfo m_DeviceInfo;
     };
+
+#ifdef ENABLE_PROFILING
+    inline void ENGER_PROFILE_GPU_COLLECT(const Device* device, vk::CommandBuffer cmdBuffer)
+    {
+        if (device->m_UsingTracyHostCalibrated)
+        {
+            TracyVkCollectHost(device->m_TracyVkCtx);
+        }
+        else
+        {
+            TracyVkCollect(device->m_TracyVkCtx, cmdBuffer);
+        }
+    }
+
+#define ENGER_PROFILE_GPU_ZONE(name, device, cmdBuffer, color) \
+    TracyVkZoneC(device->m_TracyVkCtx, cmdBuffer, name, color);
+
+#else
+    inline void ENGER_PROFILE_GPU_COLLECT(Device*, vk::CommandBuffer) {}
+
+#define ENGER_PROFILE_GPU_ZONE(name, device, cmdBuffer, color) \
+    do { \
+        (void)name; (void*)device; (void)cmdBuffer; (void)color; \
+    } while (0);
+
+#endif
+
 }

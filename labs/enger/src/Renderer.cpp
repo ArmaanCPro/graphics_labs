@@ -32,7 +32,7 @@ namespace enger
     {
         ENGER_PROFILE_FUNCTION();
         auto* d = &m_Device;
-        ENGER_PROFILE_GPU_ZONE("Renderer::render", d, fctx.cmd.get(), ENGER_PROFILER_COLOR_SUBMIT);
+        ENGER_PROFILE_GPU_ZONE("Renderer::render", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_SUBMIT);
 
         if (m_ShouldResize)
         {

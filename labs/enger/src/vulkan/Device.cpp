@@ -120,6 +120,7 @@ namespace enger
         :
         m_UseBindless(useBindless)
     {
+        ENGER_PROFILE_FUNCTION()
         // physical device selection
         const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(instance.enumeratePhysicalDevices());
         const auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);

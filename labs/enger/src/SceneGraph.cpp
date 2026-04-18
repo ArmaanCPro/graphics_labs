@@ -16,7 +16,7 @@ namespace enger
 {
     std::expected<std::vector<uint32_t>, std::string> loadSpirvFromFile(std::filesystem::path path)
     {
-        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_CREATE)
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_CREATE)
         std::ifstream file(path, std::ios::ate | std::ios::binary);
 
         if (!file)

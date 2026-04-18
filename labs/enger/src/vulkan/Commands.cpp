@@ -98,9 +98,9 @@ namespace enger
     void CommandBuffer::transitionImage(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout)
     {
         assert(m_Device != nullptr);
-        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
         ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImage", m_Device, m_CommandBuffer,
-                               ENGER_PROFILER_COLOR_BARRIER)
+                               ENGER_PROFILE_COLOR_BARRIER);
 
         auto* image = m_Device->getImage(texHandle);
         assert(image != nullptr);
@@ -138,9 +138,9 @@ namespace enger
     void CommandBuffer::transitionImages(std::span<const TransitionImageInfo> infos)
     {
         assert(m_Device != nullptr);
-        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
         ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImages", m_Device, m_CommandBuffer,
-                               ENGER_PROFILER_COLOR_BARRIER)
+                               ENGER_PROFILE_COLOR_BARRIER)
 
         assert(infos.size() <= kMaxTransitionImages);
 
@@ -189,8 +189,8 @@ namespace enger
     void CommandBuffer::imageBarrier(TransferTextureDesc desc)
     {
         assert(m_Device != nullptr);
-        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::imageBarrier", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::imageBarrier", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_BARRIER)
 
         auto* image = m_Device->getImage(desc.handle);
         assert(image != nullptr);
@@ -273,8 +273,8 @@ namespace enger
     SubmitHandle CommandBuffer::bufferBarrier(TransferBufferDesc desc)
     {
         assert(m_Device != nullptr);
-        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::bufferBarrier", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::bufferBarrier", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_BARRIER)
 
         if (m_Device->physicalDeviceInfo().hasMaintenance9)
         {
@@ -365,8 +365,8 @@ namespace enger
     void CommandBuffer::blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle)
     {
         assert(m_Device != nullptr);
-        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::blitImage", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::blitImage", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_BARRIER)
 
         auto* srcImage = m_Device->getImage(srcTexHandle);
         assert(srcImage != nullptr);
@@ -542,7 +542,7 @@ namespace enger
 
     void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::draw", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_SUBMIT)
+        ENGER_PROFILE_GPU_ZONE("CommandBuffer::draw", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_SUBMIT)
         m_CommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
