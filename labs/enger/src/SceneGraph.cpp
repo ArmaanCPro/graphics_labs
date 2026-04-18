@@ -69,6 +69,10 @@ namespace enger
             .frontFace = vk::FrontFace::eCounterClockwise,
 
             .sampleCount = msaaSamples,
+
+#ifndef NDEBUG
+            .enablePipelineRobustness = true,
+#endif
         }, nullptr, "GLTFMetallic_Roughness: OpaquePipeline");
 
         transparentPipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
@@ -100,6 +104,10 @@ namespace enger
             .frontFace = vk::FrontFace::eCounterClockwise,
 
             .sampleCount = msaaSamples,
+
+#ifndef NDEBUG
+            .enablePipelineRobustness = true,
+#endif
         }, nullptr, "GLTFMetallic_Roughness: TransparentPipeline");
     }
 

@@ -108,6 +108,7 @@ namespace enger
                 score += 10;
             }
             infos.hasNullDescriptor = features.get<vk::PhysicalDeviceRobustness2FeaturesEXT>().nullDescriptor;
+            infos.hasPipelineRobustness = features.get<vk::PhysicalDeviceVulkan14Features>().pipelineRobustness;
 
             if (!supportsVulkan14 || !supportsDesiredQueues || !supportsAllRequiredExtensions || !
                 supportsRequiredFeatures)
@@ -214,7 +215,7 @@ namespace enger
                 .timelineSemaphore = true, .bufferDeviceAddress = true,
             },
             {.synchronization2 = true, .dynamicRendering = true},
-            {},
+            {.pipelineRobustness = m_DeviceInfo.hasPipelineRobustness},
             {.extendedDynamicState = true},
             {.nullDescriptor = m_UseBindless && m_DeviceInfo.hasNullDescriptor}
         };
@@ -380,6 +381,25 @@ namespace enger
     Holder<ComputePipelineHandle> Device::createComputePipeline(ComputePipelineDesc desc, Queue* queue,
                                                                 std::string_view debugName)
     {
+        // Robustness
+        vk::PipelineRobustnessCreateInfo robustnessCI{
+            .storageBuffers = vk::PipelineRobustnessBufferBehavior::eDisabled,
+            .uniformBuffers = vk::PipelineRobustnessBufferBehavior::eDisabled,
+            .vertexInputs = vk::PipelineRobustnessBufferBehavior::eDisabled,
+            .images = vk::PipelineRobustnessImageBehavior::eDisabled,
+        };
+        const bool usingRobustness = desc.enablePipelineRobustness && m_DeviceInfo.hasPipelineRobustness;
+        if (desc.enablePipelineRobustness && m_DeviceInfo.hasPipelineRobustness)
+        {
+#ifdef NDEBUG
+            std::cerr << "Consider disabling pipeline robustness on Release builds [" << debugName << "]\n";
+#endif
+            robustnessCI.storageBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
+            robustnessCI.uniformBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
+            robustnessCI.images = vk::PipelineRobustnessImageBehavior::eRobustImageAccess2;
+            robustnessCI.vertexInputs = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
+        }
+
         auto* shaderModule = m_ShaderModulePool.get(desc.shaderModule);
         auto* layout = m_PipelineLayoutPool.get(desc.pipelineLayout);
 
@@ -390,6 +410,7 @@ namespace enger
         };
 
         vk::ComputePipelineCreateInfo pipelineCI{
+            .pNext = usingRobustness ? &robustnessCI : nullptr,
             .stage = shaderStageCI,
             .layout = layout->layout,
         };
@@ -411,6 +432,25 @@ namespace enger
     Holder<GraphicsPipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineDesc desc, Queue* queue,
                                                                   std::string_view debugName)
     {
+        // Robustness
+        vk::PipelineRobustnessCreateInfo robustnessCI{
+            .storageBuffers = vk::PipelineRobustnessBufferBehavior::eDisabled,
+            .uniformBuffers = vk::PipelineRobustnessBufferBehavior::eDisabled,
+            .vertexInputs = vk::PipelineRobustnessBufferBehavior::eDisabled,
+            .images = vk::PipelineRobustnessImageBehavior::eDisabled,
+        };
+        const bool usingRobustness = desc.enablePipelineRobustness && m_DeviceInfo.hasPipelineRobustness;
+        if (usingRobustness)
+        {
+#ifdef NDEBUG
+            std::cerr << "Consider disabling pipeline robustness on Release builds [" << debugName << "]" << '\n';
+#endif
+            robustnessCI.storageBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
+            robustnessCI.uniformBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
+            robustnessCI.images = vk::PipelineRobustnessImageBehavior::eRobustImageAccess2;
+            robustnessCI.vertexInputs = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
+        }
+
         // Color Attachments
         std::array<vk::Format, GraphicsPipelineDesc::kMaxColorAttachments> colorAttachmentFormats;
         for (uint32_t i = 0; i < desc.colorAttachmentCount; ++i)
@@ -418,6 +458,7 @@ namespace enger
             colorAttachmentFormats[i] = desc.colorAttachments[i].format;
         }
         vk::PipelineRenderingCreateInfo renderingCI{
+            .pNext = usingRobustness ? &robustnessCI : nullptr,
             .colorAttachmentCount = desc.colorAttachmentCount,
             .pColorAttachmentFormats = colorAttachmentFormats.data(),
             .depthAttachmentFormat = desc.depthFormat,

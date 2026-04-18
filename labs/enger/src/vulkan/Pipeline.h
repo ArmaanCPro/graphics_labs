@@ -24,7 +24,9 @@ namespace enger
         PipelineLayoutHandle pipelineLayout;
         ShaderModuleHandle shaderModule;
 
+        // Only enabled if the device actually supports it.
         std::string entryPoint = "computeMain";
+        bool enablePipelineRobustness = false;
     };
 
     struct GraphicsPipelineDesc
@@ -55,6 +57,9 @@ namespace enger
 
         vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
         float minSampleShading = 0.0f;
+
+        // Only enabled if the device actually supports it. Consider enabling for Debug builds only.
+        bool enablePipelineRobustness = false;
     };
 
     struct Pipeline

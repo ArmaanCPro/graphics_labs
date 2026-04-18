@@ -38,6 +38,7 @@ namespace enger
         bool hasMaintenance9 = false;
         bool hasRobustness2 = false;
         bool hasNullDescriptor = false;
+        bool hasPipelineRobustness = false;
     };
 
     class Device
