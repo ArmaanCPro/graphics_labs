@@ -21,6 +21,7 @@ namespace enger
     public:
         SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples);
 
+        // This doesn't actually load the new scene, it just schedules the scene load to updateScene
         void loadScene(const std::filesystem::path& filePath);
 
         [[nodiscard]] const DrawContext& updateScene(float width, float height, const Camera& camera, EngineStats& stats);
@@ -35,6 +36,9 @@ namespace enger
 
         GPUSceneData m_SceneData;
         Holder<BufferHandle> m_GPUSceneDataBuffer;
+
+        std::filesystem::path m_PendingScenePath;
+        bool m_IsScenePending = false;
 
     public:
         Holder<TextureHandle> m_WhiteImage;

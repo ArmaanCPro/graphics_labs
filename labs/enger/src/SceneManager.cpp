@@ -118,17 +118,29 @@ namespace enger
 
     void SceneManager::loadScene(const std::filesystem::path& filePath)
     {
-        auto file = LoadGltf(m_Device, *this, filePath);
-        if (file.has_value())
+        if (filePath.empty())
         {
-            m_LoadedScenes.clear();
-            m_LoadedScenes[file.value()->name_] = std::move(file.value());
+            return;
         }
+        m_PendingScenePath = filePath;
+        m_IsScenePending = true;
     }
 
     const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera, EngineStats& stats)
     {
         auto start = std::chrono::high_resolution_clock::now();
+
+        if (m_IsScenePending)
+        {
+            auto file = LoadGltf(m_Device, *this, m_PendingScenePath);
+            if (file.has_value())
+            {
+                m_LoadedScenes.clear();
+                m_LoadedScenes[file.value()->name_] = std::move(file.value());
+                m_IsScenePending = false;
+                m_PendingScenePath.clear();
+            }
+        }
 
         m_DrawContext.opaqueSurfaces.clear();
         m_DrawContext.transparentSurfaces.clear();
