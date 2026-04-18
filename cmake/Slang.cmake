@@ -15,7 +15,7 @@ function(compile_slang_shaders target shader_dir output_dir)
 
     set(COMMON_FLAGS
         -target spirv
-        -profile spirv_1_4
+        -profile spirv_1_6
         -emit-spirv-directly
         -matrix-layout-column-major # GLM is column-major, but Slang is better as row-major. Consider transposing glm matrices later, for now we enforce column-major.
         -fvk-use-entrypoint-name
