@@ -88,6 +88,7 @@ int main()
 
     while (!window.shouldClose())
     {
+        ENGER_PROFILE_ZONEN("Main loop")
         window.poll();
 
         const auto start = std::chrono::high_resolution_clock::now();

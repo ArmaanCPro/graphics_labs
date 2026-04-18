@@ -260,7 +260,7 @@ namespace enger
     }
 
 #define ENGER_PROFILE_GPU_ZONE(name, device, cmdBuffer, color) \
-    TracyVkZoneC(device->m_TracyVkCtx, cmdBuffer, name, color);
+    TracyVkZoneC((*device).m_TracyVkCtx, cmdBuffer, name, color);
 
 #else
     inline void ENGER_PROFILE_GPU_COLLECT(Device*, vk::CommandBuffer) {}

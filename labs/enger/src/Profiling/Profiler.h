@@ -18,8 +18,12 @@ inline constexpr auto ENGER_PROFILE_COLOR_DRAW    = 0x00ffffu;
 
 #define ENGER_PROFILE_FUNCTION() ZoneScoped;
 #define ENGER_PROFILE_FUNCTION_COLOR(color) ZoneScopedC(color);
-#define ENGER_PROFILE_ZONE(name, color) \
+#define ENGER_PROFILE_ZONENC(name, color) \
     ZoneScopedNC(name, color);
+#define ENGER_PROFILE_ZONEN(name) \
+    ZoneScopedN(name);
+#define ENGER_PROFILE_ZONE() \
+    ZoneScoped;
 
 #define ENGER_PROFILE_THREAD(name) tracy::SetThreadName(name);
 #define ENGER_PROFILE_FRAMEN(name) FrameMarkNamed(name);
@@ -29,7 +33,9 @@ inline constexpr auto ENGER_PROFILE_COLOR_DRAW    = 0x00ffffu;
 
 #define ENGER_PROFILE_FUNCTION()
 #define ENGER_PROFILE_FUNCTION_COLOR(color)
-#define ENGER_PROFILE_ZONE(name, color)
+#define ENGER_PROFILE_ZONENC(name, color)
+#define ENGER_PROFILE_ZONEN(name)
+#define ENGER_PROFILE_ZONE()
 #define ENGER_PROFILE_THREAD(name)
 #define ENGER_PROFILE_FRAMEN(name)
 #define ENGER_PROFILE_FRAME()

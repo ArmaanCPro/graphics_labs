@@ -140,17 +140,28 @@ namespace enger
         for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); ++qfpIndex)
         {
             auto& qfp = queueFamilyProperties[qfpIndex];
+            // Graphics Queue selection
             if ((qfp.queueFlags & vk::QueueFlagBits::eGraphics)
                 && vkCheck(m_PhysicalDevice.getSurfaceSupportKHR(qfpIndex, surface)))
             {
                 graphicsQueueIndex = graphicsQueueIndex == ~0 ? qfpIndex : graphicsQueueIndex;
             }
-            else if (qfp.queueFlags & vk::QueueFlagBits::eTransfer)
+
+            // Transfer Queue selection
+            if (qfp.queueFlags & vk::QueueFlagBits::eTransfer)
             {
-                transferQueueIndex = qfpIndex;
+                // Priority 1: Dedicated Transfer Queue
+                if (!(qfp.queueFlags & (vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute)))
+                {
+                    transferQueueIndex = qfpIndex;
+                }
+                // Priority 2: Any transfer-capable queue
+                else if (transferQueueIndex == ~0)
+                {
+                    transferQueueIndex = qfpIndex;
+                }
             }
         }
-        // TODO replace this assert with something cleaner. In fact, the current cerr + terminate should be cleaner as well.
         assert(graphicsQueueIndex != ~0 && "No graphics queue family found");
 
         float graphicsQueuePriority = 1.0f;

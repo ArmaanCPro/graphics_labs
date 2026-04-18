@@ -36,6 +36,7 @@ namespace enger
 
     void GLTFMetallic_Roughness::buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples)
     {
+        ENGER_PROFILE_FUNCTION()
         auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
         if (!expectedShaderData)
         {
@@ -105,6 +106,7 @@ namespace enger
     MaterialInstance GLTFMetallic_Roughness::writeMaterial(MaterialPass pass,
                                                            MaterialResources&& resources)
     {
+        ENGER_PROFILE_FUNCTION()
         MaterialInstance inst;
         inst.passType = pass;
         inst.pipeline = pass == MaterialPass::MainColor ? &opaquePipeline : &transparentPipeline;
@@ -115,6 +117,7 @@ namespace enger
 
     void MeshNode::draw(const glm::mat4& topMatrix, DrawContext& ctx)
     {
+        ENGER_PROFILE_FUNCTION()
         glm::mat4 nodeMatrix = topMatrix * worldTransform;
 
         for (auto& s : mesh->surfaces)
