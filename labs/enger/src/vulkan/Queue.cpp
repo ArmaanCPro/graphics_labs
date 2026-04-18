@@ -219,9 +219,9 @@ namespace enger
             // TODO expand cmd.transitionImage to support mips?
             vk::ImageMemoryBarrier2 barrier{
                 .srcStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-                .srcAccessMask = vk::AccessFlagBits2::eMemoryWrite,
+                .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
                 .dstStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-                .dstAccessMask = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
+                .dstAccessMask = vk::AccessFlagBits2::eTransferRead,
                 .oldLayout = vk::ImageLayout::eTransferDstOptimal,
                 .newLayout = vk::ImageLayout::eTransferSrcOptimal,
                 .image = m_Device->getImage(handle)->image_,

@@ -33,6 +33,11 @@ namespace
             access = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
             stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
         }
+        else if (layout == vk::ImageLayout::ePresentSrcKHR)
+        {
+            access = vk::AccessFlagBits2::eNone;
+            stage = vk::PipelineStageFlagBits2::eBottomOfPipe; // swapchain happens at the end of the pipeline. just make sure the present waits for AllGraphics/AllCommands too
+        }
         return {access, stage};
     }
 }

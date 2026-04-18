@@ -102,7 +102,7 @@ namespace enger::framing
         submission.waitBinary(*m_ImageAvailableSemaphores[fctx.frameIndex],
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput);
         submission.signalBinary(*m_RenderFinishedSemaphores[fctx.swapchainImageIndex],
-                                vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+                                vk::PipelineStageFlagBits2::eAllGraphics); // waits for all the graphics commands to be done, including layout transitions, before presenting swapchain
         submission.addCmd(cmd);
 
         for (const auto& wait : fctx.desiredWaits)
