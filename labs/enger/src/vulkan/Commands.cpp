@@ -271,6 +271,37 @@ namespace enger
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
         ENGER_PROFILE_GPU_ZONE("CommandBuffer::bufferBarrier", m_Device, m_CommandBuffer, ENGER_PROFILER_COLOR_BARRIER)
 
+        if (m_Device->physicalDeviceInfo().hasMaintenance9)
+        {
+            // With Maintenance9, we don't need a barrier for a release submission, just a semaphore for sync
+            auto releaseSubmission = desc.srcQueue.submitImmediateAsync([](CommandBuffer&) {});
+
+            std::vector<vk::BufferMemoryBarrier2> acquireBarriers;
+
+            for (auto& handle : desc.handles)
+            {
+                acquireBarriers.push_back(vk::BufferMemoryBarrier2{
+                    .srcStageMask = desc.srcStage,
+                    .srcAccessMask = desc.srcAccess,
+                    .dstStageMask = desc.dstStage,
+                    .dstAccessMask = desc.dstAccess,
+                    .srcQueueFamilyIndex = vk::QueueFamilyIgnored, // not needed
+                    .dstQueueFamilyIndex = vk::QueueFamilyIgnored, // not needed
+                    .buffer = m_Device->getBuffer(handle)->buffer_,
+                    .offset = 0,
+                    .size = m_Device->getBuffer(handle)->size_,
+                });
+            }
+
+            vk::DependencyInfo acquireInfo{
+                .bufferMemoryBarrierCount = static_cast<uint32_t>(acquireBarriers.size()),
+                .pBufferMemoryBarriers = acquireBarriers.data(),
+            };
+            m_CommandBuffer.pipelineBarrier2(acquireInfo);
+
+            return releaseSubmission;
+        }
+
         std::vector<vk::BufferMemoryBarrier2> releaseBarriers;
 
         for (auto& handle : desc.handles)
