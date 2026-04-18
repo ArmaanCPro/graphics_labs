@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Queue.h"
 #include "vk.h"
 
 namespace enger
@@ -11,14 +12,18 @@ namespace enger
         void waitBinary(vk::Semaphore semaphore, vk::PipelineStageFlags2 stage);
         void signalBinary(vk::Semaphore semaphore, vk::PipelineStageFlags2 stage);
         void waitTimeline(vk::Semaphore semaphore, uint64_t waitValue, vk::PipelineStageFlags2 stage);
+        void waitTimeline(SubmitHandle handle, vk::PipelineStageFlags2 stage);
         void signalTimeline(vk::Semaphore semaphore, uint64_t signalValue, vk::PipelineStageFlags2 stage);
+        void signalTimeline(SubmitHandle handle, vk::PipelineStageFlags2 stage);
         void addCmd(CommandBuffer& commandBuffer);
 
         [[nodiscard]] vk::SubmitInfo2 build() const;
+        void clear();
 
     private:
         static constexpr size_t kMaxSemaphores = 8;
-        std::array<vk::SemaphoreSubmitInfo, kMaxSemaphores> semaphores_;
+        std::array<vk::SemaphoreSubmitInfo, kMaxSemaphores> waitSemaphores_;
+        std::array<vk::SemaphoreSubmitInfo, kMaxSemaphores> signalSemaphores_;
         size_t waitSemaphoreCount_ = 0;
         size_t signalSemaphoreCount_ = 0;
 

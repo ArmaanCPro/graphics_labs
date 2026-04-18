@@ -10,3 +10,4 @@
 - Genuinely happy with how the resource management system turned out to be.
     - The fact that the Pool (holder of GPU resources) could be used for the Bindless descriptor index is huge
 - Bindless overall is pretty cool and fits so tightly that the API is easier than the bindful way (for `enger`).
+- Recently implemented Transfer queues. Pretty interesting, but it seems it would be much more powerful when combined with CPU-side concurrency as well.

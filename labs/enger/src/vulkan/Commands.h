@@ -7,6 +7,7 @@
 namespace enger
 {
     class Device;
+    struct SubmitHandle;
     class Queue;
 
     enum class CommandPoolFlags
@@ -94,7 +95,10 @@ namespace enger
             Queue& srcQueue;
             Queue& dstQueue;
         };
-        void bufferBarrier(TransferBufferDesc desc);
+        /// This returns the SubmitHandle for the RELEASE operation.
+        /// Release must complete BEFORE this command buffer (ACQUIRE) is submitted on the dst queue.
+        /// Therefore, you should add a waitTimeline for this SubmitHandle.
+        [[nodiscard]] SubmitHandle bufferBarrier(TransferBufferDesc desc);
 
         void blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle);
         void clearColorImage(TextureHandle texHandle, vk::ClearColorValue color, vk::ImageAspectFlags aspectMask);

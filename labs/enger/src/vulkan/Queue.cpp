@@ -38,10 +38,10 @@ namespace enger
     Queue::Queue(Device* device, uint32_t familyIndex, std::string_view debugName)
         :
         m_Device(device),
-        m_FamilyIndex(familyIndex),
         m_Queue(device->device().getQueue(familyIndex, 0)),
+        m_FamilyIndex(familyIndex),
         m_ImmediateCmdPool(device->createUniqueCommandPool(CommandPoolFlags::ResetCommandBuffer, familyIndex,
-            debugName.empty() ? "" : std::format("{}_{}", debugName, "_ImmediateCmdPool")))
+                                                           debugName.empty() ? "" : std::format("{}_{}", debugName, "_ImmediateCmdPool")))
     {
         vk::SemaphoreTypeCreateInfo semaphoreTypeCI{
             .semaphoreType = vk::SemaphoreType::eTimeline,
@@ -52,6 +52,10 @@ namespace enger
         };
 
         m_TimelineSemaphore = vkCheck(m_Device->device().createSemaphoreUnique(semaphoreCI));
+        m_CurrentSubmitCounter = SubmitHandle{
+            .value = 0,
+            .timelineSemaphore = *m_TimelineSemaphore,
+        };
 
         if (!debugName.empty())
         {
@@ -74,7 +78,7 @@ namespace enger
     SubmitHandle Queue::submit(vk::SubmitInfo2 submitInfo)
     {
         ENGER_PROFILE_FUNCTION()
-        m_CurrentSubmitCounter++;
+        ++m_CurrentSubmitCounter;
         // Signal the timeline semaphore
         std::vector<vk::SemaphoreSubmitInfo> signalSemaphores(
             submitInfo.pSignalSemaphoreInfos,
@@ -94,11 +98,12 @@ namespace enger
 
     SubmitHandle Queue::submitImmediateAsync(std::function<void(CommandBuffer &)> func, std::optional<vk::SubmitInfo2> submitInfo)
     {
+        ENGER_PROFILE_FUNCTION();
+        wait(m_CurrentSubmitCounter); // if we used an Arena style immediate command buffer ring, then we wouldn't need this unless ALL arenas are occupied
         m_ImmediateCmdBuffer.reset();
         m_ImmediateCmdBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
         func(m_ImmediateCmdBuffer);
         m_ImmediateCmdBuffer.end();
-
 
         vk::CommandBufferSubmitInfo cmdInfo{
             .commandBuffer = m_ImmediateCmdBuffer.get(),
@@ -128,6 +133,7 @@ namespace enger
 
     void Queue::submitImmediate(std::function<void(CommandBuffer &)> func, uint64_t timeout)
     {
+        ENGER_PROFILE_FUNCTION();
         wait(submitImmediateAsync(std::move(func)), timeout);
     }
 
@@ -148,8 +154,8 @@ namespace enger
 
     void Queue::wait(SubmitHandle handle, uint64_t timeout)
     {
-        std::array<vk::Semaphore, 1> semaphores{*m_TimelineSemaphore};
-        std::array<uint64_t, 1> values{handle};
+        std::array<vk::Semaphore, 1> semaphores{handle.timelineSemaphore};
+        std::array<uint64_t, 1> values{handle.value};
         m_Device->waitSemaphores(semaphores, values, timeout);
     }
 

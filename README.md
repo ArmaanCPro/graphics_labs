@@ -6,7 +6,7 @@ Particularly focused on Vulkan, 3D rendering, and modern C++.
 
 ## Labs
 
-- [enger](labs/enger/README.md): A Vulkan-based Bindless 3D rendering engine
+- [enger](labs/enger/README.md): A Vulkan-based multi-Queue Bindless 3D rendering engine
 
 
 ### Third-Party Assets

@@ -18,6 +18,7 @@ namespace enger::framing
         TextureHandle swapchainImageHandle;
         vk::Extent2D swapchainExtent;
         uint32_t frameIndex;
+        std::vector<SubmitHandle> desiredWaits;
     };
 
     /// The FrameOrchestrator simply manages frame synchronization AND swapchain recreation/resizing.
@@ -48,7 +49,7 @@ namespace enger::framing
         SwapChain& m_Swapchain;
         GlfwWindow& m_Window;
 
-        std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits = {0, 0};
+        std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits;
         std::array<UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;
         std::array<CommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 

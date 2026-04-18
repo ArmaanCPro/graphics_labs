@@ -169,17 +169,17 @@ namespace enger
 
         if (m_IsFirstFrame && m_Device.transferQueue().has_value())
         {
-            cmd.bufferBarrier({
+            auto sbv = cmd.bufferBarrier({
                 allVertexBuffers,
                 vk::AccessFlagBits2::eTransferWrite,
-                vk::AccessFlagBits2::eTransferRead,
+                vk::AccessFlagBits2::eShaderStorageRead,
                 vk::PipelineStageFlagBits2::eTransfer,
-                vk::PipelineStageFlagBits2::eAllGraphics,
+                vk::PipelineStageFlagBits2::eVertexShader,
                 m_Device.transferQueue().value(),
                 m_Device.graphicsQueue(),
             });
             allVertexBuffers.clear();
-            cmd.bufferBarrier({
+            auto sbi = cmd.bufferBarrier({
                 allIndexBuffers,
                 vk::AccessFlagBits2::eTransferWrite,
                 vk::AccessFlagBits2::eIndexRead,
@@ -188,6 +188,8 @@ namespace enger
                 m_Device.transferQueue().value(),
                 m_Device.graphicsQueue(),
             });
+            fctx.desiredWaits.push_back(sbv);
+            fctx.desiredWaits.push_back(sbi);
         }
         m_IsFirstFrame = false;
     }

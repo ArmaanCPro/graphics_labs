@@ -15,7 +15,27 @@ namespace enger
     ///     | A timeline semaphore value maps directly onto a SubmitHandle value.
     /// Used for synchronization and deletion.
     /// I.e., a resource will only be released after the current submit handle is >= the resource's designated submit handle.
-    using SubmitHandle = uint64_t;
+    struct SubmitHandle
+    {
+        uint64_t value = 0;
+        vk::Semaphore timelineSemaphore = VK_NULL_HANDLE;
+        SubmitHandle operator++()
+        {
+            value++;
+            return *this;
+        }
+        SubmitHandle operator++(int)
+        {
+            auto copy = *this;
+            value++;
+            return copy;
+        }
+        auto operator<=>(const SubmitHandle& other) const
+        {
+            return value <=> other.value;
+        }
+        operator uint64_t() const { return value; }
+    };
 
     /// This, for now, is an internal class. Shouldn't be used by clients, but it should be relatively easy to refactor for that.
     /// Therefore, it isn't private currently.
@@ -81,7 +101,7 @@ namespace enger
         vk::Queue m_Queue;
         uint32_t m_FamilyIndex;
         vk::UniqueSemaphore m_TimelineSemaphore;
-        SubmitHandle m_CurrentSubmitCounter = {0};
+        SubmitHandle m_CurrentSubmitCounter;
         DeferredDeletionQueue m_DeletionQueue;
 
         // Immediate submits

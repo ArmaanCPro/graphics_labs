@@ -25,12 +25,12 @@ namespace
         }
         else if (layout == vk::ImageLayout::eColorAttachmentOptimal)
         {
-            access = vk::AccessFlagBits2::eColorAttachmentRead;
+            access = vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite;
             stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
         }
         else if (layout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
         {
-            access = vk::AccessFlagBits2::eDepthStencilAttachmentRead;
+            access = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
             stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
         }
         return {access, stage};
@@ -265,7 +265,7 @@ namespace enger
         }
     }
 
-    void CommandBuffer::bufferBarrier(TransferBufferDesc desc)
+    SubmitHandle CommandBuffer::bufferBarrier(TransferBufferDesc desc)
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILER_COLOR_BARRIER)
@@ -321,11 +321,9 @@ namespace enger
             .pBufferMemoryBarriers = acquireBarriers.data(),
         };
 
-        QueueSubmitBuilder acquireBuilder;
-        acquireBuilder.waitTimeline(desc.srcQueue.timelineSemaphore(), releaseSubmission, vk::PipelineStageFlagBits2::eTransfer);
-        desc.dstQueue.submitImmediateAsync([&](CommandBuffer& cmd) {
-            cmd.get().pipelineBarrier2(acquireInfo);
-        }, acquireBuilder.build());
+        m_CommandBuffer.pipelineBarrier2(acquireInfo);
+
+        return releaseSubmission;
     }
 
     void CommandBuffer::blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle)

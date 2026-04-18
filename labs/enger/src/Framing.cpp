@@ -47,7 +47,8 @@ namespace enger::framing
 
     std::expected<framing::FrameContext, FrameOrchestrator::BeginFrameError> framing::FrameOrchestrator::beginFrame()
     {
-        m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
+        if (m_LastFrameSubmits[m_CurrentFrame].timelineSemaphore != nullptr) [[likely]]
+            m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
         m_GraphicsQueue.flushDeletionQueue();
 
         if (m_ShouldRecreateSwapchain)
@@ -104,6 +105,11 @@ namespace enger::framing
                                 vk::PipelineStageFlagBits2::eColorAttachmentOutput);
         submission.addCmd(cmd);
 
+        for (const auto& wait : fctx.desiredWaits)
+        {
+            submission.waitTimeline(wait, vk::PipelineStageFlagBits2::eAllCommands);
+        }
+
         m_LastFrameSubmits[fctx.frameIndex] = m_GraphicsQueue.submit(submission.build());
         auto presentResult = m_Swapchain.present(
             {{*m_RenderFinishedSemaphores[fctx.swapchainImageIndex]}},
@@ -117,6 +123,8 @@ namespace enger::framing
         }
 
         m_CurrentFrame = (m_CurrentFrame + 1) % FRAMES_IN_FLIGHT;
+
+        ENGER_PROFILE_FRAME("Frame");
     }
 
     void framing::FrameOrchestrator::onWindowResize([[maybe_unused]] uint32_t width, [[maybe_unused]] uint32_t height)
