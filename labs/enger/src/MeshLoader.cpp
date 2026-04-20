@@ -89,9 +89,9 @@ namespace enger
         std::variant<std::filesystem::path, std::span<const std::byte> > data{};
         fastgltf::MimeType mimeType;
         // gpu data, filled by lambda
-        int width = 0, height = 0, comp = 0;
+        int width = 0, height = 0, comp = 0; // width/height are only used by STBI, KTX handles it already
         std::optional<std::variant<stbi_uc*, ktxTexture2*> > gpuPixels;
-        vk::Format format = vk::Format::eR8G8B8A8Unorm;
+        vk::Format format = vk::Format::eR8G8B8A8Srgb;
 
         ~TextureTask()
         {
@@ -333,7 +333,6 @@ namespace enger
                                                return;
                                            task.gpuPixels = tex;
                                            task.format = static_cast<vk::Format>(tex->vkFormat);
-                                           task.width = tex->baseWidth;
                                        },
                                        [&](const std::span<const std::byte>& bytes) {
                                            ktxTexture2* tex;
@@ -399,7 +398,7 @@ namespace enger
                                            desc.dimensions = {
                                                static_cast<uint32_t>(task.width), static_cast<uint32_t>(task.height), 1
                                            };
-                                           desc.generateMipMaps = false; // still blit the mips for STBI
+                                           desc.generateMipmaps = false; // still blit the mips for STBI
                                            desc.subresources.push_back(TextureSubresource{
                                                .data = pixels,
                                                .extent = desc.dimensions,
@@ -426,7 +425,7 @@ namespace enger
                                                        std::max(1u, tex->baseDepth >> level),
                                                    },
                                                    .mipLevel = level,
-                                                   .arrayLayer = 0, // TODO handles layers for cubemaps
+                                                   .arrayLayer = tex->numLayers, // TODO handles layers for cubemaps
                                                    .size = ktxTexture_GetImageSize(ktxTexture(tex), level)
                                                });
                                            }
@@ -509,11 +508,7 @@ namespace enger
                     if (sampler.has_value())
                     {
                         materialResources.colorSampler = file.samplers_[sampler.value()];
-                    }
-                    else
-                    {
-                        std::cerr << "Failed to load sampler: " << material.pbrData.baseColorTexture.value().
-                            textureIndex << std::endl;
+                        // If not present, it is valid, means use the default sampler.
                     }
                 }
 

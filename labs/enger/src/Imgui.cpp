@@ -48,7 +48,7 @@ namespace enger
 
         ImGui_ImplGlfw_InitForVulkan(window.nativeHandle(), true);
 
-        auto swapchainFormat = static_cast<VkFormat>(swapchain.swapChainFormat());
+        auto swapchainFormat = static_cast<VkFormat>(swapchain.swapChainUnormFormat());
 
         ImGui_ImplVulkan_InitInfo initInfo{
             .Instance = instance.instance(),
@@ -111,7 +111,7 @@ namespace enger
         ImGui::Render();
 
         vk::RenderingAttachmentInfo colorAttachmentInfo{
-            .imageView = m_Device.getImage(frameContext.swapchainImageHandle)->view_,
+            .imageView = m_Swapchain.swapChainUnormImageView(frameContext.swapchainImageIndex),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eLoad,
             .storeOp = vk::AttachmentStoreOp::eStore,

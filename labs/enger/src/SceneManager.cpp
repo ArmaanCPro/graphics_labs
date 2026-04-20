@@ -72,14 +72,14 @@ namespace enger
                     pixels[y * 16 + x] = (x & 1) ^ (y & 1) ? magenta : black;
                 }
             }
-            m_ErrorCheckerboardImage = m_Device.createTexture({
+            m_ErrorCheckerboardImage = m_Device.createTexture(TextureDesc{
                                                                   .format = vk::Format::eR8G8B8A8Unorm,
                                                                   .dimensions = {16, 16, 1},
                                                                   .usage = vk::ImageUsageFlagBits::eSampled |
                                                                            vk::ImageUsageFlagBits::eTransferDst |
                                                                            vk::ImageUsageFlagBits::eTransferSrc,
                                                                   .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                                                                  .generateMipMaps = true,
+                                                                  .generateMipmaps = true,
                                                                   .subresources = {
                                                                       {
                                                                           .data = pixels.data(),

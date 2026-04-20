@@ -130,6 +130,9 @@ namespace enger
         m_UseBindless(useBindless)
     {
         ENGER_PROFILE_FUNCTION()
+        // Swapchain Mutable Format is nearly universal on Vulkan 1.4 desktop (mobile support is a little bit more shoddy)
+        deviceExtensions.push_back(vk::KHRSwapchainMutableFormatExtensionName);
+
         // physical device selection
         const std::vector<vk::PhysicalDevice> physicalDevices = vkCheck(instance.enumeratePhysicalDevices());
         const auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
@@ -643,10 +646,10 @@ namespace enger
         assert(desc.dimensions.height > 0);
         assert(desc.dimensions.depth > 0);
 
-        assert(!(desc.generateMipMaps && desc.mipLevels > 1) && "Cannot generate partial mip chains.");
+        assert(!(desc.generateMipmaps && desc.mipLevels > 1) && "Cannot generate partial mip chains.");
 
         auto mipLevels = desc.mipLevels;
-        if (desc.generateMipMaps)
+        if (desc.generateMipmaps)
         {
             assert(desc.subresources.size() == 1 && "Initial data must be provided to generate mip maps");
             assert(desc.mipLevels == 1 && "Cannot manually specify mip levels when generating mip maps");
@@ -725,7 +728,7 @@ namespace enger
             assert(desc.type == vk::ImageType::e2D && "Non-2D image for initial data");
             queue = queue ? queue : &m_GraphicsQueue;
             queue->uploadTexture2DData(handle, desc.subresources, desc.dimensions, mipLevels, desc.arrayLayers,
-                                       desc.format, desc.generateMipMaps);
+                                       desc.format, desc.generateMipmaps);
         }
 
         return {this, queue, handle};

@@ -28,15 +28,19 @@ namespace enger
 
         [[nodiscard]] vk::Image swapChainImage(uint32_t index) { return m_SwapChainImages[index]; }
         [[nodiscard]] vk::ImageView swapChainImageView(uint32_t index) { return *m_SwapChainImageViews[index]; }
+        [[nodiscard]] vk::ImageView swapChainUnormImageView(uint32_t index) { return *m_UnormImageViews[index]; }
         [[nodiscard]] uint32_t numSwapChainImages() const { return static_cast<uint32_t>(m_SwapChainImages.size()); }
         [[nodiscard]] vk::Extent2D swapChainExtent() const { return m_SwapExtent; }
         [[nodiscard]] vk::Format swapChainFormat() const { return m_SwapFormat.format; }
+        [[nodiscard]] vk::Format swapChainUnormFormat() const { return getUnormEquivalent(m_SwapFormat.format); }
 
     private:
         void createSwapChain(uint32_t width, uint32_t height, vk::PresentModeKHR desiredPresentMode,
                              std::optional<vk::SwapchainKHR> oldSwapchain = {});
 
         void destroySwapchainHandles();
+
+        static vk::Format getUnormEquivalent(vk::Format srgbFormat);
 
     private:
         Device& m_Device;
@@ -57,5 +61,7 @@ namespace enger
         /// These unique handles store the device for deletion's sake. The SwapChain is long-lived, so it doesn't matter.
         /// For constrained environments, be mindful of the memory footprint.
         std::vector<vk::UniqueImageView> m_SwapChainImageViews;
+        // Needed for ImGui, and anything else that uses a linear color space.
+        std::vector<vk::UniqueImageView> m_UnormImageViews;
     };
 }

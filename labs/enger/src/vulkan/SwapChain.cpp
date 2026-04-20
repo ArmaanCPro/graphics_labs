@@ -6,7 +6,7 @@ namespace enger
     {
         for (const auto& format: availableFormats)
         {
-            if (format.format == vk::Format::eB8G8R8A8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+            if (format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
             {
                 return format;
             }
@@ -106,11 +106,22 @@ namespace enger
 
         m_CurrentPresentMode = chooseSwapPresentMode(desiredPresentMode, availablePresentModes);
 
+        std::array<vk::Format, 2> viewFormats = {
+            surfaceFormat.format,
+            getUnormEquivalent(surfaceFormat.format),
+        };
+
+        const vk::ImageFormatListCreateInfo formatListCI{
+            .viewFormatCount = static_cast<uint32_t>(viewFormats.size()),
+            .pViewFormats = viewFormats.data(),
+        };
         vk::SwapchainCreateInfoKHR swapchainCI{
+            .pNext = &formatListCI,
+            .flags = vk::SwapchainCreateFlagBitsKHR::eMutableFormat,
             .surface = m_Surface,
             .minImageCount = minImageCount,
-            .imageFormat = surfaceFormat.format,
-            .imageColorSpace = surfaceFormat.colorSpace,
+            .imageFormat = surfaceFormat.format, // srgb
+            .imageColorSpace = surfaceFormat.colorSpace, // srgb non-linear
             .imageExtent = m_SwapExtent,
             .imageArrayLayers = 1,
             .imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
@@ -143,6 +154,11 @@ namespace enger
             viewCI.image = m_SwapChainImages[i];
             m_SwapChainImageViews.push_back(std::move(vkCheck(logicalDevice.createImageViewUnique(viewCI))));
             setDebugName(logicalDevice, *m_SwapChainImageViews[i], "SwapChainImageView" + std::to_string(i));
+
+            auto unormViewCI = viewCI;
+            unormViewCI.format = getUnormEquivalent(surfaceFormat.format);
+            m_UnormImageViews.push_back(std::move(vkCheck(logicalDevice.createImageViewUnique(unormViewCI))));
+            setDebugName(logicalDevice, *m_UnormImageViews[i], "SwapChainUnormImageView" + std::to_string(i));
         }
 
         for (uint32_t i = 0; i < m_SwapChainImages.size(); ++i)
@@ -169,5 +185,22 @@ namespace enger
         m_SwapchainImageHandles.clear();
         m_SwapChainImageViews.clear();
         m_SwapChainImages.clear();
+    }
+
+    vk::Format SwapChain::getUnormEquivalent(vk::Format srgbFormat)
+    {
+        switch (srgbFormat)
+        {
+            case vk::Format::eB8G8R8A8Srgb:
+                return vk::Format::eB8G8R8A8Unorm;
+            case vk::Format::eR8G8B8A8Srgb:
+                return vk::Format::eR8G8B8A8Unorm;
+            case vk::Format::eA8B8G8R8SrgbPack32:
+                return vk::Format::eA8B8G8R8UnormPack32;
+            default:
+                break;
+        }
+        std::cerr << "Can't convert sRGB to UNorm format: " << vk::to_string(srgbFormat) << std::endl;
+        return srgbFormat;
     }
 }

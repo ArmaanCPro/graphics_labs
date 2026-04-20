@@ -22,7 +22,7 @@ namespace enger
     // Used for pre-generated Mipmaps.
     struct TextureSubresource
     {
-        void* data = nullptr;
+        const void* data = nullptr;
         vk::Extent3D extent = {1, 1, 1}; // Possibly to calculate manually, but libktx provides it anyway (better for non-Po2 extent)
         uint32_t mipLevel = 0;
         uint32_t arrayLayer = 0;
@@ -35,14 +35,15 @@ namespace enger
         vk::ImageType type = vk::ImageType::e2D;
         vk::Format format = vk::Format::eUndefined;
 
+        // Specifies the allocation dimensions. Not to be confused with TextureSubresource::Extent, which is upload dimensions (can be the same).
         vk::Extent3D dimensions = {1, 1, 1};
-        uint32_t mipLevels = 1;
+        uint32_t mipLevels = 1; // cannot be used in conjunctino with generateMipMaps, as partial mip chains are not supported.
         uint32_t arrayLayers = 1;
         vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
         vk::ImageUsageFlags usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
         vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-        bool generateMipMaps = false;
+        bool generateMipmaps = false;
 
         /// Data payload
         /// There should be mipLevels * arrayLayers count subresources. Describes mip maps for each layer.
