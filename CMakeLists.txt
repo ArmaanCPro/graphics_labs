@@ -36,6 +36,7 @@ find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(fastgltf CONFIG REQUIRED)
 find_package(Stb REQUIRED)
+find_package(Ktx CONFIG REQUIRED)
 find_package(nfd CONFIG REQUIRED)
 
 if (ENABLE_PROFILING)

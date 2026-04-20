@@ -8,7 +8,7 @@ target_include_directories(enger PRIVATE src)
 target_link_libraries(enger PRIVATE
         glfw glm::glm
         Vulkan::Headers GPUOpen::VulkanMemoryAllocator
-        imgui::imgui fastgltf::fastgltf
+        imgui::imgui fastgltf::fastgltf KTX::ktx
         nfd::nfd
 )
 

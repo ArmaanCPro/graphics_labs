@@ -19,6 +19,16 @@ namespace enger
         return 0;
     }
 
+    // Used for pre-generated Mipmaps.
+    struct TextureSubresource
+    {
+        void* data = nullptr;
+        vk::Extent3D extent = {1, 1, 1}; // Possibly to calculate manually, but libktx provides it anyway (better for non-Po2 extent)
+        uint32_t mipLevel = 0;
+        uint32_t arrayLayer = 0;
+        size_t size = 0;
+    };
+
     // Not an actual GPU resource type, but I don't know where else to put it. Used for texture creation as a parameter to device
     struct TextureDesc
     {
@@ -26,13 +36,17 @@ namespace enger
         vk::Format format = vk::Format::eUndefined;
 
         vk::Extent3D dimensions = {1, 1, 1};
+        uint32_t mipLevels = 1;
         uint32_t arrayLayers = 1;
         vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
         vk::ImageUsageFlags usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-        uint32_t mipLevels = 1;
-        bool generateMipMaps = false;
         vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-        const void* initialData = nullptr;
+
+        bool generateMipMaps = false;
+
+        /// Data payload
+        /// There should be mipLevels * arrayLayers count subresources. Describes mip maps for each layer.
+        std::vector<TextureSubresource> subresources;
     };
 
     struct SamplerDesc

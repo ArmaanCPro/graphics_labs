@@ -104,7 +104,9 @@ namespace enger
         void clearColorImage(TextureHandle texHandle, vk::ClearColorValue color, vk::ImageAspectFlags aspectMask);
 
         void copyBuffer(BufferHandle srcBuffer, BufferHandle dstBuffer, vk::BufferCopy region);
-        void copyBufferToImage(BufferHandle buffer, TextureHandle image, vk::BufferImageCopy region);
+        void copyBufferToImage(BufferHandle buffer, TextureHandle image, std::span<const vk::BufferImageCopy> regions);
+        void copyBufferToImage(BufferHandle buffer, TextureHandle image, vk::BufferImageCopy& region);
+        void copyBufferToImage2(vk::CopyBufferToImageInfo2& info);
 
         void setViewport(vk::Viewport& viewport);
         void setScissor(vk::Rect2D& scissor);

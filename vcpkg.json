@@ -16,6 +16,7 @@
     },
     "fastgltf",
     "stb",
+    "ktx",
     "nativefiledialog-extended",
     "tracy"
   ]

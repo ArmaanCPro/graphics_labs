@@ -435,7 +435,7 @@ namespace enger
         m_CommandBuffer.copyBuffer(srcBufferObj->buffer_, dstBufferObj->buffer_, 1, &region);
     }
 
-    void CommandBuffer::copyBufferToImage(BufferHandle buffer, TextureHandle image, vk::BufferImageCopy region)
+    void CommandBuffer::copyBufferToImage(BufferHandle buffer, TextureHandle image, std::span<const vk::BufferImageCopy> regions)
     {
         assert(m_Device != nullptr);
         auto* bufferObj = m_Device->getBuffer(buffer);
@@ -443,8 +443,17 @@ namespace enger
         auto* imageObj = m_Device->getImage(image);
         assert(imageObj != nullptr);
 
-        m_CommandBuffer.copyBufferToImage(bufferObj->buffer_, imageObj->image_, vk::ImageLayout::eTransferDstOptimal, 1,
-                                          &region);
+        m_CommandBuffer.copyBufferToImage(bufferObj->buffer_, imageObj->image_, vk::ImageLayout::eTransferDstOptimal, regions);
+    }
+
+    void CommandBuffer::copyBufferToImage(BufferHandle buffer, TextureHandle image, vk::BufferImageCopy& region)
+    {
+        copyBufferToImage(buffer, image, {{region}});
+    }
+
+    void CommandBuffer::copyBufferToImage2(vk::CopyBufferToImageInfo2& info)
+    {
+        m_CommandBuffer.copyBufferToImage2(info);
     }
 
     void CommandBuffer::setViewport(vk::Viewport& viewport)

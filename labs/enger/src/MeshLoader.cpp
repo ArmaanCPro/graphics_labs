@@ -3,6 +3,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <ktx.h>
+
 #include <print>
 
 #include "vulkan/Device.h"
@@ -61,7 +63,7 @@ namespace enger
         stagingBuffer->bufferSubData(device.allocator(), 0, vbSize, vertices.data());
         stagingBuffer->bufferSubData(device.allocator(), vbSize, ibSize, indices.data());
 
-        device.graphicsQueue().submitImmediate([&](CommandBuffer& cmd) {
+        queue->submitImmediate([&](CommandBuffer& cmd) {
             vk::BufferCopy vertexCopy{
                 .srcOffset = 0,
                 .dstOffset = 0,
@@ -84,25 +86,25 @@ namespace enger
     struct TextureTask
     {
         // cpu data, filled by loadImage
-        std::variant<std::filesystem::path, std::span<const std::byte>> data{};
+        std::variant<std::filesystem::path, std::span<const std::byte> > data{};
+        fastgltf::MimeType mimeType;
         // gpu data, filled by lambda
         int width = 0, height = 0, comp = 0;
-        // TODO convert to variant when we use ktx2
-        void* gpuPixels = nullptr;
-        bool is_stbi = false;
-        bool is_ktx = false;
+        std::optional<std::variant<stbi_uc*, ktxTexture2*> > gpuPixels;
+        vk::Format format = vk::Format::eR8G8B8A8Unorm;
+
         ~TextureTask()
         {
-            if (gpuPixels)
+            if (gpuPixels.has_value())
             {
-                if (is_stbi)
-                {
-                    stbi_image_free(static_cast<stbi_uc*>(gpuPixels));
-                }
-                else if (is_ktx)
-                {
-                    //ktxTexture_destroy(static_cast<ktxTexture_t*>(gpuPixels));
-                }
+                std::visit(fastgltf::visitor{
+                               [](stbi_uc* pixels) {
+                                   stbi_image_free(static_cast<void*>(pixels));
+                               },
+                               [](ktxTexture2* texture) {
+                                   ktxTexture2_Destroy(texture);
+                               },
+                           }, gpuPixels.value());
             }
         }
     };
@@ -129,41 +131,49 @@ namespace enger
 
                     return TextureTask{
                         .data = std::move(canonicalPath),
+                        .mimeType = filePath.mimeType,
                     };
                 },
                 [&](fastgltf::sources::Vector& vector) {
                     return TextureTask{
                         .data = std::span(vector.bytes.data(),
-                            vector.bytes.size()),
+                                          vector.bytes.size()),
                     };
                 },
                 [&](fastgltf::sources::BufferView& view) {
                     auto& bufferView = asset.bufferViews[view.bufferViewIndex];
                     auto& buffer = asset.buffers[bufferView.bufferIndex];
                     return std::visit<TextureTask>(fastgltf::visitor{
-                                   [&](auto&) {
-                                       std::cerr << "loadImage: Unhandled buffer data type: " << typeid(image).name();
-                                       return TextureTask{};
-                                   },
-                                   [&](fastgltf::sources::Array& array) {
-                                       return TextureTask{
-                                           .data = std::span{array.bytes.data() + bufferView.byteOffset,
-                                               bufferView.byteLength}
-                                       };
-                                   },
-                                   [&](fastgltf::sources::ByteView& byteView) {
-                                       return TextureTask{
-                                           .data = std::span{byteView.bytes.data() + bufferView.byteOffset,
-                                               bufferView.byteLength}
-                                       };
-                                   },
-                                   [&](fastgltf::sources::Vector& vector) {
-                                       return TextureTask{
-                                           .data = std::span{vector.bytes.data() + bufferView.byteOffset,
-                                               bufferView.byteLength}
-                                       };
-                                   }
-                               }, buffer.data);
+                                                       [&](auto&) {
+                                                           std::cerr << "loadImage: Unhandled buffer data type: " <<
+                                                               typeid(image).name();
+                                                           return TextureTask{};
+                                                       },
+                                                       [&](fastgltf::sources::Array& array) {
+                                                           return TextureTask{
+                                                               .data = std::span{
+                                                                   array.bytes.data() + bufferView.byteOffset,
+                                                                   bufferView.byteLength
+                                                               }
+                                                           };
+                                                       },
+                                                       [&](fastgltf::sources::ByteView& byteView) {
+                                                           return TextureTask{
+                                                               .data = std::span{
+                                                                   byteView.bytes.data() + bufferView.byteOffset,
+                                                                   bufferView.byteLength
+                                                               }
+                                                           };
+                                                       },
+                                                       [&](fastgltf::sources::Vector& vector) {
+                                                           return TextureTask{
+                                                               .data = std::span{
+                                                                   vector.bytes.data() + bufferView.byteOffset,
+                                                                   bufferView.byteLength
+                                                               }
+                                                           };
+                                                       }
+                                                   }, buffer.data);
                 },
             },
             image.data
@@ -230,7 +240,7 @@ namespace enger
                                      | fastgltf::Options::DontRequireValidAssetMember
                                      | fastgltf::Options::AllowDouble;
 
-        fastgltf::Parser parser{};
+        fastgltf::Parser parser{fastgltf::Extensions::KHR_texture_basisu};
 
         auto asset = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
         if (!asset)
@@ -246,7 +256,7 @@ namespace enger
 
         auto& gltf = asset.get(); {
             ENGER_PROFILE_ZONEN("Sampler Creation")
-            for (fastgltf::Sampler& sampler: gltf.samplers)
+            for (fastgltf::Sampler& sampler : gltf.samplers)
             {
                 file.samplers_.push_back(device.createSampler(SamplerDesc{
                                                                   .magFilter = extractFilter(
@@ -274,8 +284,8 @@ namespace enger
             ENGER_PROFILE_ZONEN("Texture Creation")
             // Build tasks sequentially
             std::vector<TextureTask> tasks;
-            std::vector<std::string_view> names;
-            {
+            tasks.reserve(gltf.images.size());
+            std::vector<std::string_view> names; {
                 ENGER_PROFILE_ZONEN("Texture Task Generation");
                 for (fastgltf::Image& image: gltf.images)
                 {
@@ -286,46 +296,144 @@ namespace enger
 
             // Process IO in parallel
             {
-                ENGER_PROFILE_ZONEN("Texture IO STBI");
+                ENGER_PROFILE_ZONEN("Texture IO");
                 std::for_each(std::execution::par, tasks.begin(), tasks.end(), [&](TextureTask& task) {
-                    std::visit(fastgltf::visitor{
-                                   [&](const std::filesystem::path& path) {
-                                       task.gpuPixels = static_cast<void*>(stbi_load(path.string().c_str(),
-                                           &task.width, &task.height, &task.comp, 4));
-                                       task.is_stbi = true;
-                                   },
-                                   [&](const std::span<const std::byte>& bytes) {
-                                       task.gpuPixels = static_cast<void*>(stbi_load_from_memory(
-                                            reinterpret_cast<stbi_uc const*>(bytes.data()),
-                                            static_cast<int>(bytes.size()),
-                                            &task.width, &task.height, &task.comp, 4
-                                       ));
-                                       task.is_stbi = true;
-                                   }
-                               }, task.data);
-                });
-            }
+                    if (task.mimeType == fastgltf::MimeType::KTX2)
+                    {
+                        static constexpr auto transcode = [](ktxTexture2* tex) -> bool {
+                            if (ktxTexture2_NeedsTranscoding(tex))
+                            {
+                                const auto res = ktxTexture2_TranscodeBasis(tex,
+                                                                            KTX_TTF_BC7_RGBA,
+                                                                            0);
+                                // TODO support for other formats like ASTC for mobile in the future?
+                                if (res != KTX_SUCCESS)
+                                {
+                                    std::cerr << "Failed to transcode ktx2 texture: " << ktxErrorString(res) << '\n';
+                                    return false;
+                                }
+                            }
+                            return true;
+                        };
 
-            {
+                        std::visit(fastgltf::visitor{
+                                       [&](const std::filesystem::path& path) {
+                                           ktxTexture2* tex;
+                                           const auto ec = ktxTexture2_CreateFromNamedFile(
+                                               path.string().c_str(),
+                                               ktxTextureCreateFlagBits::KTX_TEXTURE_CREATE_CHECK_GLTF_BASISU_BIT,
+                                               &tex);
+                                           if (ec != KTX_SUCCESS)
+                                           {
+                                               std::cerr << "Failed to load ktx2 texture: " << ktxErrorString(ec) <<
+                                                   '\n';
+                                               return;
+                                           }
+                                           if (!transcode(tex))
+                                               return;
+                                           task.gpuPixels = tex;
+                                           task.format = static_cast<vk::Format>(tex->vkFormat);
+                                           task.width = tex->baseWidth;
+                                       },
+                                       [&](const std::span<const std::byte>& bytes) {
+                                           ktxTexture2* tex;
+                                           const auto ec = ktxTexture2_CreateFromMemory(
+                                               reinterpret_cast<const ktx_uint8_t*>(bytes.data()),
+                                               static_cast<int>(bytes.size()),
+                                               ktxTextureCreateFlagBits::KTX_TEXTURE_CREATE_CHECK_GLTF_BASISU_BIT,
+                                               &tex);
+                                           if (ec != KTX_SUCCESS)
+                                           {
+                                               std::cerr << "Failed to load ktx2 texture: " << ktxErrorString(ec) <<
+                                                   '\n';
+                                               return;
+                                           }
+                                           if (!transcode(tex))
+                                               return;
+                                           task.gpuPixels = tex;
+                                           task.format = static_cast<vk::Format>(tex->vkFormat);
+                                       }
+                                   }, task.data);
+                    }
+                    else
+                    {
+                        std::visit(fastgltf::visitor{
+                                       [&](const std::filesystem::path& path) {
+                                           task.gpuPixels = stbi_load(path.string().c_str(),
+                                                                      &task.width, &task.height, &task.comp, 4);
+                                       },
+                                       [&](const std::span<const std::byte>& bytes) {
+                                           task.gpuPixels = stbi_load_from_memory(
+                                               reinterpret_cast<stbi_uc const*>(bytes.data()),
+                                               static_cast<int>(bytes.size()),
+                                               &task.width, &task.height, &task.comp, 4
+                                           );
+                                       }
+                                   }, task.data);
+                    }
+                });
+            } {
                 ENGER_PROFILE_ZONEN("Texture GPU Upload");
                 // Upload to GPU is faster sequentially rather than parallel due to PCIe bandwith constraint
                 for (uint32_t i = 0; i < tasks.size(); i++)
                 {
-                    if (const auto& task = tasks[i]; task.gpuPixels)
+                    auto& task = tasks[i];
+                    bool hasValue = task.gpuPixels.has_value();
+                    if (hasValue)
                     {
-                        auto img = device.createTexture({
-                                                                .format = vk::Format::eR8G8B8A8Unorm,
-                                                                .dimensions = vk::Extent3D{
-                                                                    .width = static_cast<uint32_t>(task.width),
-                                                                    .height = static_cast<uint32_t>(task.height),
-                                                                    .depth = 1,
-                                                                },
-                                                                .usage = vk::ImageUsageFlagBits::eSampled |
-                                                                         vk::ImageUsageFlagBits::eTransferDst |
-                                                                         vk::ImageUsageFlagBits::eTransferSrc,
-                                                                .generateMipMaps = true,
-                                                                .initialData = task.gpuPixels,
-                        }, nullptr);
+                        std::visit(
+                            [&](auto& pixels) {
+                                hasValue = pixels != nullptr;
+                            }
+                            , task.gpuPixels.value());
+                    }
+                    if (hasValue)
+                    {
+                        TextureDesc desc{
+                            .format = task.format,
+                            .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst |
+                                     vk::ImageUsageFlagBits::eTransferSrc,
+                        };
+                        std::visit(fastgltf::visitor{
+                                       [&](stbi_uc* pixels) {
+                                           desc.dimensions = {
+                                               static_cast<uint32_t>(task.width), static_cast<uint32_t>(task.height), 1
+                                           };
+                                           desc.generateMipMaps = false; // still blit the mips for STBI
+                                           desc.subresources.push_back(TextureSubresource{
+                                               .data = pixels,
+                                               .extent = desc.dimensions,
+                                               .mipLevel = 0,
+                                               .arrayLayer = 0,
+                                               .size = static_cast<size_t>(task.width * task.height * 1 * 4),
+                                           });
+                                       },
+                                       [&](ktxTexture2* tex) {
+                                           desc.dimensions = {tex->baseWidth, tex->baseHeight, tex->baseDepth};
+                                           desc.mipLevels = tex->numLevels;
+                                           desc.arrayLayers = tex->numLayers;
+
+                                           for (auto level = 0u; level < tex->numLevels; level++)
+                                           {
+                                               ktx_size_t offset = 0;
+                                               ktxTexture2_GetImageOffset(tex, level, 0, 0, &offset);
+
+                                               desc.subresources.push_back(TextureSubresource{
+                                                   .data = tex->pData + offset,
+                                                   .extent = {
+                                                       std::max(1u, tex->baseWidth >> level),
+                                                       std::max(1u, tex->baseHeight >> level),
+                                                       std::max(1u, tex->baseDepth >> level),
+                                                   },
+                                                   .mipLevel = level,
+                                                   .arrayLayer = 0, // TODO handles layers for cubemaps
+                                                   .size = ktxTexture_GetImageSize(ktxTexture(tex), level)
+                                               });
+                                           }
+                                       }
+                                   }, task.gpuPixels.value());
+
+                        auto img = device.createTexture(desc, nullptr);
                         images.push_back(img);
                         file.images_[names[i].data()] = std::move(img);
                     }
@@ -351,7 +459,7 @@ namespace enger
 
         int dataIndex = 0; {
             ENGER_PROFILE_ZONEN("Material Creation")
-            for (fastgltf::Material& material: gltf.materials)
+            for (fastgltf::Material& material : gltf.materials)
             {
                 MaterialConstants constants{};
                 constants.colorFactors.r = material.pbrData.baseColorFactor[0];
@@ -385,16 +493,27 @@ namespace enger
                 // get texture data
                 if (material.pbrData.baseColorTexture.has_value())
                 {
-                    auto img = gltf.textures[material.pbrData.baseColorTexture.value().textureIndex].imageIndex;
-                    auto sampler = gltf.textures[material.pbrData.baseColorTexture.value().textureIndex].samplerIndex;
+                    const auto textureIndex = material.pbrData.baseColorTexture.value().textureIndex;
+                    const auto imageIndex = gltf.textures[textureIndex].basisuImageIndex.value_or(gltf.textures[textureIndex].imageIndex.value());
+                    auto sampler = gltf.textures[textureIndex].samplerIndex;
 
-                    if (img.has_value())
+                    if (imageIndex < images.size())
                     {
-                        materialResources.colorImage = images[img.value()];
+                        materialResources.colorImage = images[imageIndex];
+                    }
+                    else
+                    {
+                        std::cerr << "Failed to load texture: " << material.pbrData.baseColorTexture.value().
+                            textureIndex << std::endl;
                     }
                     if (sampler.has_value())
                     {
                         materialResources.colorSampler = file.samplers_[sampler.value()];
+                    }
+                    else
+                    {
+                        std::cerr << "Failed to load sampler: " << material.pbrData.baseColorTexture.value().
+                            textureIndex << std::endl;
                     }
                 }
 
@@ -411,7 +530,7 @@ namespace enger
         std::vector<uint32_t> indices;
         std::vector<Vertex> vertices; {
             ENGER_PROFILE_ZONEN("Mesh Creation")
-            for (fastgltf::Mesh& mesh: gltf.meshes)
+            for (fastgltf::Mesh& mesh : gltf.meshes)
             {
                 std::shared_ptr<MeshAsset> newMesh = std::make_shared<MeshAsset>();
                 meshes.push_back(newMesh);
@@ -421,7 +540,7 @@ namespace enger
                 indices.clear();
                 vertices.clear();
 
-                for (auto&& p: mesh.primitives)
+                for (auto&& p : mesh.primitives)
                 {
                     GeoSurface newSurface;
 
@@ -508,7 +627,7 @@ namespace enger
         // load all nodes and their meshes
         {
             ENGER_PROFILE_ZONEN("Node Creation")
-            for (fastgltf::Node& node: gltf.nodes)
+            for (fastgltf::Node& node : gltf.nodes)
             {
                 std::shared_ptr<Node> newNode;
 
@@ -554,7 +673,7 @@ namespace enger
                 fastgltf::Node& node = gltf.nodes[i];
                 std::shared_ptr<Node>& sceneNode = nodes[i];
 
-                for (auto& c: node.children)
+                for (auto& c : node.children)
                 {
                     sceneNode->children.push_back(nodes[c]);
                     nodes[c]->parent = sceneNode;
@@ -565,7 +684,7 @@ namespace enger
         // find the top nodes, with no parents
         {
             ENGER_PROFILE_ZONEN("Top Nodes")
-            for (auto& node: nodes)
+            for (auto& node : nodes)
             {
                 if (node->parent.lock() == nullptr)
                 {

@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "Commands.h"
+#include "GpuResourceTypes.h"
 #include "vk.h"
 
 namespace enger
@@ -87,8 +88,8 @@ namespace enger
 
         void deferredDestroy(std::function<void()> func);
 
-        void uploadTexture2DData(TextureHandle handle, const void* data, const vk::Extent3D& dimensions, uint32_t mipLevels, uint32_t arrayLayers, vk::
-                                 Format imageFormat);
+        void uploadTexture2DData(TextureHandle handle, const std::vector<TextureSubresource>& data, const vk::Extent3D& dimensions, uint32_t mipLevels, uint32_t arrayLayers, vk::
+                                 Format imageFormat, bool generateMipmaps);
 
         [[nodiscard]] vk::Semaphore timelineSemaphore() const { return *m_TimelineSemaphore; };
         [[nodiscard]] uint32_t familyIndex() const { return m_FamilyIndex; };

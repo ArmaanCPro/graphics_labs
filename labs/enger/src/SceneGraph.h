@@ -88,6 +88,11 @@ namespace enger
         BufferHandle sceneDataBuffer;
     };
 
+    struct WorldMatrixBuffer
+    {
+        glm::mat4 worldMatrix;
+    };
+
     // Base class for a renderable dynamic object.
     class IRenderable
     {

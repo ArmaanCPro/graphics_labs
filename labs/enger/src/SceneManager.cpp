@@ -23,7 +23,13 @@ namespace enger
                                                   .usage = vk::ImageUsageFlagBits::eSampled |
                                                            vk::ImageUsageFlagBits::eTransferDst,
                                                   .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                                                  .initialData = &white,
+                                                  .subresources = {
+                                                      TextureSubresource{
+                                                          .data = &white,
+                                                          .extent = {1, 1, 1},
+                                                          .size = sizeof(uint32_t),
+                                                      }
+                                                  }
                                               }, nullptr, "WhiteImage");
 
         uint32_t gray = glm::packUnorm4x8(glm::vec4{0.66f, 0.66f, 0.66f, 1.0f});
@@ -33,7 +39,13 @@ namespace enger
                                                  .usage = vk::ImageUsageFlagBits::eSampled |
                                                           vk::ImageUsageFlagBits::eTransferDst,
                                                  .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                                                 .initialData = &gray,
+                                                 .subresources = {
+                                                     TextureSubresource{
+                                                         .data = &gray,
+                                                         .extent = {1, 1, 1},
+                                                         .size = sizeof(uint32_t),
+                                                     }
+                                                 },
                                              }, nullptr, "GrayImage");
 
         uint32_t black = glm::packUnorm4x8(glm::vec4{0.0f, 0.0f, 0.0f, 1.0f});
@@ -43,7 +55,12 @@ namespace enger
                                                   .usage = vk::ImageUsageFlagBits::eSampled |
                                                            vk::ImageUsageFlagBits::eTransferDst,
                                                   .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                                                  .initialData = &black,
+                                                  .subresources = {
+                                                      TextureSubresource{
+                                                          .data = &black,
+                                                          .extent = {1, 1, 1},
+                                                          .size = sizeof(uint32_t),
+                                                      }},
                                               }, nullptr, "BlackImage"); {
             // checkerboard image
             uint32_t magenta = glm::packUnorm4x8(glm::vec4{1.0f, 0.0f, 1.0f, 1.0f});
@@ -59,11 +76,17 @@ namespace enger
                                                                   .format = vk::Format::eR8G8B8A8Unorm,
                                                                   .dimensions = {16, 16, 1},
                                                                   .usage = vk::ImageUsageFlagBits::eSampled |
-                                                                           vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc,
+                                                                           vk::ImageUsageFlagBits::eTransferDst |
+                                                                           vk::ImageUsageFlagBits::eTransferSrc,
+                                                                  .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
                                                                   .generateMipMaps = true,
-                                                                  .memoryProperties =
-                                                                  vk::MemoryPropertyFlagBits::eDeviceLocal,
-                                                                  .initialData = pixels.data(),
+                                                                  .subresources = {
+                                                                      {
+                                                                          .data = pixels.data(),
+                                                                          .extent = {16, 16, 1},
+                                                                          .size = sizeof(uint32_t) * 16 * 16,
+                                                                      }
+                                                                  }
                                                               }, nullptr, "ErrorCheckerboardImage");
 
             m_DefaultSamplerLinear = m_Device.createSampler({

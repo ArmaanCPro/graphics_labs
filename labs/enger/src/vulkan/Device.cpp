@@ -100,7 +100,8 @@ namespace enger
                                             descriptorBindingPartiallyBound
                                             && features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().
                                             extendedDynamicState
-                                            && features.get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy;
+                                            && features.get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy
+                                            && features.get<vk::PhysicalDeviceFeatures2>().features.textureCompressionBC;
 
             infos.hasHostQuery = features.get<vk::PhysicalDeviceVulkan12Features>().hostQueryReset;
             if (infos.hasHostQuery)
@@ -197,9 +198,10 @@ namespace enger
             vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT, vk::PhysicalDeviceRobustness2FeaturesEXT>
             featureChain{
             {
-                .features = {
+                .features = vk::PhysicalDeviceFeatures{
                     .samplerAnisotropy = true,
-                }
+                    .textureCompressionBC = true, // TODO this is nearly guaranteed (on desktop), but still useful to make sure
+                },
             },
             {
                 .descriptorIndexing = true, .shaderStorageImageArrayNonUniformIndexing = true,
@@ -641,12 +643,12 @@ namespace enger
         assert(desc.dimensions.height > 0);
         assert(desc.dimensions.depth > 0);
 
-        assert(desc.mipLevels == 1 && "Manual mip specification not yet supported");
+        assert(!(desc.generateMipMaps && desc.mipLevels > 1) && "Cannot generate partial mip chains.");
 
         auto mipLevels = desc.mipLevels;
         if (desc.generateMipMaps)
         {
-            assert(desc.initialData && "Initial data must be provided to generate mip maps");
+            assert(desc.subresources.size() == 1 && "Initial data must be provided to generate mip maps");
             assert(desc.mipLevels == 1 && "Cannot manually specify mip levels when generating mip maps");
             assert(
                 desc.usage & vk::ImageUsageFlagBits::eTransferDst &&
@@ -656,6 +658,11 @@ namespace enger
                 "Mipmapped textures must have transfer src usage.");
 
             mipLevels = static_cast<uint32_t>(std::log2(std::max(desc.dimensions.width, desc.dimensions.height))) + 1;
+        }
+        if (!desc.subresources.empty()) // has some sort of initial data
+        {
+            assert(desc.subresources.size() == desc.mipLevels * desc.arrayLayers && "Subresource count must match mipLevels * arrayLayers");
+            assert(desc.usage & vk::ImageUsageFlagBits::eTransferDst && "Initial data requires transfer dst usage");
         }
 
         auto qfp = queue ? queue->familyIndex() : m_GraphicsQueue.familyIndex();
@@ -702,26 +709,23 @@ namespace enger
 
         if (m_UseBindless)
         {
-            if (image.isStorageImage())
+            if (m_TexturePool.get(handle)->isStorageImage())
             {
                 updateBindlessStorageImage(handle.index(), m_TexturePool.get(handle)->view_);
             }
-            else if (image.isSampledImage())
+            else if (m_TexturePool.get(handle)->isSampledImage())
             {
                 updateBindlessSampledImage(handle.index(), m_TexturePool.get(handle)->view_);
             }
         }
 
-        if (desc.initialData)
+        if (!desc.subresources.empty())
         {
             assert(aspectFlags == vk::ImageAspectFlagBits::eColor && "Non-color aspect for initial data");
-            assert(
-                desc.usage & vk::ImageUsageFlagBits::eTransferDst &&
-                "Non-transfer dst usage for initial data (can't upload)");
             assert(desc.type == vk::ImageType::e2D && "Non-2D image for initial data");
             queue = queue ? queue : &m_GraphicsQueue;
-            queue->uploadTexture2DData(handle, desc.initialData, desc.dimensions, mipLevels, desc.arrayLayers,
-                                       desc.format);
+            queue->uploadTexture2DData(handle, desc.subresources, desc.dimensions, mipLevels, desc.arrayLayers,
+                                       desc.format, desc.generateMipMaps);
         }
 
         return {this, queue, handle};

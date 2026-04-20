@@ -15,8 +15,7 @@ namespace enger
     void DeferredDeletionQueue::flush(vk::Device device, vk::Semaphore timeline)
     {
         uint64_t gpuSubmitValue = vkCheck(device.getSemaphoreCounterValue(timeline));
-        std::erase_if(m_Tasks, [&](const auto &task)
-        {
+        std::erase_if(m_Tasks, [&](const auto& task) {
             if (task.submitValue <= gpuSubmitValue)
             {
                 task.func();
@@ -28,7 +27,7 @@ namespace enger
 
     void DeferredDeletionQueue::forceFlush()
     {
-        for (auto &task : m_Tasks)
+        for (auto& task : m_Tasks)
         {
             task.func();
         }
@@ -41,7 +40,9 @@ namespace enger
         m_Queue(device->device().getQueue(familyIndex, 0)),
         m_FamilyIndex(familyIndex),
         m_ImmediateCmdPool(device->createUniqueCommandPool(CommandPoolFlags::ResetCommandBuffer, familyIndex,
-                                                           debugName.empty() ? "" : std::format("{}_{}", debugName, "_ImmediateCmdPool")))
+                                                           debugName.empty()
+                                                               ? ""
+                                                               : std::format("{}_{}", debugName, "_ImmediateCmdPool")))
     {
         vk::SemaphoreTypeCreateInfo semaphoreTypeCI{
             .semaphoreType = vk::SemaphoreType::eTimeline,
@@ -61,12 +62,15 @@ namespace enger
         {
             setDebugName(device->device(), m_Queue, debugName);
             setDebugName(device->device(), *m_TimelineSemaphore,
-                std::format("{}_{}", debugName, "TimelineSemaphore"));
+                         std::format("{}_{}", debugName, "TimelineSemaphore"));
         }
 
         m_ImmediateCmdBuffer = m_Device->allocateCommandBuffer(m_ImmediateCmdPool,
-            CommandBufferLevel::Primary,
-            debugName.empty() ? "" : std::format("{}_{}", debugName, "ImmediateCommandBuffer"));
+                                                               CommandBufferLevel::Primary,
+                                                               debugName.empty()
+                                                                   ? ""
+                                                                   : std::format(
+                                                                       "{}_{}", debugName, "ImmediateCommandBuffer"));
     }
 
     Queue::~Queue()
@@ -96,10 +100,12 @@ namespace enger
         return m_CurrentSubmitCounter;
     }
 
-    SubmitHandle Queue::submitImmediateAsync(std::function<void(CommandBuffer &)> func, std::optional<vk::SubmitInfo2> submitInfo)
+    SubmitHandle Queue::submitImmediateAsync(std::function<void(CommandBuffer&)> func,
+                                             std::optional<vk::SubmitInfo2> submitInfo)
     {
         ENGER_PROFILE_FUNCTION();
-        wait(m_CurrentSubmitCounter); // if we used an Arena style immediate command buffer ring, then we wouldn't need this unless ALL arenas are occupied
+        wait(m_CurrentSubmitCounter);
+        // if we used an Arena style immediate command buffer ring, then we wouldn't need this unless ALL arenas are occupied
         m_ImmediateCmdBuffer.reset();
         m_ImmediateCmdBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
         func(m_ImmediateCmdBuffer);
@@ -117,7 +123,9 @@ namespace enger
                 submitInfo.value().pCommandBufferInfos = &cmdInfo;
                 return submit(submitInfo.value());
             }
-            std::vector<vk::CommandBufferSubmitInfo> infos(submitInfo.value().pCommandBufferInfos, submitInfo.value().pCommandBufferInfos + submitInfo.value().commandBufferInfoCount);
+            std::vector<vk::CommandBufferSubmitInfo> infos(submitInfo.value().pCommandBufferInfos,
+                                                           submitInfo.value().pCommandBufferInfos + submitInfo.value().
+                                                           commandBufferInfoCount);
             infos.push_back(cmdInfo);
             submitInfo.value().pCommandBufferInfos = infos.data();
             submitInfo.value().commandBufferInfoCount += 1;
@@ -131,7 +139,7 @@ namespace enger
         return submit(si);
     }
 
-    void Queue::submitImmediate(std::function<void(CommandBuffer &)> func, uint64_t timeout)
+    void Queue::submitImmediate(std::function<void(CommandBuffer&)> func, uint64_t timeout)
     {
         ENGER_PROFILE_FUNCTION();
         wait(submitImmediateAsync(std::move(func)), timeout);
@@ -164,42 +172,63 @@ namespace enger
         m_DeletionQueue.push(std::move(func), m_CurrentSubmitCounter);
     }
 
-    void Queue::uploadTexture2DData(TextureHandle handle, const void* data, const vk::Extent3D& dimensions, uint32_t mipLevels,
-                                    uint32_t arrayLayers, vk::Format imageFormat)
+    void Queue::uploadTexture2DData(TextureHandle handle, const std::vector<TextureSubresource>& data,
+                                    const vk::Extent3D& dimensions, uint32_t mipLevels,
+                                    [[maybe_unused]] uint32_t arrayLayers, [[maybe_unused]] vk::Format imageFormat, bool genMips)
     {
-        const size_t dataSize = dimensions.width * dimensions.height * dimensions.depth * (findBppFromFormat(imageFormat) / 8);
-        auto stagingHandle = m_Device->createBuffer(dataSize,
-            vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            this, "StagingBufferForImage");
+        size_t size = 0;
+        for (const auto& sub : data)
+            size += sub.size;
+        if (size == 0)
+            size = dimensions.width * dimensions.height * dimensions.depth * (findBppFromFormat(imageFormat) / 8);
+
+        auto stagingHandle = m_Device->createBuffer(size,
+                                                    vk::BufferUsageFlagBits::eTransferSrc,
+                                                    vk::MemoryPropertyFlagBits::eHostVisible |
+                                                    vk::MemoryPropertyFlagBits::eHostCoherent,
+                                                    this, "StagingBufferForImage");
 
         // TODO move buffer subdata to Device as an internal function
         auto* staging = m_Device->getBuffer(stagingHandle);
         assert(staging && staging->mappedMemory_);
 
-        staging->bufferSubData(m_Device->allocator(), 0, dataSize, data);
-
         submitImmediate([&](CommandBuffer& cmd) {
             cmd.transitionImage(handle, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
-            vk::BufferImageCopy copyRegion{
-                .bufferOffset = 0,
-                .bufferRowLength = 0,
-                .bufferImageHeight = 0,
-
-                .imageSubresource = vk::ImageSubresourceLayers{
-                    .aspectMask = vk::ImageAspectFlagBits::eColor,
-                    .mipLevel = 0,
-                    .baseArrayLayer = 0,
-                    .layerCount = arrayLayers,
-                },
-                .imageOffset = {0, 0, 0},
-                .imageExtent = dimensions,
-            };
-
-            cmd.copyBufferToImage(stagingHandle, handle, copyRegion);
-            if (mipLevels > 1)
+            std::vector<vk::BufferImageCopy2> regions;
+            regions.reserve(data.size());
+            uint32_t currentOffset = 0;
+            for (auto& subresource : data)
             {
-                generateMipmaps(cmd, handle, {dimensions.height, dimensions.width}, mipLevels);
+                staging->bufferSubData(m_Device->allocator(), currentOffset, subresource.size, subresource.data);
+                regions.push_back(vk::BufferImageCopy2{
+                    .bufferOffset = currentOffset,
+                    .bufferRowLength = 0,
+                    .bufferImageHeight = 0,
+
+                    .imageSubresource = vk::ImageSubresourceLayers{
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .mipLevel = subresource.mipLevel,
+                        .baseArrayLayer = subresource.arrayLayer,
+                        .layerCount = 1,
+                    },
+                    .imageOffset = {0, 0, 0},
+                    .imageExtent = subresource.extent,
+                });
+                currentOffset += static_cast<uint32_t>(subresource.size);
+            }
+
+            vk::CopyBufferToImageInfo2 info{
+                .srcBuffer = m_Device->getBuffer(stagingHandle)->buffer_,
+                .dstImage = m_Device->getImage(handle)->image_,
+                .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
+                .regionCount = static_cast<uint32_t>(regions.size()),
+                .pRegions = regions.data(),
+            };
+            cmd.copyBufferToImage2(info);
+            if (genMips)
+            {
+                generateMipmaps(cmd, handle, {dimensions.width, dimensions.height}, mipLevels);
             }
             else
             {
