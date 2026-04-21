@@ -17,15 +17,10 @@ struct VSOutput
 [shader("vertex")]
 VSOutput vertexMain(uint id : SV_VulkanVertexID)
 {
-    let verts = float2[3](float2(-1, -1), float2(3, -1), float2(-1, 3));
     VSOutput output;
-    output.position = float4(verts[id], 0, 1);
-    output.uv = 0.5 * output.position.xy + float2(0.5);
+    output.uv = float2((id << 1) & 2, id & 2);
+    output.position = float4(output.uv * float2(2, 2) + float2(-1, -1), 0, 1);
     return output;
-
-    //float2 uv = float2((id << 1) & 2, id & 2);
-    // xy is the UV of the triangle, zw is irrelevant
-    //return float4(uv * float2(2, -2) + float2(-1, 1), 0, 1);
 }
 
 [[vk::push_constant]]
