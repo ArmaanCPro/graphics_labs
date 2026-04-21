@@ -1,6 +1,7 @@
 import TonemappingCommon;
 
 // Procedurally generates a Fullscreen Triangle based on the vertex ID (pass in 3 vertices in draw call)
+// https://wallisc.github.io/rendering/2021/04/18/Fullscreen-Pass.html
 [shader("vertex")]
 VSOutput vertexMain(uint id : SV_VulkanVertexID)
 {

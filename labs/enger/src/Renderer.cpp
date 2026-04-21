@@ -35,7 +35,7 @@ namespace enger
         }, &m_GraphicsQueue, "Tonemapper Pipeline Layout");
 
         auto tonemapperVertSpirv = loadSpirvFromFile("shaders/TonemappingVertex.spv");
-        auto tonemapperSpirv = loadSpirvFromFile("shaders/Reinhard.spv");
+        auto tonemapperSpirv = loadSpirvFromFile("shaders/ACES.spv");
         assert(tonemapperVertSpirv.has_value());
         assert(tonemapperSpirv.has_value());
         auto tonemapperVertSM = m_Device.createShaderModule(std::move(tonemapperVertSpirv.value()), &m_GraphicsQueue, "Tonemapper Vertex Shader Module");
