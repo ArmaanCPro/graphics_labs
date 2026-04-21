@@ -51,5 +51,9 @@ namespace enger
 
         GLTFMetallic_Roughness m_GLTFMetallic_Roughness;
         MaterialInstance m_DefaultMaterial;
+
+        float m_Aspect = 16.0f/9.0f;
+        float m_FovH = glm::radians(90.0f);
+        float m_FovY = glm::radians(90.0f);
     };
 }

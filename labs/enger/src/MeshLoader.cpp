@@ -398,7 +398,7 @@ namespace enger
                                            desc.dimensions = {
                                                static_cast<uint32_t>(task.width), static_cast<uint32_t>(task.height), 1
                                            };
-                                           desc.generateMipmaps = false; // still blit the mips for STBI
+                                           desc.generateMipmaps = true; // still blit the mips for STBI
                                            desc.subresources.push_back(TextureSubresource{
                                                .data = pixels,
                                                .extent = desc.dimensions,

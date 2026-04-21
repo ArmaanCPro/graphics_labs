@@ -176,8 +176,14 @@ namespace enger
 
         glm::mat4 view = camera.viewMatrix();
         m_SceneData.view = view;
-        m_SceneData.proj = glm::perspective(glm::radians(70.0f),
-                                            width / height,
+        if (const auto aspect = width / height; m_Aspect != aspect)
+        {
+            m_Aspect = aspect;
+            m_FovH = m_Aspect >= 21.0f/9.0f ? glm::radians(110.0f) : glm::radians(70.0f);
+            m_FovY = 2 * glm::atan(glm::tan(m_FovH / 2.0f), m_Aspect);
+        }
+        m_SceneData.proj = glm::perspective(m_FovY,
+                                            m_Aspect,
                                             10000.0f, 0.1f);
 
         m_SceneData.viewProj = m_SceneData.proj * m_SceneData.view;
