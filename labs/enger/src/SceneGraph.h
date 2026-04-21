@@ -7,6 +7,7 @@
 #include "vulkan/vk.h"
 
 #include "Resources.h"
+#include "Profiling/Profiler.h"
 
 namespace enger
 {
@@ -122,6 +123,7 @@ namespace enger
 
         virtual void draw([[maybe_unused]] const glm::mat4& topMatrix, DrawContext& ctx) override
         {
+            ENGER_PROFILE_FUNCTION()
             for (auto& c : children)
             {
                 c->draw(worldTransform, ctx);

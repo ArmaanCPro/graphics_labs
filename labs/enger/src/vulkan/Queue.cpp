@@ -14,6 +14,7 @@ namespace enger
 
     void DeferredDeletionQueue::flush(vk::Device device, vk::Semaphore timeline)
     {
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_DESTROY);
         uint64_t gpuSubmitValue = vkCheck(device.getSemaphoreCounterValue(timeline));
         std::erase_if(m_Tasks, [&](const auto& task) {
             if (task.submitValue <= gpuSubmitValue)
@@ -176,6 +177,7 @@ namespace enger
                                     const vk::Extent3D& dimensions, uint32_t mipLevels,
                                     [[maybe_unused]] uint32_t arrayLayers, [[maybe_unused]] vk::Format imageFormat, bool genMips)
     {
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_CREATE);
         size_t size = 0;
         for (const auto& sub : data)
             size += sub.size;
@@ -239,6 +241,7 @@ namespace enger
 
     void Queue::generateMipmaps(CommandBuffer& cmd, TextureHandle handle, vk::Extent2D dimensions, uint32_t mipLevels)
     {
+        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_CREATE);
         for (uint32_t mip = 0; mip < mipLevels; ++mip)
         {
             vk::Extent2D halfSize = dimensions;

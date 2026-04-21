@@ -20,6 +20,12 @@
 
 namespace enger
 {
+    struct TonemapperPushConstants
+    {
+        alignas(4) uint32_t srcTexIndex;
+        alignas(4) uint32_t samplerIndex;
+    };
+
     class Renderer
     {
     public:
@@ -47,6 +53,9 @@ namespace enger
         // This is an intermediate target that gets resolved to from the Msaa target and blitted to the swapchain. Required because image format and swapchain format are different.
         Holder<TextureHandle> m_RenderTarget;
         Holder<TextureHandle> m_DepthBuffer;
+
+        Holder<PipelineLayoutHandle> m_TonemapperPipelineLayout;
+        Holder<GraphicsPipelineHandle> m_TonemapperPipeline;
 
         static constexpr vk::SampleCountFlagBits m_MsaaSamples = vk::SampleCountFlagBits::e4;
 

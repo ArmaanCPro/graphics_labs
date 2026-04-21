@@ -187,6 +187,11 @@ namespace enger
             return m_BindlessGraphicsPipelineLayout;
         }
 
+        [[nodiscard]] SamplerHandle defaultNullSampler()
+        {
+            return m_DefaultNullSampler;
+        }
+
         void waitIdle()
         {
             vkCheck(m_Device->waitIdle());

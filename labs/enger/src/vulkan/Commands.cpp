@@ -99,8 +99,6 @@ namespace enger
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImage", m_Device, m_CommandBuffer,
-                               ENGER_PROFILE_COLOR_BARRIER);
 
         auto* image = m_Device->getImage(texHandle);
         assert(image != nullptr);
@@ -139,8 +137,6 @@ namespace enger
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::transitionImages", m_Device, m_CommandBuffer,
-                               ENGER_PROFILE_COLOR_BARRIER)
 
         assert(infos.size() <= kMaxTransitionImages);
 
@@ -190,7 +186,6 @@ namespace enger
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::imageBarrier", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_BARRIER)
 
         auto* image = m_Device->getImage(desc.handle);
         assert(image != nullptr);
@@ -274,7 +269,6 @@ namespace enger
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::bufferBarrier", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_BARRIER)
 
         if (m_Device->physicalDeviceInfo().hasMaintenance9)
         {
@@ -366,7 +360,6 @@ namespace enger
     {
         assert(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::blitImage", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_BARRIER)
 
         auto* srcImage = m_Device->getImage(srcTexHandle);
         assert(srcImage != nullptr);
@@ -551,7 +544,6 @@ namespace enger
 
     void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
-        ENGER_PROFILE_GPU_ZONE("CommandBuffer::draw", m_Device, m_CommandBuffer, ENGER_PROFILE_COLOR_SUBMIT)
         m_CommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     }
 

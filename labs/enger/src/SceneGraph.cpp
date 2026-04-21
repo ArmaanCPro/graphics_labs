@@ -11,29 +11,10 @@
 #include "Renderer.h"
 
 #include "MeshLoader.h"
+#include "Utils/Spirv.h"
 
 namespace enger
 {
-    std::expected<std::vector<uint32_t>, std::string> loadSpirvFromFile(std::filesystem::path path)
-    {
-        ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_CREATE)
-        std::ifstream file(path, std::ios::ate | std::ios::binary);
-
-        if (!file)
-        {
-            return std::unexpected("Failed to open file " + path.string());
-        }
-
-        const auto size = file.tellg();
-        std::vector<uint32_t> data(size / sizeof(uint32_t));
-        file.seekg(0);
-
-        file.read(reinterpret_cast<char*>(data.data()), size);
-        file.close();
-
-        return data;
-    }
-
     void GLTFMetallic_Roughness::buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples)
     {
         ENGER_PROFILE_FUNCTION()
