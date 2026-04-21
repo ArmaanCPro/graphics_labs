@@ -34,13 +34,16 @@ namespace enger
                 .stages = vk::ShaderStageFlagBits::eFragment}}},
         }, &m_GraphicsQueue, "Tonemapper Pipeline Layout");
 
+        auto tonemapperVertSpirv = loadSpirvFromFile("shaders/TonemappingVertex.spv");
         auto tonemapperSpirv = loadSpirvFromFile("shaders/Reinhard.spv");
+        assert(tonemapperVertSpirv.has_value());
         assert(tonemapperSpirv.has_value());
-        auto tonemapperSM = m_Device.createShaderModule(std::move(tonemapperSpirv.value()), &m_GraphicsQueue, "Tonemapper Shader Module");
+        auto tonemapperVertSM = m_Device.createShaderModule(std::move(tonemapperVertSpirv.value()), &m_GraphicsQueue, "Tonemapper Vertex Shader Module");
+        auto tonemapperSM = m_Device.createShaderModule(std::move(tonemapperSpirv.value()), &m_GraphicsQueue, "Tonemapper Fragment Shader Module");
 
         m_TonemapperPipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
             .pipelineLayout = m_TonemapperPipelineLayout,
-            .vertexShaderModule = tonemapperSM,
+            .vertexShaderModule = tonemapperVertSM,
             .fragmentShaderModule = tonemapperSM,
 
             .colorAttachments = {ColorAttachment{

@@ -6,7 +6,8 @@ find_program(SLANGC_EXECUTABLE slangc
 message(STATUS "Found slangc: ${SLANGC_EXECUTABLE}")
 
 function(compile_slang_shaders target shader_dir output_dir)
-    file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS "${shader_dir}/*.slang")
+    file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS "${shader_dir}/src/*.slang")
+    file(GLOB_RECURSE SLANG_MODULES CONFIGURE_DEPENDS "${shader_dir}/modules/*.slang")
 
     if (NOT SLANG_SOURCES)
         message(WARNING "compile_slang_shaders: no .slang files found in ${SHADER_DIR}")
@@ -21,6 +22,8 @@ function(compile_slang_shaders target shader_dir output_dir)
         -fvk-use-entrypoint-name
         -fvk-use-gl-layout
         -bindless-space-index 0
+        -I "${shader_dir}/src"
+        -I "${shader_dir}/modules"
     )
 
     set(SPV_OUTPUTS "")
@@ -42,7 +45,7 @@ function(compile_slang_shaders target shader_dir output_dir)
                     -o "${SPV_OUT}"
                 COMMAND
                     ${CMAKE_COMMAND} -E make_directory "${output_dir}"
-                DEPENDS "${SLANG_FILE}" # if I ever use Slang imports, I would need to find a way to do dependency tracking. Or just depend on all Slang files ${SLANG_SOURCES}
+                DEPENDS "${SLANG_FILE}" "${SLANG_MODULES}"
                 COMMENT "Compiling Slang shader: ${SHADER_STEM}.slang -> ${SHADER_STEM}.spv"
                 VERBATIM
         )
