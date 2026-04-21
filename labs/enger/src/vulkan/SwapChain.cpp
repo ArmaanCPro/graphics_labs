@@ -184,6 +184,7 @@ namespace enger
 
         m_SwapchainImageHandles.clear();
         m_SwapChainImageViews.clear();
+        m_UnormImageViews.clear();
         m_SwapChainImages.clear();
     }
 

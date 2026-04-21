@@ -136,7 +136,6 @@ namespace enger::framing
     {
         auto [width, height] = m_Window.framebufferSize();
 
-        m_GraphicsQueue.waitIdle();
         m_Device.waitIdle();
 
         m_Swapchain.recreate(width, height);
