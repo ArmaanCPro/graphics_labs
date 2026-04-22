@@ -93,6 +93,8 @@ namespace enger
         std::vector<RenderObject> additiveSurfaces; // Additive Blending
         std::vector<RenderObject> transparentSurfaces; // Alpha Blending
         BufferHandle sceneDataBuffer;
+        glm::mat4 viewProj;
+        glm::vec3 cameraPos{0};
     };
 
     // Base class for a renderable dynamic object.

@@ -25,6 +25,49 @@ namespace enger
         // Create textures
         createRenderTextures(m_SwapChain.swapChainExtent().width, m_SwapChain.swapChainExtent().height);
 
+        // Create grid pipeline
+
+        m_GridPipelineLayout = m_Device.createPipelineLayout(PipelineLayoutDesc{
+            .descriptorLayouts = {{m_Device.bindlessDescriptorSetLayout()}},
+            .pushConstantRanges = {{
+                PushConstantsInfo{
+                .offset = 0, .size = sizeof(GridPushConstants), .stages = vk::ShaderStageFlagBits::eAllGraphics
+            }}}
+        }, &m_GraphicsQueue, "Grid Pipeline Layout");
+        auto gridSpirv = loadSpirvFromFile("shaders/Grid.spv");
+        assert(gridSpirv.has_value());
+        auto gridSM = m_Device.createShaderModule(std::move(gridSpirv.value()), &m_GraphicsQueue, "Grid Shader Module");
+        m_GridPipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
+            .pipelineLayout = m_GridPipelineLayout,
+            .vertexShaderModule = gridSM,
+            .fragmentShaderModule = gridSM,
+            .depthTestEnable = true,
+            .depthWriteEnable = false,
+            .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
+            .colorAttachments = {
+                ColorAttachment{
+                    .format = m_Device.getImage(m_MsaaRenderTarget)->format_,
+                    .blendEnabled = true,
+                    .srcRgbBlendFactor = vk::BlendFactor::eSrcAlpha,
+                    .dstRgbBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
+                    .rgbBlendOp = vk::BlendOp::eAdd,
+                    .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                    .dstAlphaBlendFactor = vk::BlendFactor::eOne,
+                    .alphaBlendOp = vk::BlendOp::eAdd,
+                }
+            },
+            .depthFormat = m_Device.getImage(m_DepthBuffer)->format_,
+
+            .cullMode = vk::CullModeFlagBits::eNone,
+
+            .sampleCount = m_MsaaSamples,
+
+#ifndef NDEBUG
+            .enablePipelineRobustness = true,
+#endif
+        }, &m_GraphicsQueue, "Grid Pipeline");
+
+
         // Create tonemapping pipeline (could move to a frame graph later on)
         m_TonemapperPipelineLayout = m_Device.createPipelineLayout(PipelineLayoutDesc{
                                                                        .descriptorLayouts = {
@@ -57,11 +100,13 @@ namespace enger
                                                                    .vertexShaderModule = tonemapperVertSM,
                                                                    .fragmentShaderModule = tonemapperSM,
 
+
                                                                    .colorAttachments = {
                                                                        ColorAttachment{
                                                                            .format = m_SwapChain.swapChainFormat()
                                                                        }
                                                                    },
+            .cullMode = vk::CullModeFlagBits::eNone,
 
 #ifndef NDEBUG
                                                                    .enablePipelineRobustness = true,
@@ -69,7 +114,7 @@ namespace enger
                                                                }, &m_GraphicsQueue, "Tonemapper Pipeline");
     }
 
-    void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx, EngineStats& stats)
+    void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx, EngineStats& stats, bool drawGrid)
     {
         ENGER_PROFILE_FUNCTION();
         auto* d = &m_Device;
@@ -100,7 +145,6 @@ namespace enger
                 }
             });
 
-            // Geometry Drawing
             vk::RenderingAttachmentInfo colorAttachmentInfo{
                 .imageView = m_Device.getImage(m_MsaaRenderTarget)->view_,
                 .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
@@ -138,6 +182,8 @@ namespace enger
             stats.drawCalls = 0;
             stats.triangleCount = 0;
 
+
+            // Geometry Drawing
             cmd.bindDescriptorSetsBindless(vk::PipelineBindPoint::eGraphics);
 
             BufferHandle lastIndexBuffer;
@@ -243,6 +289,23 @@ namespace enger
                     }
                     draw(drawObj);
                 }
+            }
+
+
+            // Grid drawing
+
+            if (drawGrid)
+            {
+                cmd.bindGraphicsPipeline(m_GridPipeline);
+                GridPushConstants gpc{
+                    .mvp = dctx.viewProj,
+                    .camPos = glm::vec4(dctx.cameraPos, 1.0f),
+                    .origin = glm::vec4{0.0f},
+                };
+                cmd.pushConstants(m_GridPipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(gpc), &gpc);
+                cmd.draw(6, 1, 0, 0);
+                stats.drawCalls++;
+                stats.triangleCount += 2;
             }
 
             cmd.endRendering();

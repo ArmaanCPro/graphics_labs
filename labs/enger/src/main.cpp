@@ -124,10 +124,12 @@ int main()
             continue;
         }
 
+        static bool drawGrid = true;
+
         auto fctx = frameOrchestrator.beginFrame();
         if (fctx.has_value())
         {
-            renderer.render(fctx.value(), dctx, stats);
+            renderer.render(fctx.value(), dctx, stats, drawGrid);
 
             imguiLayer.beginFrame();
             ImGui::Begin("Stats");
@@ -161,6 +163,8 @@ int main()
             ImGui::InputFloat3("Velocity", glm::value_ptr(camera.velocity_));
             ImGui::InputFloat("Pitch", &camera.pitch_);
             ImGui::InputFloat("Yaw", &camera.yaw_);
+
+            ImGui::Checkbox("Draw Grid", &drawGrid);
 
             ImGui::End();
             imguiLayer.endFrame(fctx.value());

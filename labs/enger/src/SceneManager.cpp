@@ -202,6 +202,9 @@ namespace enger
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         stats.sceneUpdateTime = elapsed.count() / 1000.0f;
 
+        m_DrawContext.viewProj = m_SceneData.viewProj; // todo cleanup duplication of this data
+        m_DrawContext.cameraPos = camera.position_;
+
         return m_DrawContext;
     }
 }
