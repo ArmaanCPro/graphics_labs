@@ -81,7 +81,7 @@ namespace enger
                                                                   .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
                                                                   .generateMipmaps = true,
                                                                   .subresources = {
-                                                                      {
+                                                                      TextureSubresource{
                                                                           .data = pixels.data(),
                                                                           .extent = {16, 16, 1},
                                                                           .size = sizeof(uint32_t) * 16 * 16,
@@ -167,6 +167,8 @@ namespace enger
         }
 
         m_DrawContext.opaqueSurfaces.clear();
+        m_DrawContext.unlitSurfaces.clear();
+        m_DrawContext.additiveSurfaces.clear();
         m_DrawContext.transparentSurfaces.clear();
 
         for (auto& scene : m_LoadedScenes | std::views::values)

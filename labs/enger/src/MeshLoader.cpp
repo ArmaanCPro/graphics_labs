@@ -236,11 +236,12 @@ namespace enger
             return std::nullopt;
         }
 
-        constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers
+        static constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers
                                      | fastgltf::Options::DontRequireValidAssetMember
                                      | fastgltf::Options::AllowDouble;
 
-        fastgltf::Parser parser{fastgltf::Extensions::KHR_texture_basisu};
+        static constexpr auto extensions = fastgltf::Extensions::KHR_texture_basisu | fastgltf::Extensions::KHR_materials_unlit;
+        fastgltf::Parser parser{extensions};
 
         auto asset = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
         if (!asset)
@@ -476,8 +477,14 @@ namespace enger
                 MaterialPass passType = MaterialPass::MainColor;
                 if (material.alphaMode == fastgltf::AlphaMode::Blend)
                 {
-                    passType = MaterialPass::Transparent;
+                    static constexpr bool kForceAdditive = true;
+                    if (kForceAdditive || material.unlit) // temporary
+                        passType = MaterialPass::Additive;
+                    else
+                        passType = MaterialPass::Transparent;
                 }
+                else if (material.unlit)
+                    passType = MaterialPass::Unlit;
 
                 MaterialResources materialResources;
                 // default the material textures

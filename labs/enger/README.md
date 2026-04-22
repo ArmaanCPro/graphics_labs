@@ -11,3 +11,4 @@
     - The fact that the Pool (holder of GPU resources) could be used for the Bindless descriptor index is huge
 - Bindless overall is pretty cool and fits so tightly that the API is easier than the bindful way (for `enger`).
 - Recently implemented Transfer queues. Pretty interesting, but it seems it would be much more powerful when combined with CPU-side concurrency as well.
+- Just encountered the [most mind-numbing bug](https://www.amn.sh/blog/2026-04-21-be-careful). The link is to my own personal site, feel free to read the article.

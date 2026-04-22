@@ -46,14 +46,13 @@ namespace enger
 {
     void TransitionImageBuilder::add(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout)
     {
-        assert(imageCount_ < kMaxTransitionImages);
         auto* image = device_.getImage(texHandle);
         assert(image);
 
         auto [srcAccess, srcStage] = getTransitionAccessAndStage(srcLayout);
         auto [dstAccess, dstStage] = getTransitionAccessAndStage(dstLayout);
 
-        imageBarriers_[imageCount_++] = vk::ImageMemoryBarrier2{
+        imageBarriers_.push_back(vk::ImageMemoryBarrier2{
             .srcAccessMask = srcAccess,
             .dstAccessMask = dstAccess,
             .oldLayout = srcLayout,
@@ -66,13 +65,13 @@ namespace enger
                 .baseMipLevel = 0,
                 .levelCount = vk::RemainingMipLevels,
             }
-        };
+        });
     }
 
     vk::DependencyInfo TransitionImageBuilder::build()
     {
         vk::DependencyInfo dependencyInfo{
-            .imageMemoryBarrierCount = imageCount_,
+            .imageMemoryBarrierCount = static_cast<uint32_t>(imageBarriers_.size()),
             .pImageMemoryBarriers = imageBarriers_.data(),
         };
         return dependencyInfo;
@@ -276,6 +275,7 @@ namespace enger
             auto releaseSubmission = desc.srcQueue.submitImmediateAsync([](CommandBuffer&) {});
 
             std::vector<vk::BufferMemoryBarrier2> acquireBarriers;
+            acquireBarriers.reserve(desc.handles.size());
 
             for (auto& handle : desc.handles)
             {
@@ -302,6 +302,7 @@ namespace enger
         }
 
         std::vector<vk::BufferMemoryBarrier2> releaseBarriers;
+        releaseBarriers.reserve(desc.handles.size());
 
         for (auto& handle : desc.handles)
         {
@@ -330,6 +331,7 @@ namespace enger
         });
 
         std::vector<vk::BufferMemoryBarrier2> acquireBarriers;
+        acquireBarriers.reserve(desc.handles.size());
         for (auto& handle : desc.handles)
         {
             auto* buffer = m_Device->getBuffer(handle);

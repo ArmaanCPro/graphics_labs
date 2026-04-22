@@ -16,8 +16,10 @@ namespace enger
     enum class MaterialPass : uint8_t
     {
         MainColor,
+        Unlit,
+        Additive,
         Transparent,
-        Other
+        Other,
     };
 
     // UBO for material color factors
@@ -63,6 +65,8 @@ namespace enger
     struct GLTFMetallic_Roughness
     {
         MaterialPipeline opaquePipeline;
+        MaterialPipeline unlitPipeline;
+        MaterialPipeline additivePipeline;
         MaterialPipeline transparentPipeline;
 
         void buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples);
@@ -85,13 +89,10 @@ namespace enger
     struct DrawContext
     {
         std::vector<RenderObject> opaqueSurfaces;
-        std::vector<RenderObject> transparentSurfaces;
+        std::vector<RenderObject> unlitSurfaces;
+        std::vector<RenderObject> additiveSurfaces; // Additive Blending
+        std::vector<RenderObject> transparentSurfaces; // Alpha Blending
         BufferHandle sceneDataBuffer;
-    };
-
-    struct WorldMatrixBuffer
-    {
-        glm::mat4 worldMatrix;
     };
 
     // Base class for a renderable dynamic object.

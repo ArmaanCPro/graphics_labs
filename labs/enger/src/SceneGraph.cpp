@@ -43,7 +43,6 @@ namespace enger
                     .blendEnabled = false,
                 }
             },
-            .colorAttachmentCount = 1,
             .depthFormat = depthFormat,
 
             .cullMode = vk::CullModeFlagBits::eBack,
@@ -56,9 +55,37 @@ namespace enger
 #endif
         }, nullptr, "GLTFMetallic_Roughness: OpaquePipeline");
 
-        transparentPipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
-        transparentPipeline.pipeline = device.createGraphicsPipeline(GraphicsPipelineDesc{
-            .pipelineLayout = transparentPipeline.pipelineLayout,
+        // For now, the unlit pipeline is the SAME as the opaque pipeline
+        unlitPipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
+        unlitPipeline.pipeline = device.createGraphicsPipeline(GraphicsPipelineDesc{
+            .pipelineLayout = unlitPipeline.pipelineLayout,
+            .vertexShaderModule = shaderModule,
+            .fragmentShaderModule = shaderModule,
+            .depthTestEnable = true,
+            .depthWriteEnable = true,
+
+            .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
+            .colorAttachments = {
+                ColorAttachment{
+                    .format = drawFormat,
+                    .blendEnabled = false,
+                }
+            },
+            .depthFormat = depthFormat,
+
+            .cullMode = vk::CullModeFlagBits::eBack,
+            .frontFace = vk::FrontFace::eCounterClockwise,
+
+            .sampleCount = msaaSamples,
+
+#ifndef NDEBUG
+            .enablePipelineRobustness = true,
+#endif
+        }, nullptr, "GLTFMetallic_Roughness: UnlitPipeline");
+
+        additivePipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
+        additivePipeline.pipeline = device.createGraphicsPipeline(GraphicsPipelineDesc{
+            .pipelineLayout = additivePipeline.pipelineLayout,
             .vertexShaderModule = shaderModule,
             .fragmentShaderModule = shaderModule,
             .depthTestEnable = true,
@@ -77,7 +104,40 @@ namespace enger
                     .alphaBlendOp = vk::BlendOp::eAdd,
                 },
             },
-            .colorAttachmentCount = 1,
+
+            .depthFormat = depthFormat,
+
+            .cullMode = vk::CullModeFlagBits::eBack,
+            .frontFace = vk::FrontFace::eCounterClockwise,
+
+            .sampleCount = msaaSamples,
+
+#ifndef NDEBUG
+            .enablePipelineRobustness = true,
+#endif
+        }, nullptr, "GLTFMetallic_Roughness: AdditivePipeline");
+
+        transparentPipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
+        transparentPipeline.pipeline = device.createGraphicsPipeline(GraphicsPipelineDesc{
+            .pipelineLayout = transparentPipeline.pipelineLayout,
+            .vertexShaderModule = shaderModule,
+            .fragmentShaderModule = shaderModule,
+            .depthTestEnable = true,
+            .depthWriteEnable = false,
+
+            .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
+            .colorAttachments = {
+                ColorAttachment{ // enable alpha blending
+                    .format = drawFormat,
+                    .blendEnabled = true,
+                    .srcRgbBlendFactor = vk::BlendFactor::eSrcAlpha,
+                    .dstRgbBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
+                    .rgbBlendOp = vk::BlendOp::eAdd,
+                    .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                    .dstAlphaBlendFactor = vk::BlendFactor::eZero,
+                    .alphaBlendOp = vk::BlendOp::eAdd,
+                },
+            },
 
             .depthFormat = depthFormat,
 
@@ -98,7 +158,25 @@ namespace enger
         ENGER_PROFILE_FUNCTION()
         MaterialInstance inst;
         inst.passType = pass;
-        inst.pipeline = pass == MaterialPass::MainColor ? &opaquePipeline : &transparentPipeline;
+        switch (pass)
+        {
+            case MaterialPass::MainColor:
+                inst.pipeline = &opaquePipeline;
+                break;
+            case MaterialPass::Unlit:
+                inst.pipeline = &unlitPipeline;
+                break;
+            case MaterialPass::Additive:
+                inst.pipeline = &additivePipeline;
+                break;
+            case MaterialPass::Transparent:
+                inst.pipeline = &transparentPipeline;
+                break;
+            default:
+                std::cerr << "Unknown pass type: " << static_cast<uint32_t>(pass) << std::endl;
+                inst.pipeline = nullptr;
+                break;
+        }
         inst.resources = std::move(resources);
 
         return inst;
@@ -123,10 +201,24 @@ namespace enger
 
             if (!obj.material)
                 continue;
-            if (obj.material->passType == MaterialPass::Transparent)
-                ctx.transparentSurfaces.push_back(std::move(obj));
-            else if (obj.material->passType == MaterialPass::MainColor)
-                ctx.opaqueSurfaces.push_back(std::move(obj));
+            switch (obj.material->passType)
+            {
+                case MaterialPass::MainColor:
+                    ctx.opaqueSurfaces.push_back(std::move(obj));
+                    break;
+                case MaterialPass::Unlit:
+                    ctx.unlitSurfaces.push_back(std::move(obj));
+                    break;
+                case MaterialPass::Additive:
+                    ctx.additiveSurfaces.push_back(std::move(obj));
+                    break;
+                case MaterialPass::Transparent:
+                    ctx.transparentSurfaces.push_back(std::move(obj));
+                    break;
+                default:
+                    std::cerr << "Unknown pass type: " << static_cast<uint32_t>(obj.material->passType) << std::endl;
+                    break;
+            }
         }
 
         Node::draw(topMatrix, ctx);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk.h"
+#include "Utils/InplaceVector.h"
 
 namespace enger
 {
@@ -45,9 +46,10 @@ namespace enger
 
         bool generateMipmaps = false;
 
+        static constexpr auto kMaxSubresources = 128uz;
         /// Data payload
         /// There should be mipLevels * arrayLayers count subresources. Describes mip maps for each layer.
-        std::vector<TextureSubresource> subresources;
+        InplaceVector<TextureSubresource, kMaxSubresources> subresources;
     };
 
     struct SamplerDesc

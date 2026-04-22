@@ -27,34 +27,46 @@ namespace enger
 
         // Create tonemapping pipeline (could move to a frame graph later on)
         m_TonemapperPipelineLayout = m_Device.createPipelineLayout(PipelineLayoutDesc{
-            .descriptorLayouts = {{m_Device.bindlessDescriptorSetLayout()}},
-            .pushConstantRanges = {{PushConstantsInfo{
-                .offset = 0,
-                .size = sizeof(TonemapperPushConstants),
-                .stages = vk::ShaderStageFlagBits::eFragment}}},
-        }, &m_GraphicsQueue, "Tonemapper Pipeline Layout");
+                                                                       .descriptorLayouts = {
+                                                                           {m_Device.bindlessDescriptorSetLayout()}
+                                                                       },
+                                                                       .pushConstantRanges = {
+                                                                           {
+                                                                               PushConstantsInfo{
+                                                                                   .offset = 0,
+                                                                                   .size = sizeof(
+                                                                                       TonemapperPushConstants),
+                                                                                   .stages =
+                                                                                   vk::ShaderStageFlagBits::eFragment
+                                                                               }
+                                                                           }
+                                                                       },
+                                                                   }, &m_GraphicsQueue, "Tonemapper Pipeline Layout");
 
         auto tonemapperVertSpirv = loadSpirvFromFile("shaders/TonemappingVertex.spv");
         auto tonemapperSpirv = loadSpirvFromFile("shaders/ACES.spv");
         assert(tonemapperVertSpirv.has_value());
         assert(tonemapperSpirv.has_value());
-        auto tonemapperVertSM = m_Device.createShaderModule(std::move(tonemapperVertSpirv.value()), &m_GraphicsQueue, "Tonemapper Vertex Shader Module");
-        auto tonemapperSM = m_Device.createShaderModule(std::move(tonemapperSpirv.value()), &m_GraphicsQueue, "Tonemapper Fragment Shader Module");
+        auto tonemapperVertSM = m_Device.createShaderModule(std::move(tonemapperVertSpirv.value()), &m_GraphicsQueue,
+                                                            "Tonemapper Vertex Shader Module");
+        auto tonemapperSM = m_Device.createShaderModule(std::move(tonemapperSpirv.value()), &m_GraphicsQueue,
+                                                        "Tonemapper Fragment Shader Module");
 
         m_TonemapperPipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
-            .pipelineLayout = m_TonemapperPipelineLayout,
-            .vertexShaderModule = tonemapperVertSM,
-            .fragmentShaderModule = tonemapperSM,
+                                                                   .pipelineLayout = m_TonemapperPipelineLayout,
+                                                                   .vertexShaderModule = tonemapperVertSM,
+                                                                   .fragmentShaderModule = tonemapperSM,
 
-            .colorAttachments = {ColorAttachment{
-                .format = m_SwapChain.swapChainFormat()
-            }},
-            .colorAttachmentCount = 1,
+                                                                   .colorAttachments = {
+                                                                       ColorAttachment{
+                                                                           .format = m_SwapChain.swapChainFormat()
+                                                                       }
+                                                                   },
 
 #ifndef NDEBUG
-            .enablePipelineRobustness = true,
+                                                                   .enablePipelineRobustness = true,
 #endif
-        }, &m_GraphicsQueue, "Tonemapper Pipeline");
+                                                               }, &m_GraphicsQueue, "Tonemapper Pipeline");
     }
 
     void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx, EngineStats& stats)
@@ -75,14 +87,17 @@ namespace enger
         auto drawExtent = m_Device.getImage(m_MsaaRenderTarget)->extent_;
         vk::Rect2D scissor{0, 0, drawExtent.width, drawExtent.height};
         std::vector<BufferHandle> allVertexBuffers;
-        std::vector<BufferHandle> allIndexBuffers;
-        {
+        std::vector<BufferHandle> allIndexBuffers; {
             ENGER_PROFILE_ZONENC("Geometry Pass Frame", ENGER_PROFILE_COLOR_DRAW);
             ENGER_PROFILE_GPU_ZONE("Geometry Pass", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
             cmd.transitionImages(std::array{
                 TransitionImageInfo{m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral},
-                TransitionImageInfo{m_DepthBuffer, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal},
-                TransitionImageInfo{m_MsaaRenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal}
+                TransitionImageInfo{
+                    m_DepthBuffer, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal
+                },
+                TransitionImageInfo{
+                    m_MsaaRenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal
+                }
             });
 
             // Geometry Drawing
@@ -128,69 +143,117 @@ namespace enger
             BufferHandle lastIndexBuffer;
 
             auto draw = [&](const RenderObject& drawObj) {
+                ENGER_PROFILE_ZONENC("Internal Draw Call", ENGER_PROFILE_COLOR_DRAW);
                 if (drawObj.indexBuffer != lastIndexBuffer)
                 {
                     lastIndexBuffer = drawObj.indexBuffer;
                     cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
                 }
 
-                GraphicsPushConstants pc{
-                    .worldMatrix = drawObj.transform,
-                    .vertexBufferDeviceAddress = m_Device.getBuffer(drawObj.vertexBuffer)->deviceAddress_,
-                    .sceneDataBDA = m_Device.getBuffer(dctx.sceneDataBuffer)->deviceAddress_,
-                    .materialBDA = m_Device.getBuffer(drawObj.material->resources.materialConstantsBuffer)->deviceAddress_,
-                    .colorTextureIndex = drawObj.material->resources.colorImage.index(),
-                    .metallicRoughnessTextureIndex = drawObj.material->resources.metallicRoughnessImage.index(),
-                    .samplerIndex = drawObj.material->resources.colorSampler.index(),
-                };
-                cmd.pushConstants(drawObj.material->pipeline->pipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(pc), &pc);
+                    GraphicsPushConstants pc{
+                        .worldMatrix = drawObj.transform,
+                        .vertexBufferDeviceAddress = m_Device.getBuffer(drawObj.vertexBuffer)->deviceAddress_,
+                        .sceneDataBDA = m_Device.getBuffer(dctx.sceneDataBuffer)->deviceAddress_,
+                        .materialBDA = m_Device.getBuffer(drawObj.material->resources.materialConstantsBuffer)->
+                        deviceAddress_,
+                        .colorTextureIndex = drawObj.material->resources.colorImage.index(),
+                        .metallicRoughnessTextureIndex = drawObj.material->resources.metallicRoughnessImage.index(),
+                        .samplerIndex = drawObj.material->resources.colorSampler.index(),
+                    };
+                    cmd.pushConstants(drawObj.material->pipeline->pipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0,
+                                      sizeof(pc), &pc);
 
-                cmd.drawIndexed(drawObj.indexCount, 1, drawObj.firstIndex, 0, 0);
+                    cmd.drawIndexed(drawObj.indexCount, 1, drawObj.firstIndex, 0, 0);
 
                 stats.drawCalls++;
                 stats.triangleCount += drawObj.indexCount / 3;
-            };
-
-
-            if (!dctx.opaqueSurfaces.empty())
-                cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
-            for (auto& r : dctx.opaqueSurfaces)
-            {
-                if (m_IsFirstFrame)
+            }; {
+                ENGER_PROFILE_ZONENC("Opaque Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                ENGER_PROFILE_GPU_ZONE("Opaque Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                if (!dctx.opaqueSurfaces.empty())
+                    cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
+                for (auto& r : dctx.opaqueSurfaces)
                 {
-                    if (m_Device.transferQueue().has_value())
+                    if (m_IsFirstFrame)
                     {
-                        allVertexBuffers.push_back(r.vertexBuffer);
-                        allIndexBuffers.push_back(r.indexBuffer);
+                        if (m_Device.transferQueue().has_value())
+                        {
+                            allVertexBuffers.push_back(r.vertexBuffer);
+                            allIndexBuffers.push_back(r.indexBuffer);
+                        }
+                    }
+                    draw(r);
+                }
+            } {
+                ENGER_PROFILE_ZONENC("Opaque (Unlit) Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                ENGER_PROFILE_GPU_ZONE("Opaque (Unlit) Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                if (!dctx.unlitSurfaces.empty())
+                    cmd.bindGraphicsPipeline(dctx.unlitSurfaces[0].material->pipeline->pipeline);
+                for (auto& r : dctx.unlitSurfaces)
+                {
+                    if (m_IsFirstFrame)
+                    {
+                        if (m_Device.transferQueue().has_value())
+                        {
+                            allVertexBuffers.push_back(r.vertexBuffer);
+                            allIndexBuffers.push_back(r.indexBuffer);
+                        }
+                    }
+                    draw(r);
+                }
+            } {
+                ENGER_PROFILE_ZONENC("Additive (Unlit) Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                ENGER_PROFILE_GPU_ZONE("Additive (Unlit) Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                if (!dctx.additiveSurfaces.empty())
+                {
+                    ENGER_PROFILE_ZONENC("Pipeline Bind", ENGER_PROFILE_COLOR_DRAW);
+                    ENGER_PROFILE_GPU_ZONE("Pipeline Bind", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                    cmd.bindGraphicsPipeline(dctx.additiveSurfaces[0].material->pipeline->pipeline);
+                }
+                {
+                    ENGER_PROFILE_ZONENC("Draw Call", ENGER_PROFILE_COLOR_DRAW);
+                    ENGER_PROFILE_GPU_ZONE("Draw Call", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                    for (auto& r : dctx.additiveSurfaces)
+                    {
+                        if (m_IsFirstFrame)
+                        {
+                            if (m_Device.transferQueue().has_value())
+                            {
+                                allVertexBuffers.push_back(r.vertexBuffer);
+                                allIndexBuffers.push_back(r.indexBuffer);
+                            }
+                        }
+                        draw(r);
                     }
                 }
-                draw(r);
-            }
-
-            if (!dctx.transparentSurfaces.empty())
-                cmd.bindGraphicsPipeline(dctx.transparentSurfaces[0].material->pipeline->pipeline);
-            for (const RenderObject& drawObj : dctx.transparentSurfaces)
-            {
-                if (m_IsFirstFrame)
+            } {
+                ENGER_PROFILE_ZONENC("Transparent Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                ENGER_PROFILE_GPU_ZONE("Transparent Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                if (!dctx.transparentSurfaces.empty())
+                    cmd.bindGraphicsPipeline(dctx.transparentSurfaces[0].material->pipeline->pipeline);
+                for (const RenderObject& drawObj : dctx.transparentSurfaces)
                 {
-                    if (m_Device.transferQueue().has_value())
+                    if (m_IsFirstFrame)
                     {
-                        allVertexBuffers.push_back(drawObj.vertexBuffer);
-                        allIndexBuffers.push_back(drawObj.indexBuffer);
+                        if (m_Device.transferQueue().has_value())
+                        {
+                            allVertexBuffers.push_back(drawObj.vertexBuffer);
+                            allIndexBuffers.push_back(drawObj.indexBuffer);
+                        }
                     }
+                    draw(drawObj);
                 }
-                draw(drawObj);
             }
 
             cmd.endRendering();
-        }
-
-        {
+        } {
             ENGER_PROFILE_ZONENC("Tone Mapping Pass", ENGER_PROFILE_COLOR_DRAW);
             ENGER_PROFILE_GPU_ZONE("Tone Mapping Pass", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
             cmd.transitionImages(std::array{
                 TransitionImageInfo{m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal},
-                TransitionImageInfo{fctx.swapchainImageHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal},
+                TransitionImageInfo{
+                    fctx.swapchainImageHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal
+                },
             });
 
             const TonemapperPushConstants tpc = {
@@ -201,7 +264,8 @@ namespace enger
                 .imageView = m_SwapChain.swapChainImageView(fctx.swapchainImageIndex),
                 .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                 .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
+                .storeOp = vk::AttachmentStoreOp::eNone,
+                .clearValue = vk::ClearValue{vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f}},
             };
             vk::RenderingInfo tonemapperRenderingInfo{
                 .renderArea = vk::Rect2D{0, 0, fctx.swapchainExtent.width, fctx.swapchainExtent.height},
@@ -222,7 +286,8 @@ namespace enger
             cmd.setViewport(tmViewport);
             cmd.setScissor(scissor);
             cmd.bindGraphicsPipeline(m_TonemapperPipeline);
-            cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TonemapperPipelineLayout, 0, {{m_Device.bindlessDescriptorSet()}});
+            cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TonemapperPipelineLayout, 0,
+                                   {{m_Device.bindlessDescriptorSet()}});
 
             cmd.pushConstants(m_TonemapperPipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(tpc), &tpc);
             cmd.draw(3, 1, 0, 0);
@@ -231,7 +296,9 @@ namespace enger
 
         if (m_IsFirstFrame && m_Device.transferQueue().has_value())
         {
-            ENGER_PROFILE_GPU_ZONE("Transfer Vert/Index Transfer Queue to Graphics Queue", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_BARRIER);
+            ENGER_PROFILE_ZONENC("Transfer Vert/Index Transfer Queue to Graphics Queue", ENGER_PROFILE_COLOR_BARRIER);
+            ENGER_PROFILE_GPU_ZONE("Transfer Vert/Index Transfer Queue to Graphics Queue", d, fctx.cmd.get(),
+                                   ENGER_PROFILE_COLOR_BARRIER);
             auto sbv = cmd.bufferBarrier({
                 allVertexBuffers,
                 vk::AccessFlagBits2::eTransferWrite,
@@ -259,7 +326,6 @@ namespace enger
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         stats.meshDrawTime = elapsed.count() / 1000.0f;
-
     }
 
     void Renderer::onResize(uint32_t width, uint32_t height)
@@ -286,7 +352,8 @@ namespace enger
             {
                 .format = vk::Format::eR16G16B16A16Sfloat,
                 .dimensions = {width, height, 1},
-                .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled,
+                .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
+                         vk::ImageUsageFlagBits::eSampled,
                 .memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal,
             },
             &m_GraphicsQueue,

@@ -3,6 +3,7 @@
 #include "vk.h"
 
 #include "Resources.h"
+#include "Utils/InplaceVector.h"
 
 namespace enger
 {
@@ -35,11 +36,10 @@ namespace enger
         TransitionImageBuilder(Device& device) : device_(device) {}
         void add(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout);
         vk::DependencyInfo build();
-        void clear() { imageCount_ = 0; }
+        void clear() { imageBarriers_.clear(); }
     private:
         Device& device_;
-        std::array<vk::ImageMemoryBarrier2, kMaxTransitionImages> imageBarriers_;
-        uint32_t imageCount_ = 0;
+        InplaceVector<vk::ImageMemoryBarrier2, kMaxTransitionImages> imageBarriers_;
     };
     struct TransitionImageInfo final
     {

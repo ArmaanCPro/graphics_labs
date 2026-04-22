@@ -173,7 +173,7 @@ namespace enger
         m_DeletionQueue.push(std::move(func), m_CurrentSubmitCounter);
     }
 
-    void Queue::uploadTexture2DData(TextureHandle handle, const std::vector<TextureSubresource>& data,
+    void Queue::uploadTexture2DData(TextureHandle handle, std::span<const TextureSubresource> data,
                                     const vk::Extent3D& dimensions, uint32_t mipLevels,
                                     [[maybe_unused]] uint32_t arrayLayers, [[maybe_unused]] vk::Format imageFormat, bool genMips)
     {

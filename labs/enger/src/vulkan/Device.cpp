@@ -458,13 +458,13 @@ namespace enger
 
         // Color Attachments
         std::array<vk::Format, GraphicsPipelineDesc::kMaxColorAttachments> colorAttachmentFormats;
-        for (uint32_t i = 0; i < desc.colorAttachmentCount; ++i)
+        for (uint32_t i = 0; i < desc.colorAttachments.size(); ++i)
         {
             colorAttachmentFormats[i] = desc.colorAttachments[i].format;
         }
         vk::PipelineRenderingCreateInfo renderingCI{
             .pNext = usingRobustness ? &robustnessCI : nullptr,
-            .colorAttachmentCount = desc.colorAttachmentCount,
+            .colorAttachmentCount = static_cast<uint32_t>(desc.colorAttachments.size()),
             .pColorAttachmentFormats = colorAttachmentFormats.data(),
             .depthAttachmentFormat = desc.depthFormat,
             .stencilAttachmentFormat = desc.stencilFormat,
@@ -540,7 +540,7 @@ namespace enger
         // Color Blending
         std::array<vk::PipelineColorBlendAttachmentState, GraphicsPipelineDesc::kMaxColorAttachments>
             colorBlendAttachments;
-        for (uint32_t i = 0; i < desc.colorAttachmentCount; ++i)
+        for (uint32_t i = 0; i < desc.colorAttachments.size(); ++i)
         {
             colorBlendAttachments[i] = vk::PipelineColorBlendAttachmentState{
                 .blendEnable = desc.colorAttachments[i].blendEnabled,
@@ -556,7 +556,7 @@ namespace enger
         vk::PipelineColorBlendStateCreateInfo colorBlendCI{
             .logicOpEnable = vk::False,
             .logicOp = vk::LogicOp::eCopy,
-            .attachmentCount = desc.colorAttachmentCount,
+            .attachmentCount = static_cast<uint32_t>(desc.colorAttachments.size()),
             .pAttachments = colorBlendAttachments.data(),
         };
 

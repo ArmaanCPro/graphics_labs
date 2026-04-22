@@ -3,6 +3,7 @@
 #include "vk.h"
 
 #include "Resources.h"
+#include "Utils/InplaceVector.h"
 
 namespace enger
 {
@@ -44,8 +45,7 @@ namespace enger
         vk::CompareOp depthCompareOp = vk::CompareOp::eLessOrEqual;
 
         static constexpr auto kMaxColorAttachments = 8;
-        std::array<ColorAttachment, kMaxColorAttachments> colorAttachments;
-        uint32_t colorAttachmentCount = 0;
+        InplaceVector<ColorAttachment, kMaxColorAttachments> colorAttachments;
 
         vk::Format depthFormat = vk::Format::eUndefined;
         vk::Format stencilFormat = vk::Format::eUndefined;
