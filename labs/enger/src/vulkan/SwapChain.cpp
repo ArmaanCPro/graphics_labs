@@ -201,7 +201,7 @@ namespace enger
             default:
                 break;
         }
-        std::cerr << "Can't convert sRGB to UNorm format: " << vk::to_string(srgbFormat) << std::endl;
+        LOG_ERROR("Can't convert sRGB to UNorm format: {}", vk::to_string(srgbFormat));
         return srgbFormat;
     }
 }

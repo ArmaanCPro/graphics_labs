@@ -138,7 +138,7 @@ namespace enger
         const auto sortedDevices = sortPhysicalDevices(physicalDevices, deviceExtensions);
         if (!sortedDevices.empty() && sortedDevices.rbegin()->first == 0)
         {
-            std::cerr << "No suitable GPU/device found! Consider updating drivers." << std::endl;
+            LOG_ERROR("No suitable GPU/device found! Consider updating drivers.");
             std::terminate();
         }
         const auto [deviceInfo, physicalDevice] = sortedDevices.rbegin()->second;
@@ -397,7 +397,7 @@ namespace enger
         if (desc.enablePipelineRobustness && m_DeviceInfo.hasPipelineRobustness)
         {
 #ifdef NDEBUG
-            std::cerr << "Consider disabling pipeline robustness on Release builds [" << debugName << "]\n";
+            LOG_ERROR("Consider disabling pipeline robustness on Release builds [{}]", debugName);
 #endif
             robustnessCI.storageBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
             robustnessCI.uniformBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
@@ -448,7 +448,7 @@ namespace enger
         if (usingRobustness)
         {
 #ifdef NDEBUG
-            std::cerr << "Consider disabling pipeline robustness on Release builds [" << debugName << "]" << '\n';
+            LOG_ERROR("Consider disabling pipeline robustness on Release builds [{}]", debugName);
 #endif
             robustnessCI.storageBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;
             robustnessCI.uniformBuffers = vk::PipelineRobustnessBufferBehavior::eRobustBufferAccess2;

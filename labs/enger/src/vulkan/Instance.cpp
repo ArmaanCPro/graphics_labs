@@ -14,7 +14,7 @@ namespace enger
                                          return std::strcmp(extension.extensionName, instanceExtension) == 0;
                                      }))
             {
-                std::cerr << "Missing instance extension: " << reqInstExtension << std::endl;
+                LOG_ERROR("Missing instance extension: {}", reqInstExtension);
                 std::terminate();
             }
         }

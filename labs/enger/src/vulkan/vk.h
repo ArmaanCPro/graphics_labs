@@ -5,13 +5,14 @@
 #include <vk_mem_alloc.h>
 
 #include <source_location>
-#include <iostream>
+
+#include "Logging/Log.h"
 
 namespace enger
 {
     [[noreturn]] inline void vkFatal(vk::Result result, std::source_location loc = std::source_location::current())
     {
-        std::cerr << "Vulkan error: " << vk::to_string(result) << " at " << loc.file_name() << ":" << loc.line() << std::endl;
+        LOG_ERROR("Vulkan error: {} at {}:{}", vk::to_string(result), loc.file_name(), loc.line());
         std::terminate();
     }
 

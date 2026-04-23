@@ -5,8 +5,6 @@
 
 #include <ktx.h>
 
-#include <print>
-
 #include "vulkan/Device.h"
 
 #include <glm/gtx/quaternion.hpp>
@@ -21,6 +19,8 @@
 
 #include <algorithm>
 #include <execution>
+
+#include "Logging/Log.h"
 
 namespace enger
 {
@@ -117,7 +117,7 @@ namespace enger
         return std::visit<TextureTask>(
             fastgltf::visitor{
                 [&](auto&) {
-                    std::cerr << "loadImage: Unhandled image data type: " << typeid(image).name() << '\n';
+                    LOG_ERROR("Unhandled image data type: {}", typeid(image).name());
                     return TextureTask{};
                 },
                 [&](fastgltf::sources::URI& filePath) {
@@ -145,8 +145,7 @@ namespace enger
                     auto& buffer = asset.buffers[bufferView.bufferIndex];
                     return std::visit<TextureTask>(fastgltf::visitor{
                                                        [&](auto&) {
-                                                           std::cerr << "loadImage: Unhandled buffer data type: " <<
-                                                               typeid(image).name();
+                                                           LOG_ERROR("Unhandled buffer data type: {}", typeid(image).name());
                                                            return TextureTask{};
                                                        },
                                                        [&](fastgltf::sources::Array& array) {
@@ -224,7 +223,7 @@ namespace enger
     {
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_CREATE)
 
-        std::println("Loading GLTF: {}", filePath.string());
+        LOG_INFO("Loading GLTF: {}", filePath.string());
 
         std::unique_ptr<LoadedGLTF> scene = std::make_unique<LoadedGLTF>(device, &sceneManager);
         LoadedGLTF& file = *scene;
@@ -232,7 +231,7 @@ namespace enger
         auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
         if (!data)
         {
-            std::cerr << "Failed to load gltf file: " << filePath.string();
+            LOG_ERROR("Failed to load gltf file: {}", filePath.string());
             return std::nullopt;
         }
 
@@ -246,12 +245,12 @@ namespace enger
         auto asset = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
         if (!asset)
         {
-            std::println("Failed to parse gltf file: {}", filePath.string());
+            LOG_ERROR("Failed to parse gltf file: {}", filePath.string());
             return std::nullopt;
         }
         if (asset.error() != fastgltf::Error::None)
         {
-            std::println("Failed to parse gltf file: {}, error: {}", filePath.string(), getErrorMessage(asset.error()));
+            LOG_ERROR("Failed to parse gltf file: {}, error: {}", filePath.string(), getErrorMessage(asset.error()));
             return std::nullopt;
         }
 
@@ -310,7 +309,7 @@ namespace enger
                                 // TODO support for other formats like ASTC for mobile in the future?
                                 if (res != KTX_SUCCESS)
                                 {
-                                    std::cerr << "Failed to transcode ktx2 texture: " << ktxErrorString(res) << '\n';
+                                    LOG_ERROR("Failed to transcode ktx2 texture: {}", ktxErrorString(res));
                                     return false;
                                 }
                             }
@@ -326,8 +325,7 @@ namespace enger
                                                &tex);
                                            if (ec != KTX_SUCCESS)
                                            {
-                                               std::cerr << "Failed to load ktx2 texture: " << ktxErrorString(ec) <<
-                                                   '\n';
+                                               LOG_ERROR("Failted to load ktx2 texture: {}", ktxErrorString(ec));
                                                return;
                                            }
                                            if (!transcode(tex))
@@ -344,8 +342,7 @@ namespace enger
                                                &tex);
                                            if (ec != KTX_SUCCESS)
                                            {
-                                               std::cerr << "Failed to load ktx2 texture: " << ktxErrorString(ec) <<
-                                                   '\n';
+                                               LOG_ERROR("Failed to load ktx2 texture: {}", ktxErrorString(ec));
                                                return;
                                            }
                                            if (!transcode(tex))
@@ -439,7 +436,7 @@ namespace enger
                     }
                     else
                     {
-                        std::cerr << "Failed to load image: " << stbi_failure_reason() << " " << names[i] << std::endl;
+                        LOG_ERROR("Failed to load image: {}", names[i]);
                         images.push_back(sceneManager.m_ErrorCheckerboardImage);
                     }
                 }
@@ -509,8 +506,7 @@ namespace enger
                     }
                     else
                     {
-                        std::cerr << "Failed to load texture: " << material.pbrData.baseColorTexture.value().
-                            textureIndex << std::endl;
+                        LOG_ERROR("Failed to load texture: {}", material.pbrData.baseColorTexture.value().textureIndex);
                     }
                     if (sampler.has_value())
                     {

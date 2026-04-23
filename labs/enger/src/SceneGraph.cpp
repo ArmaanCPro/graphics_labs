@@ -11,6 +11,7 @@
 #include "Renderer.h"
 
 #include "MeshLoader.h"
+#include "Logging/Log.h"
 #include "Utils/Spirv.h"
 
 namespace enger
@@ -28,7 +29,7 @@ namespace enger
             auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
             if (!expectedShaderData)
             {
-                std::cerr << "Failed to load shader data: " << expectedShaderData.error();
+                LOG_ERROR("Failed to load shader data: {}", expectedShaderData.error());
                 std::terminate();
             }
 
@@ -182,7 +183,7 @@ namespace enger
                 inst.pipeline = &transparentPipeline;
                 break;
             default:
-                std::cerr << "Unknown pass type: " << static_cast<uint32_t>(pass) << std::endl;
+                LOG_ERROR("Unknown pass type: {}", static_cast<uint32_t>(pass));
                 inst.pipeline = nullptr;
                 break;
         }
@@ -225,7 +226,7 @@ namespace enger
                     ctx.transparentSurfaces.push_back(std::move(obj));
                     break;
                 default:
-                    std::cerr << "Unknown pass type: " << static_cast<uint32_t>(obj.material->passType) << std::endl;
+                    LOG_ERROR("Unknown pass type: {}", static_cast<uint32_t>(obj.material->passType));
                     break;
             }
         }

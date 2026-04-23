@@ -113,7 +113,7 @@ namespace enger
         auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
         if (!expectedShaderData)
         {
-            std::cerr << "Failed to load shader data: " << expectedShaderData.error();
+            LOG_ERROR("Failed to load shader data: {}", expectedShaderData.error());
             std::terminate();
         }
 

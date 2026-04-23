@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 4.0)
 set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/overlay-ports")
 
 option(ENABLE_PROFILING "Enables Profiling via Tracy" OFF)
+option(ENABLE_LOGGING "Enables Logging" ON)
 
 project(
         graphics_labs
@@ -38,6 +39,7 @@ find_package(fastgltf CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(Ktx CONFIG REQUIRED)
 find_package(nfd CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 
 if (ENABLE_PROFILING)
     find_package(Tracy CONFIG REQUIRED)

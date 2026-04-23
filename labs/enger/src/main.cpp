@@ -24,6 +24,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Logging/Log.h"
+
 constexpr auto WIDTH = 800;
 constexpr auto HEIGHT = 600;
 
@@ -35,7 +37,7 @@ struct ResizeEvent
 
 int main()
 {
-    NFD_Init();
+    enger::Logger::init();
 
     enger::GlfwWindow window{WIDTH, HEIGHT, "Enger"};
 
@@ -147,11 +149,11 @@ int main()
                 auto path = fileLoader.openDialog(fileItems);
                 if (!path.has_value() && path.error() != enger::OpenDialogError::Cancelled)
                 {
-                    std::cerr << "Failed to open file dialog" << fileLoader.getLastError() << std::endl;
+                    LOG_ERROR("Failed to open file dialog: {}", fileLoader.getLastError());
                 }
                 else if (path.has_value())
                 {
-                    std::cout << "Selected file: " << path.value().string() << std::endl;
+                    LOG_INFO("Selected file: {}", path.value().string());
                     sceneManager.loadScene(*path);
                 }
             }

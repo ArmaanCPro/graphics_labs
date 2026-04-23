@@ -16,7 +16,7 @@ namespace enger
             default:
                 break;
         }
-        std::cerr << "Unknown BPP for format: " << vk::to_string(format) << std::endl;
+        LOG_ERROR("Unknown BPP for format: {}", vk::to_string(format));
         return 0;
     }
 

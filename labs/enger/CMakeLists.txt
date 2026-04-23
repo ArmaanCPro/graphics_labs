@@ -10,6 +10,7 @@ target_link_libraries(enger PRIVATE
         Vulkan::Headers GPUOpen::VulkanMemoryAllocator
         imgui::imgui fastgltf::fastgltf KTX::ktx
         nfd::nfd
+        spdlog::spdlog
 )
 
 if (ENABLE_PROFILING)
@@ -22,6 +23,10 @@ if (ENABLE_PROFILING)
             $<TARGET_FILE:Tracy::TracyClient>
             $<TARGET_FILE_DIR:enger>
     )
+endif()
+
+if (ENABLE_LOGGING)
+    target_compile_definitions(enger PRIVATE ENABLE_LOGGING)
 endif()
 
 target_include_directories(enger PRIVATE ${Stb_INCLUDE_DIR})
