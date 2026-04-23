@@ -69,7 +69,8 @@ namespace enger
         MaterialPipeline additivePipeline;
         MaterialPipeline transparentPipeline;
 
-        void buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples);
+        void buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples, ShaderModuleHandle
+                            shaderOverride = {});
         MaterialInstance writeMaterial(MaterialPass pass, MaterialResources&& resources);
     };
 

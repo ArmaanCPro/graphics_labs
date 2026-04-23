@@ -8,6 +8,8 @@
 
 #include "vulkan/Device.h"
 
+#include "Utils/Spirv.h"
+
 namespace enger
 {
     SceneManager::SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat,
@@ -108,8 +110,18 @@ namespace enger
                                                      nullptr, "GPUSceneData");
 
         // MATERIALS
+        auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
+        if (!expectedShaderData)
+        {
+            std::cerr << "Failed to load shader data: " << expectedShaderData.error();
+            std::terminate();
+        }
+
+        auto shaderModuleHolder = device.createShaderModule(std::move(expectedShaderData.value()),
+            nullptr, "GLTFMetallic_Roughness: MeshShaderModule");
+
         m_GLTFMetallic_Roughness.buildPipelines(m_Device, renderFormat,
-                                                depthFormat, msaaSamples);
+                                                depthFormat, msaaSamples, shaderModuleHolder);
 
         MaterialResources materialResources;
         materialResources.colorImage = m_WhiteImage;

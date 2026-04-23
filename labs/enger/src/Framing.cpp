@@ -50,6 +50,7 @@ namespace enger::framing
         if (m_LastFrameSubmits[m_CurrentFrame].timelineSemaphore != nullptr) [[likely]]
             m_GraphicsQueue.wait(m_LastFrameSubmits[m_CurrentFrame]);
         m_GraphicsQueue.flushDeletionQueue();
+        ENGER_PROFILE_GPU_COLLECT(&m_Device, m_CommandBuffers[m_CurrentFrame].get());
 
         if (m_ShouldRecreateSwapchain)
         {
@@ -87,8 +88,6 @@ namespace enger::framing
     void framing::FrameOrchestrator::endFrame(FrameContext& fctx)
     {
         ENGER_PROFILE_FUNCTION();
-        auto* device = &m_Device;
-        ENGER_PROFILE_GPU_COLLECT(device, fctx.cmd.get());
 
         auto& cmd = fctx.cmd;
 

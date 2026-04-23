@@ -15,18 +15,27 @@
 
 namespace enger
 {
-    void GLTFMetallic_Roughness::buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples)
+    void GLTFMetallic_Roughness::buildPipelines(Device& device, vk::Format drawFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples, ShaderModuleHandle
+                                                shaderOverride)
     {
         ENGER_PROFILE_FUNCTION()
-        auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
-        if (!expectedShaderData)
-        {
-            std::cerr << "Failed to load shader data: " << expectedShaderData.error();
-            std::terminate();
-        }
 
-        Holder<ShaderModuleHandle> shaderModule = device.createShaderModule(std::move(expectedShaderData.value()),
-            nullptr, "GLTFMetallic_Roughness: MeshShaderModule");
+        ShaderModuleHandle shaderModule = shaderOverride;
+        Holder<ShaderModuleHandle> shaderModuleHolder{};
+
+        if (!shaderModule.valid())
+        {
+            auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
+            if (!expectedShaderData)
+            {
+                std::cerr << "Failed to load shader data: " << expectedShaderData.error();
+                std::terminate();
+            }
+
+            shaderModuleHolder = device.createShaderModule(std::move(expectedShaderData.value()),
+                nullptr, "GLTFMetallic_Roughness: MeshShaderModule");
+            shaderModule = shaderModuleHolder;
+        }
 
         opaquePipeline.pipelineLayout = device.bindlessGraphicsPipelineLayout();
         opaquePipeline.pipeline = device.createGraphicsPipeline(GraphicsPipelineDesc{

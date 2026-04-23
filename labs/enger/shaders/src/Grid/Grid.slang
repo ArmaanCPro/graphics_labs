@@ -61,7 +61,7 @@ float4 gridColor(float2 uv, float2 camPos)
     var dudv : float2 = fwidth(uv);
     let lodLevel : float = max(0.0, log10((length(dudv) *
         gridMinPixelsBetweenCells) / gridCellSize) + 1.0);
-    let lodFade : float = fract(lodLevel);
+    let lodFade : float = frac(lodLevel);
     let lod0 = gridCellSize * pow(10.0, floor(lodLevel));
     let lod1 = lod0 * 10.0;
     let lod2 = lod1 * 10.0;
