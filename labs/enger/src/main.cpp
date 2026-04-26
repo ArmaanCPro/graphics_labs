@@ -43,15 +43,6 @@ int main()
 {
     enger::Logger::init();
 
-    enger::uuid::uuidv7 u1{};
-    enger::uuid::uuidv7 u2{};
-    EASSERT(u1 != u2, "Monotonicity");
-    auto u1str = u1.to_string();
-    auto u3 = enger::uuid::uuidv7::from_string(u1str);
-    LOG_INFO("UUID: {}", u1str);
-    LOG_INFO("UUID: {}", u3.to_string());
-    EASSERT(u1 == u3, "Serialization");
-
     enger::GlfwWindow window{WIDTH, HEIGHT, "Enger"};
 
     enger::NFDEFileLoader fileLoader{};
