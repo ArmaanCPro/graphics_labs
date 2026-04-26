@@ -46,6 +46,7 @@ target_compile_definitions(enger PRIVATE
 )
 
 set_project_warnings(enger)
+set_project_settings(enger)
 enable_sanitizers(enger)
 
 compile_slang_shaders(enger_shaders "${CMAKE_CURRENT_SOURCE_DIR}/shaders" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders")

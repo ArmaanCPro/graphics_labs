@@ -1,12 +1,13 @@
 #include "QueueSubmitBuilder.h"
 
 #include "Commands.h"
+#include "Logging/Assert.h"
 
 namespace enger
 {
     void QueueSubmitBuilder::waitBinary(vk::Semaphore semaphore, vk::PipelineStageFlags2 stage)
     {
-        assert(waitSemaphoreCount_ < kMaxSemaphores);
+        EASSERT(waitSemaphoreCount_ < kMaxSemaphores, "Too many wait semaphores");
         waitSemaphores_[waitSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .stageMask = stage
@@ -15,7 +16,7 @@ namespace enger
 
     void QueueSubmitBuilder::signalBinary(vk::Semaphore semaphore, vk::PipelineStageFlags2 stage)
     {
-        assert(signalSemaphoreCount_ < kMaxSemaphores);
+        EASSERT(signalSemaphoreCount_ < kMaxSemaphores, "Too many signal semaphores");
         signalSemaphores_[signalSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .stageMask = stage
@@ -24,7 +25,7 @@ namespace enger
 
     void QueueSubmitBuilder::waitTimeline(vk::Semaphore semaphore, uint64_t waitValue, vk::PipelineStageFlags2 stage)
     {
-        assert(waitSemaphoreCount_ < kMaxSemaphores);
+        EASSERT(waitSemaphoreCount_ < kMaxSemaphores, "Too many wait semaphores");
         waitSemaphores_[waitSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .value = waitValue,
@@ -39,7 +40,7 @@ namespace enger
 
     void QueueSubmitBuilder::signalTimeline(vk::Semaphore semaphore, uint64_t signalValue, vk::PipelineStageFlags2 stage)
     {
-        assert(signalSemaphoreCount_ < kMaxSemaphores);
+        EASSERT(signalSemaphoreCount_ < kMaxSemaphores, "Too many signal semaphores");
         signalSemaphores_[signalSemaphoreCount_++] = vk::SemaphoreSubmitInfo{
             .semaphore = semaphore,
             .value = signalValue,
@@ -54,7 +55,7 @@ namespace enger
 
     void QueueSubmitBuilder::addCmd(CommandBuffer& commandBuffer)
     {
-        assert(commandBufferCount_ < kMaxCommandBuffers);
+        EASSERT(commandBufferCount_ < kMaxCommandBuffers, "Too many command buffers");
         commandBuffers_[commandBufferCount_++] = vk::CommandBufferSubmitInfo{
             .commandBuffer = commandBuffer.get()
         };

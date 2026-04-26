@@ -24,6 +24,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Logging/Assert.h"
 #include "Logging/Log.h"
 
 constexpr auto WIDTH = 800;

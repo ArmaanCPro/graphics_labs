@@ -1,15 +1,16 @@
 #include "GpuResourceTypes.h"
 
 #include "Allocator.h"
+#include "Logging/Assert.h"
 
 
 namespace enger
 {
     void VulkanBuffer::bufferSubData(const Allocator &allocator, size_t offset, size_t size, const void *data)
     {
-        assert(mappedMemory_ != nullptr);
+        EASSERT(mappedMemory_ != nullptr, "Buffer is not mapped");
 
-        assert(offset + size <= size_);
+        EASSERT(offset + size <= size_, "Buffer subdata out of bounds");
 
         if (data)
         {
@@ -28,9 +29,9 @@ namespace enger
 
     void VulkanBuffer::getBufferSubData(const Allocator &allocator, size_t offset, size_t size, void *data)
     {
-        assert(mappedMemory_ != nullptr);
+        EASSERT(mappedMemory_ != nullptr, "Buffer is not mapped");
 
-        assert(offset + size <= size_);
+        EASSERT(offset + size <= size_, "Buffer subdata out of bounds");
 
         if (!isCoherent_)
         {
@@ -43,7 +44,7 @@ namespace enger
 
     void VulkanBuffer::flushMappedMemory(const Allocator &allocator, vk::DeviceSize offset, vk::DeviceSize size) const
     {
-        assert(mappedMemory_ != nullptr);
+        EASSERT(mappedMemory_ != nullptr, "Buffer is not mapped");
 
         vmaFlushAllocation(allocator.allocator(), allocation_, offset, size);
     }
@@ -51,7 +52,7 @@ namespace enger
     void VulkanBuffer::invalidateMappedMemory(const Allocator &allocator, vk::DeviceSize offset,
         vk::DeviceSize size) const
     {
-        assert(mappedMemory_ != nullptr);
+        EASSERT(mappedMemory_ != nullptr, "Buffer is not mapped");
 
         vmaInvalidateAllocation(allocator.allocator(), allocation_, offset, size);
     }

@@ -4,6 +4,7 @@
 
 #include "GpuResourceTypes.h"
 #include "QueueSubmitBuilder.h"
+#include "Logging/Assert.h"
 
 #include "Profiling/Profiler.h"
 
@@ -47,7 +48,7 @@ namespace enger
     void TransitionImageBuilder::add(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout)
     {
         auto* image = device_.getImage(texHandle);
-        assert(image);
+        EASSERT(image);
 
         auto [srcAccess, srcStage] = getTransitionAccessAndStage(srcLayout);
         auto [dstAccess, dstStage] = getTransitionAccessAndStage(dstLayout);
@@ -96,11 +97,11 @@ namespace enger
 
     void CommandBuffer::transitionImage(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
 
         auto* image = m_Device->getImage(texHandle);
-        assert(image != nullptr);
+        EASSERT(image != nullptr);
 
         auto [srcAccess, srcStage] = getTransitionAccessAndStage(srcLayout);
         auto [dstAccess, dstStage] = getTransitionAccessAndStage(dstLayout);
@@ -134,17 +135,17 @@ namespace enger
 
     void CommandBuffer::transitionImages(std::span<const TransitionImageInfo> infos)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
 
-        assert(infos.size() <= kMaxTransitionImages);
+        EASSERT(infos.size() <= kMaxTransitionImages);
 
         std::array<vk::ImageMemoryBarrier2, kMaxTransitionImages> barriers;
         for (uint32_t i = 0; i < infos.size(); ++i)
         {
             const auto info = infos[i];
             const auto* image = m_Device->getImage(info.texHandle);
-            assert(image != nullptr);
+            EASSERT(image != nullptr);
 
             auto [srcAccess, srcStage] = getTransitionAccessAndStage(info.srcLayout);
             auto [dstAccess, dstStage] = getTransitionAccessAndStage(info.dstLayout);
@@ -183,11 +184,11 @@ namespace enger
 
     void CommandBuffer::imageBarrier(TransferTextureDesc desc)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
 
         auto* image = m_Device->getImage(desc.handle);
-        assert(image != nullptr);
+        EASSERT(image != nullptr);
 
         if (!desc.srcAccess.has_value())
             desc.srcAccess = getTransitionAccessAndStage(desc.srcLayout).first;
@@ -200,7 +201,7 @@ namespace enger
 
         if (desc.srcQueue || desc.dstQueue)
         {
-            assert(desc.srcQueue && desc.dstQueue);
+            EASSERT(desc.srcQueue && desc.dstQueue);
 
             vk::ImageMemoryBarrier2 releaseBarrier{
                 .srcStageMask = desc.srcStage.value(),
@@ -266,7 +267,7 @@ namespace enger
 
     SubmitHandle CommandBuffer::bufferBarrier(TransferBufferDesc desc)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
 
         if (m_Device->physicalDeviceInfo().hasMaintenance9)
@@ -307,7 +308,7 @@ namespace enger
         for (auto& handle : desc.handles)
         {
             auto* buffer = m_Device->getBuffer(handle);
-            assert(buffer != nullptr);
+            EASSERT(buffer != nullptr);
             releaseBarriers.push_back(vk::BufferMemoryBarrier2{
                 .srcStageMask = desc.srcStage,
                 .srcAccessMask = desc.srcAccess,
@@ -360,13 +361,13 @@ namespace enger
 
     void CommandBuffer::blitImage(TextureHandle srcTexHandle, TextureHandle dstTexHandle)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         ENGER_PROFILE_FUNCTION_COLOR(ENGER_PROFILE_COLOR_BARRIER)
 
         auto* srcImage = m_Device->getImage(srcTexHandle);
-        assert(srcImage != nullptr);
+        EASSERT(srcImage != nullptr);
         auto* dstImage = m_Device->getImage(dstTexHandle);
-        assert(dstImage != nullptr);
+        EASSERT(dstImage != nullptr);
 
         vk::Extent2D srcExtent = {srcImage->extent_.width, srcImage->extent_.height};
         vk::Extent2D dstExtent = {dstImage->extent_.width, dstImage->extent_.height};
@@ -404,9 +405,9 @@ namespace enger
     void CommandBuffer::clearColorImage(TextureHandle texHandle, vk::ClearColorValue color,
                                         vk::ImageAspectFlags aspectMask)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* image = m_Device->getImage(texHandle);
-        assert(image != nullptr);
+        EASSERT(image != nullptr);
 
         vk::ImageSubresourceRange clearRange{
             .aspectMask = aspectMask,
@@ -421,22 +422,22 @@ namespace enger
 
     void CommandBuffer::copyBuffer(BufferHandle srcBuffer, BufferHandle dstBuffer, vk::BufferCopy region)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* srcBufferObj = m_Device->getBuffer(srcBuffer);
-        assert(srcBufferObj != nullptr);
+        EASSERT(srcBufferObj != nullptr);
         auto* dstBufferObj = m_Device->getBuffer(dstBuffer);
-        assert(dstBufferObj != nullptr);
+        EASSERT(dstBufferObj != nullptr);
 
         m_CommandBuffer.copyBuffer(srcBufferObj->buffer_, dstBufferObj->buffer_, 1, &region);
     }
 
     void CommandBuffer::copyBufferToImage(BufferHandle buffer, TextureHandle image, std::span<const vk::BufferImageCopy> regions)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* bufferObj = m_Device->getBuffer(buffer);
-        assert(bufferObj != nullptr);
+        EASSERT(bufferObj != nullptr);
         auto* imageObj = m_Device->getImage(image);
-        assert(imageObj != nullptr);
+        EASSERT(imageObj != nullptr);
 
         m_CommandBuffer.copyBufferToImage(bufferObj->buffer_, imageObj->image_, vk::ImageLayout::eTransferDstOptimal, regions);
     }
@@ -473,18 +474,18 @@ namespace enger
 
     void CommandBuffer::bindComputePipeline(ComputePipelineHandle pipelineHandle)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* pipeline = m_Device->getComputePipeline(pipelineHandle);
-        assert(pipeline != nullptr);
+        EASSERT(pipeline != nullptr);
 
         m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline->handle);
     }
 
     void CommandBuffer::bindGraphicsPipeline(GraphicsPipelineHandle pipelineHandle)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* pipeline = m_Device->getGraphicsPipeline(pipelineHandle);
-        assert(pipeline != nullptr);
+        EASSERT(pipeline != nullptr);
 
         m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->handle);
     }
@@ -492,17 +493,17 @@ namespace enger
     void CommandBuffer::bindDescriptorSets(vk::PipelineBindPoint bindPoint, PipelineLayoutHandle pipelineLayout,
                                            uint32_t firstSet, std::span<const vk::DescriptorSet> descriptorSets)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* layout = m_Device->getPipelineLayout(pipelineLayout);
-        assert(layout != nullptr);
+        EASSERT(layout != nullptr);
 
         m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, firstSet, descriptorSets, nullptr);
     }
 
     void CommandBuffer::bindDescriptorSetsBindless(vk::PipelineBindPoint bindPoint)
     {
-        assert(m_Device != nullptr);
-        assert(m_Device->bindlessDescriptorSet());
+        EASSERT(m_Device != nullptr);
+        EASSERT(m_Device->bindlessDescriptorSet());
         PipelineLayout* layout = nullptr;
 
         switch (bindPoint)
@@ -512,10 +513,11 @@ namespace enger
                 break;
             case vk::PipelineBindPoint::eCompute:
                 layout = m_Device->getPipelineLayout(m_Device->bindlessComputePipelineLayout());
+                break;
             default:
                 layout = nullptr;
         }
-        assert(layout);
+        EASSERT(layout);
         m_CommandBuffer.bindDescriptorSets(bindPoint, layout->layout, 0,
                                            m_Device->bindlessDescriptorSet(), nullptr);
     }
@@ -523,18 +525,18 @@ namespace enger
     void CommandBuffer::pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages,
                                       uint32_t offset, uint32_t size, const void* data)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* layout = m_Device->getPipelineLayout(pipelineLayout);
-        assert(layout != nullptr);
+        EASSERT(layout != nullptr);
 
         m_CommandBuffer.pushConstants(layout->layout, stages, offset, size, data);
     }
 
     void CommandBuffer::bindIndexBuffer(BufferHandle buffer, uint32_t offset, vk::IndexType indexType)
     {
-        assert(m_Device != nullptr);
+        EASSERT(m_Device != nullptr);
         auto* rawBuf = m_Device->getBuffer(buffer);
-        assert(rawBuf != nullptr);
+        EASSERT(rawBuf != nullptr);
 
         m_CommandBuffer.bindIndexBuffer(rawBuf->buffer_, offset, indexType);
     }

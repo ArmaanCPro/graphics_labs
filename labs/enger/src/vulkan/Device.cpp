@@ -6,6 +6,7 @@
 
 #include "Descriptors.h"
 #include "PushConstantRanges.h"
+#include "Logging/Assert.h"
 
 namespace enger
 {
@@ -148,7 +149,7 @@ namespace enger
         if (m_UseBindless)
         {
             // nullDescriptor isn't truly required, but highly beneficial for bindless rendering.
-            assert(m_DeviceInfo.hasRobustness2 && m_DeviceInfo.hasNullDescriptor && "For bindless rendering, NullDescriptor (from Robustness2) is required");
+            EASSERT(m_DeviceInfo.hasRobustness2 && m_DeviceInfo.hasNullDescriptor, "For bindless rendering, NullDescriptor (from Robustness2) is required");
         }
 
         // logical device creation
@@ -180,7 +181,7 @@ namespace enger
                 }
             }
         }
-        assert(graphicsQueueIndex != ~0 && "No graphics queue family found");
+        EASSERT(graphicsQueueIndex != ~0, "No graphics queue family found");
 
         float graphicsQueuePriority = 1.0f;
         vk::DeviceQueueCreateInfo graphicsQueueCI{
@@ -228,7 +229,7 @@ namespace enger
 #ifdef ENABLE_PROFILING
         if (m_DeviceInfo.hasKhrCalibratedTimestamps)
         {
-            assert(m_DeviceInfo.hasExtCalibratedTimestamps && "Right now, Tracy needs the EXT version as well. (for me) Consider fixing");
+            EASSERT(m_DeviceInfo.hasExtCalibratedTimestamps, "Right now, Tracy needs the EXT version as well. (for me) Consider fixing");
             deviceExtensions.push_back(vk::KHRCalibratedTimestampsExtensionName);
         }
         if (m_DeviceInfo.hasExtCalibratedTimestamps)
@@ -373,7 +374,7 @@ namespace enger
                                 uint64_t timeout)
     {
         ENGER_PROFILE_FUNCTION()
-        assert(semaphores.size() == waitValues.size());
+        EASSERT(semaphores.size() == waitValues.size(), "semaphores and waitValues must have the same size");
 
         vk::SemaphoreWaitInfo waitSemInfo{
             .semaphoreCount = static_cast<uint32_t>(semaphores.size()),
@@ -640,32 +641,33 @@ namespace enger
     Holder<TextureHandle> Device::createTexture(
         const TextureDesc& desc, Queue* queue, std::string_view debugName)
     {
-        assert(desc.mipLevels > 0);
-        assert(desc.arrayLayers > 0);
-        assert(desc.dimensions.width > 0);
-        assert(desc.dimensions.height > 0);
-        assert(desc.dimensions.depth > 0);
+        ENGER_PROFILE_FUNCTION()
+        EASSERT(desc.mipLevels > 0, "Texture must have at least one mip level");
+        EASSERT(desc.arrayLayers > 0, "Texture must have at least one array layer");
+        EASSERT(desc.dimensions.width > 0, "Texture width must be positive");
+        EASSERT(desc.dimensions.height > 0, "Texture height must be positive");
+        EASSERT(desc.dimensions.depth > 0, "Texture depth must be positive");
 
-        assert(!(desc.generateMipmaps && desc.mipLevels > 1) && "Cannot generate partial mip chains.");
+        EASSERT(!(desc.generateMipmaps && desc.mipLevels > 1), "Cannot generate partial mip chains.");
 
         auto mipLevels = desc.mipLevels;
         if (desc.generateMipmaps)
         {
-            assert(desc.subresources.size() == 1 && "Initial data must be provided to generate mip maps");
-            assert(desc.mipLevels == 1 && "Cannot manually specify mip levels when generating mip maps");
-            assert(
-                desc.usage & vk::ImageUsageFlagBits::eTransferDst &&
+            EASSERT(desc.subresources.size() == 1, "Initial data must be provided to generate mip maps");
+            EASSERT(desc.mipLevels == 1, "Cannot manually specify mip levels when generating mip maps");
+            EASSERT(
+                desc.usage & vk::ImageUsageFlagBits::eTransferDst,
                 "Mipmapped textures must have transfer dst usage.");
-            assert(
-                desc.usage & vk::ImageUsageFlagBits::eTransferSrc &&
+            EASSERT(
+                desc.usage & vk::ImageUsageFlagBits::eTransferSrc,
                 "Mipmapped textures must have transfer src usage.");
 
             mipLevels = static_cast<uint32_t>(std::log2(std::max(desc.dimensions.width, desc.dimensions.height))) + 1;
         }
         if (!desc.subresources.empty()) // has some sort of initial data
         {
-            assert(desc.subresources.size() == desc.mipLevels * desc.arrayLayers && "Subresource count must match mipLevels * arrayLayers");
-            assert(desc.usage & vk::ImageUsageFlagBits::eTransferDst && "Initial data requires transfer dst usage");
+            EASSERT(desc.subresources.size() == desc.mipLevels * desc.arrayLayers, "Subresource count must match mipLevels * arrayLayers");
+            EASSERT(desc.usage & vk::ImageUsageFlagBits::eTransferDst, "Initial data requires transfer dst usage");
         }
 
         auto qfp = queue ? queue->familyIndex() : m_GraphicsQueue.familyIndex();
@@ -724,8 +726,8 @@ namespace enger
 
         if (!desc.subresources.empty())
         {
-            assert(aspectFlags == vk::ImageAspectFlagBits::eColor && "Non-color aspect for initial data");
-            assert(desc.type == vk::ImageType::e2D && "Non-2D image for initial data");
+            EASSERT(aspectFlags == vk::ImageAspectFlagBits::eColor, "Non-color aspect for initial data");
+            EASSERT(desc.type == vk::ImageType::e2D, "Non-2D image for initial data");
             queue = queue ? queue : &m_GraphicsQueue;
             queue->uploadTexture2DData(handle, desc.subresources, desc.dimensions, mipLevels, desc.arrayLayers,
                                        desc.format, desc.generateMipmaps);
@@ -738,7 +740,8 @@ namespace enger
                                               vk::MemoryPropertyFlags memFlags, Queue* queue,
                                               std::string_view debugName)
     {
-        assert(size > 0);
+        ENGER_PROFILE_FUNCTION()
+        EASSERT(size > 0);
 
         // TODO assert that sizes are within physical device limits
 
@@ -765,7 +768,7 @@ namespace enger
                 .buffer = buffer.buffer_,
             };
             buffer.deviceAddress_ = m_Device->getBufferAddress(bufferDeviceAddressInfo);
-            assert(buffer.deviceAddress_ != 0);
+            EASSERT(buffer.deviceAddress_ != 0);
         }
 
         return {this, queue, m_BufferPool.create(std::move(buffer))};
@@ -774,7 +777,8 @@ namespace enger
     Holder<DescriptorSetLayoutHandle> Device::createDescriptorSetLayout(DescriptorSetLayoutDesc desc,
                                                                         Queue* queue, std::string_view debugName)
     {
-        assert(desc.bindIndices.size() == desc.types.size());
+        ENGER_PROFILE_FUNCTION()
+        EASSERT(desc.bindIndices.size() == desc.types.size());
 
         std::vector<vk::DescriptorSetLayoutBinding> bindings;
         bindings.reserve(desc.bindIndices.size());
@@ -1077,7 +1081,7 @@ namespace enger
 
     void Device::initBindless()
     {
-        assert(m_Device);
+        EASSERT(m_Device);
 
         // Create Descriptor Set Layout
         std::array binding{
@@ -1179,7 +1183,8 @@ namespace enger
 
     void Device::updateBindlessStorageImage(uint32_t index, vk::ImageView view)
     {
-        assert(m_GlobalDescriptorSet);
+        ENGER_PROFILE_FUNCTION()
+        EASSERT(m_GlobalDescriptorSet);
 
         if ((view == VK_NULL_HANDLE || view == nullptr) && !m_DeviceInfo.hasNullDescriptor)
         {
@@ -1210,7 +1215,8 @@ namespace enger
 
     void Device::updateBindlessSampledImage(uint32_t index, vk::ImageView view)
     {
-        assert(m_GlobalDescriptorSet);
+        ENGER_PROFILE_FUNCTION()
+        EASSERT(m_GlobalDescriptorSet);
 
         if ((view == VK_NULL_HANDLE || view == nullptr) && !m_DeviceInfo.hasNullDescriptor)
         {
@@ -1241,13 +1247,13 @@ namespace enger
 
     void Device::updateBindlessSampler(uint32_t index, vk::Sampler sampler)
     {
-        assert(m_GlobalDescriptorSet);
+        EASSERT(m_GlobalDescriptorSet);
 
         if ((sampler == VK_NULL_HANDLE || sampler == nullptr))
         {
             // You can't write null descriptors to samplers even with Robustness2 nullDescriptor. Use a default sampler here.
             const auto* defaultSampler = m_SamplerPool.get(m_DefaultNullSampler);
-            assert(defaultSampler);
+            EASSERT(defaultSampler);
             sampler = *defaultSampler;
         }
         if (!m_GlobalDescriptorSet) [[unlikely]]

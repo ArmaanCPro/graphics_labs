@@ -1,10 +1,10 @@
 #pragma once
 
-#include <cassert>
 #include <cstdint>
-#include <compare>
 #include <utility>
 #include <vector>
+
+#include "Logging/Assert.h"
 
 namespace enger
 {
@@ -232,13 +232,12 @@ namespace enger
             {
                 return;
             }
-            // TODO consider std::expected here
-            assert(m_NumObjects > 0);
+            EASSERT(m_NumObjects > 0);
             const auto index = handle.index();
-            assert(index < m_Objects.size());
+            EASSERT(index < m_Objects.size());
 
             // double deletion
-            assert(handle.gen() == m_Objects[index].gen_);
+            EASSERT(handle.gen() == m_Objects[index].gen_);
 
             // places the array element at the front of the free list
             m_Objects[index].obj_ = ImplObjectType{};
@@ -255,9 +254,9 @@ namespace enger
                 return nullptr;
             }
             const auto index = handle.index();
-            assert(index < m_Objects.size());
+            EASSERT(index < m_Objects.size());
             // accessing a deleted object
-            assert(handle.gen() == m_Objects[index].gen_);
+            EASSERT(handle.gen() == m_Objects[index].gen_);
 
             return &m_Objects[index].obj_;
         }
@@ -273,7 +272,7 @@ namespace enger
         /// This is unsafe but useful for debugging.
         [[nodiscard]] Handle<ObjectType> getHandle(uint32_t index) const noexcept
         {
-            assert(index < m_Objects.size());
+            EASSERT(index < m_Objects.size());
             if (index >= m_Objects.size())
             {
                 return {};

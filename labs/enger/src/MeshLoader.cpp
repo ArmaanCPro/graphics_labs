@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <execution>
 
+#include "Logging/Assert.h"
 #include "Logging/Log.h"
 
 namespace enger
@@ -121,8 +122,8 @@ namespace enger
                     return TextureTask{};
                 },
                 [&](fastgltf::sources::URI& filePath) {
-                    assert(filePath.fileByteOffset == 0);
-                    assert(filePath.uri.isLocalPath());
+                    EASSERT(filePath.fileByteOffset == 0, "Invalid file byte offset for URI image");
+                    EASSERT(filePath.uri.isLocalPath(), "URI image must be a local path");
 
                     const std::string path(filePath.uri.path().begin(),
                                            filePath.uri.path().end());

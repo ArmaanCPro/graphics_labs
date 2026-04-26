@@ -10,6 +10,7 @@
 #include "SceneGraph.h"
 
 #include "MeshLoader.h"
+#include "Logging/Assert.h"
 #include "Utils/Spirv.h"
 #include "vulkan/PushConstantRanges.h"
 
@@ -35,7 +36,7 @@ namespace enger
             }}}
         }, &m_GraphicsQueue, "Grid Pipeline Layout");
         auto gridSpirv = loadSpirvFromFile("shaders/Grid.spv");
-        assert(gridSpirv.has_value());
+        EASSERT(gridSpirv.has_value());
         auto gridSM = m_Device.createShaderModule(std::move(gridSpirv.value()), &m_GraphicsQueue, "Grid Shader Module");
         m_GridPipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
             .pipelineLayout = m_GridPipelineLayout,
@@ -88,8 +89,8 @@ namespace enger
 
         auto tonemapperVertSpirv = loadSpirvFromFile("shaders/TonemappingVertex.spv");
         auto tonemapperSpirv = loadSpirvFromFile("shaders/ACES.spv");
-        assert(tonemapperVertSpirv.has_value());
-        assert(tonemapperSpirv.has_value());
+        EASSERT(tonemapperVertSpirv.has_value());
+        EASSERT(tonemapperSpirv.has_value());
         auto tonemapperVertSM = m_Device.createShaderModule(std::move(tonemapperVertSpirv.value()), &m_GraphicsQueue,
                                                             "Tonemapper Vertex Shader Module");
         auto tonemapperSM = m_Device.createShaderModule(std::move(tonemapperSpirv.value()), &m_GraphicsQueue,

@@ -1,6 +1,7 @@
 #include "Allocator.h"
 
 #include "GpuResourceTypes.h"
+#include "Logging/Assert.h"
 
 namespace enger
 {
@@ -16,9 +17,9 @@ namespace enger
 
     void Allocator::init(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device)
     {
-        assert(instance != nullptr);
-        assert(physicalDevice != nullptr);
-        assert(device != nullptr);
+        EASSERT(instance != nullptr, "Instance cannot be null");
+        EASSERT(physicalDevice != nullptr, "Physical device cannot be null");
+        EASSERT(device != nullptr, "Device cannot be null");
 
         const auto& dld = VULKAN_HPP_DEFAULT_DISPATCHER;
         m_VulkanFunctions = {
@@ -115,13 +116,13 @@ namespace enger
 
     void Allocator::destroyBuffer(VmaAllocation alloc, vk::Buffer buffer)
     {
-        assert(buffer != nullptr);
+        EASSERT(buffer != VK_NULL_HANDLE);
         vmaDestroyBuffer(m_Allocator, static_cast<VkBuffer>(buffer), alloc);
     }
 
     void Allocator::destroyImage(VmaAllocation alloc, vk::Image image)
     {
-        assert(image != VK_NULL_HANDLE);
+        EASSERT(image != VK_NULL_HANDLE);
         vmaDestroyImage(m_Allocator, static_cast<VkImage>(image), alloc);
     }
 }

@@ -1,6 +1,7 @@
 #include "Descriptors.h"
 
 #include "Device.h"
+#include "Logging/Assert.h"
 
 namespace enger
 {
@@ -38,7 +39,7 @@ namespace enger
     vk::DescriptorSet DescriptorAllocator::allocate(Device& device, DescriptorSetLayoutHandle handle)
     {
         auto* layout = device.getDescriptorSetLayout(handle);
-        assert(layout != nullptr);
+        EASSERT(layout != nullptr, "Descriptor set layout cannot be null");
 
         vk::DescriptorSetAllocateInfo allocInfo{
             .descriptorPool = pool_,

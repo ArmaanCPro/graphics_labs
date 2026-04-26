@@ -4,7 +4,8 @@
 #include <memory>
 #include <iterator>
 #include <vector>
-#include <initializer_list>
+
+#include "Logging/Assert.h"
 
 namespace enger
 {
@@ -127,7 +128,7 @@ namespace enger
             }
             else
             {
-                assert(Capacity >= sizeof...(args));
+                EASSERT(Capacity >= sizeof...(args));
             }
         }
 
@@ -150,13 +151,13 @@ namespace enger
 
         constexpr void resize(std::size_t size) noexcept
         {
-            assert(Capacity >= size);
+            EASSERT(Capacity >= size);
             m_Size = size;
             m_Data.fill(T{});
         }
         constexpr void resize(std::size_t size, T value) noexcept
         {
-            assert(Capacity >= size);
+            EASSERT(Capacity >= size);
             m_Size = size;
             m_Data.fill(value);
         }
@@ -165,12 +166,12 @@ namespace enger
 
         constexpr void push_back(const T& value) noexcept
         {
-            assert(Capacity > m_Size);
+            EASSERT(Capacity > m_Size);
             m_Data[m_Size++] = value;
         }
         constexpr void push_back(T&& value) noexcept
         {
-            assert(Capacity > m_Size);
+            EASSERT(Capacity > m_Size);
             m_Data[m_Size++] = std::move(value);
         }
 
@@ -183,7 +184,7 @@ namespace enger
             }
             else
             {
-                assert(Capacity > m_Size);
+                EASSERT(Capacity > m_Size);
             }
             m_Data[m_Size++] = T(std::forward<Args>(args)...);
         }
@@ -196,7 +197,7 @@ namespace enger
             }
             else
             {
-                assert(m_Size > 0);
+                EASSERT(m_Size > 0);
             }
             return m_Data[--m_Size];
         }

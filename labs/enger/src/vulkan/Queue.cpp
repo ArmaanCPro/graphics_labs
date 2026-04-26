@@ -5,6 +5,8 @@
 
 #include <format>
 
+#include "Logging/Assert.h"
+
 namespace enger
 {
     void DeferredDeletionQueue::push(std::function<void()> func, SubmitHandle submitValue)
@@ -192,7 +194,7 @@ namespace enger
 
         // TODO move buffer subdata to Device as an internal function
         auto* staging = m_Device->getBuffer(stagingHandle);
-        assert(staging && staging->mappedMemory_);
+        EASSERT(staging && staging->mappedMemory_);
 
         submitImmediate([&](CommandBuffer& cmd) {
             cmd.transitionImage(handle, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);

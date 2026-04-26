@@ -1,5 +1,7 @@
 #include "SwapChain.h"
 
+#include "Logging/Assert.h"
+
 namespace enger
 {
     vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
@@ -178,7 +180,7 @@ namespace enger
     {
         for (auto i = 0; i < m_SwapchainImageHandles.size(); ++i)
         {
-            assert(m_SwapchainImageHandles[i]);
+            EASSERT(m_SwapchainImageHandles[i]);
             m_Device.removeTextureFromPool(m_SwapchainImageHandles[i]);
         }
 
