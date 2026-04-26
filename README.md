@@ -6,8 +6,8 @@ Particularly focused on Vulkan, 3D rendering, and modern C++.
 
 ## Labs
 
-- [enger](labs/enger/README.md): A Vulkan-based multi-Queue Bindless 3D rendering engine
+- [enger](libs/enger/README.md): A Vulkan-based multi-Queue Bindless 3D rendering engine
 
 
 ### Third-Party Assets
-- Inter Font [SIL Open Font License 1.1](labs/enger/assets/fonts/Inter/OFL.txt)
+- Inter Font [SIL Open Font License 1.1](libs/enger/assets/fonts/Inter/OFL.txt)

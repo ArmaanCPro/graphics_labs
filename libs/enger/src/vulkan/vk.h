@@ -9,7 +9,7 @@
 
 namespace enger
 {
-    [[noreturn]] inline void vkFatal(vk::Result result, std::source_location loc = std::source_location::current())
+    [[noreturn]] inline void vkFatal([[maybe_unused]] vk::Result result, [[maybe_unused]] std::source_location loc = std::source_location::current())
     {
         LOG_ERROR("Vulkan error: {} at {}:{}", vk::to_string(result), loc.file_name(), loc.line());
         std::terminate();

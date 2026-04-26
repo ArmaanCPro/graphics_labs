@@ -24,6 +24,7 @@ function(compile_slang_shaders target shader_dir output_dir)
         -bindless-space-index 0
         -I "${shader_dir}/src"
         -I "${shader_dir}/modules"
+        -I "${shader_dir}"
     )
 
     set(SPV_OUTPUTS "")

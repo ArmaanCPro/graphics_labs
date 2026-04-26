@@ -13,7 +13,7 @@
 namespace enger
 {
     SceneManager::SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat,
-                               vk::SampleCountFlagBits msaaSamples)
+                               vk::SampleCountFlagBits msaaSamples, std::string_view shaderPath)
         : m_Device(device)
     {
         ENGER_PROFILE_FUNCTION()
@@ -110,7 +110,7 @@ namespace enger
                                                      nullptr, "GPUSceneData");
 
         // MATERIALS
-        auto expectedShaderData = loadSpirvFromFile("shaders/mesh.spv");
+        auto expectedShaderData = loadSpirvFromFile(shaderPath);
         if (!expectedShaderData)
         {
             LOG_ERROR("Failed to load shader data: {}", expectedShaderData.error());
@@ -147,8 +147,6 @@ namespace enger
 
         m_DefaultMaterial = m_GLTFMetallic_Roughness.writeMaterial(MaterialPass::MainColor,
                                                                    std::move(materialResources));
-
-        loadScene("assets/structure.glb");
     }
 
     void SceneManager::loadScene(const std::filesystem::path& filePath)

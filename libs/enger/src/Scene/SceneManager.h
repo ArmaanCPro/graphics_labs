@@ -19,7 +19,8 @@ namespace enger
     class SceneManager
     {
     public:
-        SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples);
+        SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples,
+            std::string_view shaderPath);
 
         // This doesn't actually load the new scene, it just schedules the scene load to updateScene
         void loadScene(const std::filesystem::path& filePath);

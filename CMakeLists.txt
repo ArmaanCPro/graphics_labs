@@ -51,4 +51,5 @@ if (ENABLE_PROFILING)
     )
 endif()
 
+add_subdirectory(libs)
 add_subdirectory(labs)

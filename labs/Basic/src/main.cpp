@@ -86,7 +86,8 @@ int main()
 
     enger::framing::FrameOrchestrator frameOrchestrator{device, swapchain, window};
 
-    enger::SceneManager sceneManager{device, renderer.renderFormat(), renderer.depthFormat(), renderer.msaaSamples()};
+    enger::SceneManager sceneManager{device, renderer.renderFormat(), renderer.depthFormat(), renderer.msaaSamples(), "shaders/mesh.spv"};
+    sceneManager.loadScene("assets/structure.glb");
 
     EngineStats stats{};
 
