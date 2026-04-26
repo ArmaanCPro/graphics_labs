@@ -6,6 +6,8 @@
 #include "GlfwWindow.h"
 #include "vulkan/Descriptors.h"
 
+extern "C" ENGER_EXPORT ImGuiContext* EngerImGuiContext();
+
 namespace enger
 {
     class Instance;
@@ -13,7 +15,7 @@ namespace enger
     class SwapChain;
 
     // This is an abstraction for a UI Layer. Not necessary needed as we only use ImGui (for now)
-    class UILayer
+    class ENGER_EXPORT UILayer
     {
     public:
         virtual ~UILayer() = default;
@@ -26,7 +28,7 @@ namespace enger
         virtual void onResize(uint32_t width, uint32_t height) = 0;
     };
 
-    class ImguiLayer : public UILayer
+    class ENGER_EXPORT ImguiLayer : public UILayer
     {
     public:
         ImguiLayer(Instance& instance, Device& device, GlfwWindow& window, SwapChain& swapchain);

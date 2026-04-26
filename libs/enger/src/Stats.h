@@ -1,6 +1,6 @@
 #pragma once
 
-struct EngineStats
+struct ENGER_EXPORT EngineStats
 {
     float frameTime = 0.0f;
     int triangleCount = 0;

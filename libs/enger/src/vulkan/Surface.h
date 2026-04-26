@@ -6,15 +6,10 @@
 
 namespace enger
 {
-    class Surface
+    class ENGER_EXPORT Surface final
     {
     public:
-        Surface(GlfwWindow& window, vk::Instance instance)
-        {
-            VkSurfaceKHR surface;
-            vkCheck(vk::Result{glfwCreateWindowSurface(instance, window.nativeHandle(), nullptr, &surface)});
-            m_Surface = vk::UniqueSurfaceKHR{surface, instance};
-        }
+        Surface(GlfwWindow& window, vk::Instance instance);
 
         vk::SurfaceKHR surface() { return *m_Surface; }
 

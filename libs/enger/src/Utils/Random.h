@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <random>
 
+#include "enger_export.h"
+
 namespace enger::random
 {
-    // Xoroshiro256++ implementation. Consider making this generator thread_local.
+    // Xoroshiro256++ implementation. Consider making this generator thread_local. Header-only, no dll export.
     struct Xoro256
     {
     public:

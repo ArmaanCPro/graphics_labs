@@ -5,10 +5,11 @@
 #include <GLFW/glfw3.h>
 
 #include "Profiling/Profiler.h"
+#include "enger_export.h"
 
 namespace enger
 {
-    class GlfwWindow
+    class ENGER_EXPORT GlfwWindow
     {
     public:
         GlfwWindow(uint32_t width, uint32_t height, const char* title, bool resizable = true)

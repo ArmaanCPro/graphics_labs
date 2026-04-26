@@ -15,9 +15,11 @@
 #include "Profiling/Profiler.h"
 #include "Random.h"
 
+#include "enger_export.h"
+
 namespace enger::uuid
 {
-    // A minimal UUID V7 Implementation.
+    // A minimal UUID V7 Implementation. Header-only, so no need to dll export.
     class uuidv7
     {
     public:

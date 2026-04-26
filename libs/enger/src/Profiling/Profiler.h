@@ -16,14 +16,14 @@ inline constexpr auto ENGER_PROFILE_COLOR_DRAW    = 0x00ffffu;
 
 #ifdef ENABLE_PROFILING
 
-#define ENGER_PROFILE_FUNCTION() ZoneScoped;
-#define ENGER_PROFILE_FUNCTION_COLOR(color) ZoneScopedC(color);
+#define ENGER_PROFILE_FUNCTION() ZoneScoped; (void)___tracy_scoped_zone;
+#define ENGER_PROFILE_FUNCTION_COLOR(color) ZoneScopedC(color); (void)___tracy_scoped_zone;
 #define ENGER_PROFILE_ZONENC(name, color) \
-    ZoneScopedNC(name, color);
+    ZoneScopedNC(name, color); (void)___tracy_scoped_zone;
 #define ENGER_PROFILE_ZONEN(name) \
-    ZoneScopedN(name);
+    ZoneScopedN(name); (void)___tracy_scoped_zone;
 #define ENGER_PROFILE_ZONE() \
-    ZoneScoped;
+    ZoneScoped; (void)___tracy_scoped_zone;
 
 #define ENGER_PROFILE_THREAD(name) tracy::SetThreadName(name);
 #define ENGER_PROFILE_FRAMEN(name) FrameMarkNamed(name);

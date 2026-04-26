@@ -139,6 +139,8 @@ int main()
             renderer.render(fctx.value(), dctx, stats, drawGrid);
 
             imguiLayer.beginFrame();
+            if (!ImGui::GetCurrentContext())
+                ImGui::SetCurrentContext(EngerImGuiContext());
             ImGui::Begin("Stats");
             ImGui::Text("FPS: %.1f", 1000.0f / stats.frameTime);
             ImGui::Text("Frame Time: %.2f ms", stats.frameTime);

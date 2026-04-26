@@ -19,9 +19,11 @@
 #include <memory>
 #include <array>
 
+#include "enger_export.h"
+
 namespace enger
 {
-    class Logger
+    class ENGER_EXPORT Logger
     {
         static constexpr auto defaultLoggerName = "enger";
     public:

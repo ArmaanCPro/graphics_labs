@@ -10,7 +10,7 @@ namespace enger::framing
     static constexpr auto FRAMES_IN_FLIGHT = 2;
 
     // Used by renderers per frame. Contains information pertinent to rendering.
-    struct FrameContext
+    struct ENGER_EXPORT FrameContext
     {
         CommandBuffer& cmd;
         uint32_t swapchainImageIndex;
@@ -23,7 +23,7 @@ namespace enger::framing
     /// The FrameOrchestrator simply manages frame synchronization AND swapchain recreation/resizing.
     /// It is not tightly coupled to renderers and is meant to be used as a standalone orchestrator.
     /// The proper usage is to put any graphics logic within the begin/endFrame() functions.
-    class FrameOrchestrator
+    class ENGER_EXPORT FrameOrchestrator
     {
     public:
         FrameOrchestrator(Device& device, SwapChain& swapchain, GlfwWindow& window);

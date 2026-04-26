@@ -22,7 +22,7 @@ namespace enger
 {
     struct DescriptorSetLayoutDesc;
 
-    struct PhysicalDeviceInfo
+    struct ENGER_EXPORT PhysicalDeviceInfo
     {
         vk::PhysicalDeviceProperties2 properties{};
         vk::PhysicalDeviceMemoryProperties2 memoryProperties{};
@@ -39,7 +39,7 @@ namespace enger
         bool hasPipelineRobustness = false;
     };
 
-    class Device
+    class ENGER_EXPORT Device
     {
     public:
         /// Requires surface for presentation. Headless is not currently supported.

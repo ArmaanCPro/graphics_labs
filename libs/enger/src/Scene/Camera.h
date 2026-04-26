@@ -5,7 +5,7 @@
 #include "GlfwWindow.h"
 
 
-class Camera
+class ENGER_EXPORT Camera
 {
 public:
     Camera(enger::GlfwWindow& window);

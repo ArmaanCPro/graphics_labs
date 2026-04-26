@@ -11,6 +11,11 @@
 
 #include "vulkan/vk.h"
 
+extern "C" ENGER_EXPORT ImGuiContext* EngerImGuiContext()
+{
+    return ImGui::GetCurrentContext();
+}
+
 namespace enger
 {
     PFN_vkVoidFunction imguiFn(const char* function_name, void* user_data)

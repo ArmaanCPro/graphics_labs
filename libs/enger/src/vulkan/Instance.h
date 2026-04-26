@@ -8,7 +8,7 @@ namespace enger
 {
     /// Instance should be the top-level Vulkan object.
     /// It should only be destroyed AFTER all other Vulkan objects. RAII enforces this, but be careful.
-    class Instance
+    class ENGER_EXPORT Instance
     {
     public:
         Instance(std::span<const char*> instanceExtensions);

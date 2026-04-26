@@ -1,7 +1,19 @@
 file(GLOB_RECURSE ENGER_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 file(GLOB_RECURSE ENGER_HEADERS CONFIGURE_DEPENDS src/*.h)
 
-add_library(enger STATIC ${ENGER_SOURCES} ${ENGER_HEADERS})
+add_library(enger SHARED)
+
+target_sources(
+        enger
+        PRIVATE ${ENGER_SOURCES}
+        PUBLIC
+            FILE_SET HEADERS
+                FILES ${ENGER_HEADERS}
+            FILE_SET generated_headers
+                TYPE HEADERS
+                BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
+                FILES ${CMAKE_CURRENT_BINARY_DIR}/enger_export.h
+)
 
 target_include_directories(enger PUBLIC src)
 
@@ -72,3 +84,5 @@ endfunction()
 set_project_warnings(enger)
 set_project_settings(enger)
 enable_sanitizers(enger)
+
+generate_export_header(enger)

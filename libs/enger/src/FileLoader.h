@@ -6,9 +6,11 @@
 
 #include <nfd.hpp>
 
+#include "enger_export.h"
+
 namespace enger
 {
-    struct FileItem
+    struct ENGER_EXPORT FileItem
     {
         std::string name;
         std::string filetype;
@@ -21,17 +23,17 @@ namespace enger
         Other
     };
 
-    class FileLoader
+    class ENGER_EXPORT FileLoader
     {
     public:
         virtual ~FileLoader() = default;
 
         virtual std::expected<std::filesystem::path, OpenDialogError> openDialog(std::span<const FileItem> items) = 0;
-        virtual const char* getLastError() const = 0;
+        [[nodiscard]] virtual const char* getLastError() const = 0;
     };
 
     // Consider integrating with GLFW. Look at docs
-    class NFDEFileLoader final : public FileLoader
+    class ENGER_EXPORT NFDEFileLoader final : public FileLoader
     {
     public:
         NFDEFileLoader() = default;

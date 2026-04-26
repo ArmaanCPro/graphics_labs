@@ -9,7 +9,7 @@
 
 namespace enger
 {
-    class SwapChain
+    class ENGER_EXPORT SwapChain
     {
     public:
         // TODO cleanly refactor to use Device texture pools nicely

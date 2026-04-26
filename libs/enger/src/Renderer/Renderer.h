@@ -28,7 +28,7 @@ namespace enger
         alignas(4) uint32_t samplerIndex;
     };
 
-    class Renderer
+    class ENGER_EXPORT Renderer
     {
     public:
         Renderer(Device& device, SwapChain& swapchain);

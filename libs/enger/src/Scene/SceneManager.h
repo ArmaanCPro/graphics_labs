@@ -16,7 +16,7 @@ namespace enger
         glm::vec4 sunlightColor;
     };
 
-    class SceneManager
+    class ENGER_EXPORT SceneManager
     {
     public:
         SceneManager(Device& device, vk::Format renderFormat, vk::Format depthFormat, vk::SampleCountFlagBits msaaSamples,
