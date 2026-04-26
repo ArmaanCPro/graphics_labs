@@ -1,5 +1,5 @@
 #pragma once
-#include "SceneGraph.h"
+#include "Scene/SceneGraph.h"
 
 #include "Camera.h"
 #include "Stats.h"

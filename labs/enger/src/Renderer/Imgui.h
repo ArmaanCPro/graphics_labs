@@ -1,8 +1,6 @@
 #pragma once
 
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_vulkan.h>
 
 #include "Framing.h"
 #include "GlfwWindow.h"
@@ -14,7 +12,7 @@ namespace enger
     class Device;
     class SwapChain;
 
-    // This is an abstraction for a UI Layer. Not necessarily needed as we only use ImGui (for now)
+    // This is an abstraction for a UI Layer. Not necessary needed as we only use ImGui (for now)
     class UILayer
     {
     public:

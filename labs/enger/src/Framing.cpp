@@ -1,7 +1,6 @@
 #include "Framing.h"
 
 #include <chrono>
-#include <thread>
 
 #include "vulkan/QueueSubmitBuilder.h"
 

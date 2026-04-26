@@ -1,7 +1,7 @@
 #pragma once
 
 #include "vulkan/vk.h"
-#include "Resources.h"
+#include "Resources/Resources.h"
 
 #include <filesystem>
 

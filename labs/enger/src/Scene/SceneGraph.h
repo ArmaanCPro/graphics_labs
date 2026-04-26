@@ -1,12 +1,11 @@
 #pragma once
 
-#include <cstdint>
 #include <glm/glm.hpp>
 
 #include "MeshLoader.h"
 #include "vulkan/vk.h"
 
-#include "Resources.h"
+#include "Resources/Resources.h"
 #include "Profiling/Profiler.h"
 
 namespace enger

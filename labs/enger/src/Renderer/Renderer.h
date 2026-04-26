@@ -1,12 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <array>
-#include <vector>
-#include <fastgltf/types.hpp>
 
 #include "Imgui.h"
-#include "vulkan/Descriptors.h"
 #include "vulkan/Device.h"
 #include "vulkan/SwapChain.h"
 
@@ -14,7 +9,7 @@
 
 #include "Framing.h"
 #include "MeshLoader.h"
-#include "SceneGraph.h"
+#include "Scene/SceneGraph.h"
 
 #include "Stats.h"
 

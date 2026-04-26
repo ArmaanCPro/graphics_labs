@@ -13,9 +13,9 @@
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 
-#include "SceneGraph.h"
+#include "Scene/SceneGraph.h"
 
-#include "SceneManager.h"
+#include "Scene/SceneManager.h"
 
 #include <algorithm>
 #include <execution>

@@ -7,7 +7,7 @@
 
 #include "vulkan/QueueSubmitBuilder.h"
 
-#include "SceneGraph.h"
+#include "Scene/SceneGraph.h"
 
 #include "MeshLoader.h"
 #include "Logging/Assert.h"

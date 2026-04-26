@@ -7,16 +7,16 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Camera.h"
+#include "Scene/Camera.h"
 #include "GlfwWindow.h"
-#include "Renderer.h"
+#include "Renderer/Renderer.h"
 #include "vulkan/Device.h"
 #include "vulkan/Instance.h"
 #include "vulkan/Surface.h"
 #include "vulkan/SwapChain.h"
 
 #include "Framing.h"
-#include "SceneManager.h"
+#include "Scene/SceneManager.h"
 #include "Stats.h"
 
 #include "FileLoader.h"
@@ -24,8 +24,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Logging/Assert.h"
 #include "Logging/Log.h"
+
+#include <Renderer/Imgui.h>
 
 constexpr auto WIDTH = 800;
 constexpr auto HEIGHT = 600;

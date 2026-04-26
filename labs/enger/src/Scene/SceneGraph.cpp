@@ -1,4 +1,4 @@
-#include "SceneGraph.h"
+#include "Scene/SceneGraph.h"
 
 #include "vulkan/vk.h"
 
@@ -8,7 +8,7 @@
 #include <expected>
 #include <filesystem>
 
-#include "Renderer.h"
+#include "Renderer/Renderer.h"
 
 #include "MeshLoader.h"
 #include "Logging/Log.h"

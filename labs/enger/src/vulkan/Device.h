@@ -1,12 +1,11 @@
 #pragma once
 
-#include <functional>
 #include <map>
 
 #include "GpuResourceTypes.h"
 #include "vk.h"
 
-#include "Resources.h"
+#include "Resources/Resources.h"
 #include "Pipeline.h"
 
 #include "Allocator.h"
@@ -15,7 +14,6 @@
 
 #include "Queue.h"
 
-#include "Profiling/Profiler.h"
 #ifdef ENABLE_PROFILING
 #include <Tracy/TracyVulkan.hpp>
 #endif

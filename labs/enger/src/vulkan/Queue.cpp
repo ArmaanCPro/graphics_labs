@@ -7,6 +7,8 @@
 
 #include "Logging/Assert.h"
 
+#include "Profiling/Profiler.h"
+
 namespace enger
 {
     void DeferredDeletionQueue::push(std::function<void()> func, SubmitHandle submitValue)

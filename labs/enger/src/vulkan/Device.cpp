@@ -8,6 +8,8 @@
 #include "PushConstantRanges.h"
 #include "Logging/Assert.h"
 
+#include "Profiling/Profiler.h"
+
 namespace enger
 {
     std::multimap<int, std::pair<PhysicalDeviceInfo, const vk::PhysicalDevice> > Device::sortPhysicalDevices(
