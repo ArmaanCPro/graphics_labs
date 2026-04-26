@@ -190,7 +190,6 @@ namespace enger
             BufferHandle lastIndexBuffer;
 
             auto draw = [&](const RenderObject& drawObj) {
-                ENGER_PROFILE_ZONENC("Internal Draw Call", ENGER_PROFILE_COLOR_DRAW);
                 if (drawObj.indexBuffer != lastIndexBuffer)
                 {
                     lastIndexBuffer = drawObj.indexBuffer;
