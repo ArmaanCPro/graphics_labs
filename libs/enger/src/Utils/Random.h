@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <random>
 
 namespace enger::random
 {
@@ -9,7 +10,6 @@ namespace enger::random
     struct Xoro256
     {
     public:
-        // Consider using std::random_device as a seed
         explicit constexpr Xoro256(uint64_t seed) noexcept
         {
             uint64_t state = seed;
@@ -18,6 +18,9 @@ namespace enger::random
                 s = splitmix64(state);
             }
         }
+        constexpr Xoro256() noexcept
+            : Xoro256(std::random_device{}())
+        {}
 
         // Call to actually get a random number.
         constexpr uint64_t next() noexcept
@@ -34,6 +37,11 @@ namespace enger::random
             m_State[3] = rotl(m_State[3], 45);
 
             return result;
+        }
+
+        constexpr auto operator()() noexcept
+        {
+            return next();
         }
 
     private:

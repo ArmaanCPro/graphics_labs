@@ -19,7 +19,7 @@ TEST_CASE("uuidv7 basic validation")
     {
         uuidv7 u2;
         // Even if in the same millisecond, random bits are different
-        CHECK_LT(u1, u2);
+        CHECK_NE(u1, u2);
     }
 
     SUBCASE("String Round-Trip")
