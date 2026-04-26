@@ -20,5 +20,11 @@
     "nativefiledialog-extended",
     "tracy",
     "spdlog"
-  ]
+  ],
+  "features": {
+    "tests": {
+      "description": "Build tests",
+      "dependencies": ["doctest"]
+    }
+  }
 }

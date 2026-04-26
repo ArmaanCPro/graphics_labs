@@ -6,6 +6,10 @@ set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/overlay-ports")
 
 option(ENABLE_PROFILING "Enables Profiling via Tracy" OFF)
 option(ENABLE_LOGGING "Enables Logging" ON)
+option(ENABLE_TESTS "Enable Tests" ON)
+if (ENABLE_TESTS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
 
 project(
         graphics_labs
@@ -53,3 +57,8 @@ endif()
 
 add_subdirectory(libs)
 add_subdirectory(labs)
+
+if (ENABLE_TESTS)
+    find_package(doctest CONFIG REQUIRED)
+    add_subdirectory(tests)
+endif()
