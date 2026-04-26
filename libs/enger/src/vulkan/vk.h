@@ -24,11 +24,11 @@ namespace enger
     }
 
     template<typename T>
-    T vkCheck(vk::ResultValue<T> result)
+    T vkCheck(vk::ResultValue<T> result, std::source_location loc = std::source_location::current())
     {
         if (result.result != vk::Result::eSuccess) [[unlikely]]
         {
-            vkFatal(result.result);
+            vkFatal(result.result, loc);
         }
         return std::move(result.value);
     }

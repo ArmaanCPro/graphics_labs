@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "Device.h"
-#include "GlfwWindow.h"
+#include "Window.h"
 
 namespace enger
 {
@@ -13,7 +13,7 @@ namespace enger
     {
     public:
         // TODO cleanly refactor to use Device texture pools nicely
-        SwapChain(Device& device, vk::SurfaceKHR surface, const GlfwWindow& window,
+        SwapChain(Device& device, vk::SurfaceKHR surface, const Window& window,
                   vk::PresentModeKHR desiredPresentMode);
 
         ~SwapChain();

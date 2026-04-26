@@ -8,7 +8,7 @@
 #include <GLFW/glfw3.h>
 
 #include "Scene/Camera.h"
-#include "GlfwWindow.h"
+#include "Window.h"
 #include "Renderer/Renderer.h"
 #include "vulkan/Device.h"
 #include "vulkan/Instance.h"
@@ -43,7 +43,7 @@ int main()
 {
     enger::Logger::init();
 
-    enger::GlfwWindow window{WIDTH, HEIGHT, "Enger"};
+    enger::Window window = enger::Window::create(WIDTH, HEIGHT, "Enger", true);
 
     enger::NFDEFileLoader fileLoader{};
 

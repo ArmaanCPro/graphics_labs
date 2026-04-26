@@ -18,11 +18,14 @@ target_sources(
 target_include_directories(enger PUBLIC src)
 
 target_link_libraries(enger PUBLIC
-        glfw glm::glm
+        glm::glm
         Vulkan::Headers GPUOpen::VulkanMemoryAllocator
         imgui::imgui fastgltf::fastgltf KTX::ktx
         nfd::nfd
         spdlog::spdlog
+
+        PRIVATE
+        glfw
 )
 
 if (ENABLE_PROFILING)

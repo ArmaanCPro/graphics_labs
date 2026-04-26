@@ -23,7 +23,7 @@ namespace enger
         return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance*>(user_data)), function_name);
     }
 
-    ImguiLayer::ImguiLayer(Instance& instance, Device &device, GlfwWindow& window, SwapChain& swapchain)
+    ImguiLayer::ImguiLayer(Instance& instance, Device &device, Window& window, SwapChain& swapchain)
         :
         m_Device(device),
         m_Swapchain(swapchain),
@@ -56,7 +56,7 @@ namespace enger
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 
-        ImGui_ImplGlfw_InitForVulkan(window.nativeHandle(), true);
+        ImGui_ImplGlfw_InitForVulkan(static_cast<GLFWwindow*>(window.nativeHandle()), true);
 
         auto swapchainFormat = static_cast<VkFormat>(swapchain.swapChainUnormFormat());
 

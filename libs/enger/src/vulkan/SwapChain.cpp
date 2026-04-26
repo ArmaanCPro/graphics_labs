@@ -53,7 +53,7 @@ namespace enger
         return minImageCount;
     }
 
-    SwapChain::SwapChain(Device& device, vk::SurfaceKHR surface, const GlfwWindow& window,
+    SwapChain::SwapChain(Device& device, vk::SurfaceKHR surface, const Window& window,
                          vk::PresentModeKHR desiredPresentMode)
         :
         m_Device(device),

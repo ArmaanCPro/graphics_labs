@@ -2,13 +2,13 @@
 
 #include <glm/glm.hpp>
 
-#include "GlfwWindow.h"
+#include "Window.h"
 
 
 class ENGER_EXPORT Camera
 {
 public:
-    Camera(enger::GlfwWindow& window);
+    Camera(enger::Window& window);
     glm::vec3 velocity_ = glm::vec3(0.0f);
     glm::vec3 position_ = glm::vec3(0.0f);
     float pitch_ = 0.0f;
@@ -20,10 +20,10 @@ public:
     void update();
 
 private:
-    enger::GlfwWindow& m_Window;
+    enger::Window& m_Window;
 
-    void attachInputToWindow(enger::GlfwWindow& window);
-    void attachCursor(enger::GlfwWindow& window);
+    void attachInputToWindow(enger::Window& window);
+    void attachCursor(enger::Window& window);
 
     bool m_EnableMovement = false;
 

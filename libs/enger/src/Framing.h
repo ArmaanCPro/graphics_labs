@@ -26,7 +26,7 @@ namespace enger::framing
     class ENGER_EXPORT FrameOrchestrator
     {
     public:
-        FrameOrchestrator(Device& device, SwapChain& swapchain, GlfwWindow& window);
+        FrameOrchestrator(Device& device, SwapChain& swapchain, Window& window);
         ~FrameOrchestrator();
 
         enum class BeginFrameError
@@ -46,7 +46,7 @@ namespace enger::framing
         Device& m_Device;
         Queue& m_GraphicsQueue;
         SwapChain& m_Swapchain;
-        GlfwWindow& m_Window;
+        Window& m_Window;
 
         std::array<SubmitHandle, FRAMES_IN_FLIGHT> m_LastFrameSubmits;
         std::array<UniqueCommandPool, FRAMES_IN_FLIGHT> m_CommandPools;

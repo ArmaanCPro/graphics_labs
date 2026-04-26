@@ -3,7 +3,7 @@
 #include <imgui.h>
 
 #include "Framing.h"
-#include "GlfwWindow.h"
+#include "Window.h"
 #include "vulkan/Descriptors.h"
 
 extern "C" ENGER_EXPORT ImGuiContext* EngerImGuiContext();
@@ -31,7 +31,7 @@ namespace enger
     class ENGER_EXPORT ImguiLayer : public UILayer
     {
     public:
-        ImguiLayer(Instance& instance, Device& device, GlfwWindow& window, SwapChain& swapchain);
+        ImguiLayer(Instance& instance, Device& device, Window& window, SwapChain& swapchain);
         ~ImguiLayer() override;
 
         void beginFrame() override;
@@ -45,7 +45,7 @@ namespace enger
     private:
         Device& m_Device;
         SwapChain& m_Swapchain;
-        GlfwWindow& m_Window;
+        Window& m_Window;
         DescriptorAllocator m_DescriptorAllocator;
     };
 }

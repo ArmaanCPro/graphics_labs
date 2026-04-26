@@ -2,14 +2,14 @@
 
 #include "vk.h"
 
-#include "GlfwWindow.h"
+#include "Window.h"
 
 namespace enger
 {
     class ENGER_EXPORT Surface final
     {
     public:
-        Surface(GlfwWindow& window, vk::Instance instance);
+        Surface(Window& window, vk::Instance instance);
 
         vk::SurfaceKHR surface() { return *m_Surface; }
 

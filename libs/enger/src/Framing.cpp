@@ -2,11 +2,12 @@
 
 #include <chrono>
 
+#include "Profiling/Profiler.h"
 #include "vulkan/QueueSubmitBuilder.h"
 
 namespace enger::framing
 {
-    framing::FrameOrchestrator::FrameOrchestrator(Device& device, enger::SwapChain& swapchain, GlfwWindow& window)
+    framing::FrameOrchestrator::FrameOrchestrator(Device& device, enger::SwapChain& swapchain, Window& window)
         :
         m_Device(device),
         m_GraphicsQueue(device.graphicsQueue()),

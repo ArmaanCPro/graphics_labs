@@ -1,9 +1,10 @@
 #include "Camera.h"
 
+#include <GLFW/glfw3.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-Camera::Camera(enger::GlfwWindow& window)
+Camera::Camera(enger::Window& window)
     : m_Window(window)
 {
     attachInputToWindow(window);
@@ -33,7 +34,7 @@ void Camera::update()
     position_ += glm::vec3(cameraRotation * glm::vec4(velocity_ * 0.05f, 0.0f));
 }
 
-void Camera::attachInputToWindow(enger::GlfwWindow& window)
+void Camera::attachInputToWindow(enger::Window& window)
 {
     window.setInputCallback([&](int key, [[maybe_unused]] int scancode, int action, [[maybe_unused]] int mods) {
         if (!m_EnableMovement)
@@ -103,7 +104,7 @@ void Camera::attachInputToWindow(enger::GlfwWindow& window)
     });
 }
 
-void Camera::attachCursor(enger::GlfwWindow& window)
+void Camera::attachCursor(enger::Window& window)
 {
     window.setCursorPosCallback([&](double xpos, double ypos) {
         if (m_EnableMovement)
