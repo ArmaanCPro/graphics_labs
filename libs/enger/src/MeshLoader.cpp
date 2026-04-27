@@ -36,7 +36,8 @@ namespace enger
         auto* queue = &device.graphicsQueue();
         if (device.transferQueue().has_value())
         {
-            queue = &device.transferQueue().value();
+            LOG_WARN("Transfer queue is temporarily disabled in Mesh Loader");
+            //queue = &device.transferQueue().value();
         }
 
         surface.vertexBuffer = device.createBuffer(

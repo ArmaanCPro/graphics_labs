@@ -171,6 +171,12 @@ namespace enger
                 .extent_ = {m_SwapExtent.width, m_SwapExtent.height, 1},
                 .usage_ = vk::ImageUsageFlagBits::eColorAttachment,
                 .format_ = surfaceFormat.format,
+                .aspectFlags_ = vk::ImageAspectFlagBits::eColor,
+                .state_ = ImageState{
+                    vk::ImageLayout::ePresentSrcKHR,
+                    vk::AccessFlagBits2::eNone,
+                    vk::PipelineStageFlagBits2::eNone,
+                },
             };
             m_SwapchainImageHandles.push_back(m_Device.addTextureToPool(std::move(img)));
         }

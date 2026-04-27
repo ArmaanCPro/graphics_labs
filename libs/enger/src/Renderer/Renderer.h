@@ -7,6 +7,7 @@
 
 #include <glm/glm.hpp>
 
+#include "FrameGraph.h"
 #include "Framing.h"
 #include "MeshLoader.h"
 #include "Scene/SceneGraph.h"
@@ -44,6 +45,10 @@ namespace enger
     private:
         void createRenderTextures(uint32_t width, uint32_t height);
 
+        fg::RenderPassDesc buildGeometryPass(const DrawContext& dctx, EngineStats& stats);
+        fg::RenderPassDesc buildGridPass(const DrawContext& dctx, EngineStats& stats);
+        fg::RenderPassDesc buildTonemapperPass(TextureHandle swapchainHandle);
+
         Device& m_Device;
         SwapChain& m_SwapChain;
         Queue& m_GraphicsQueue;
@@ -68,6 +73,6 @@ namespace enger
         uint32_t m_PendingWidth = 0;
         uint32_t m_PendingHeight = 0;
 
-        bool m_IsFirstFrame = true;
+        fg::FrameGraph m_FrameGraph;
     };
 }

@@ -69,6 +69,7 @@ namespace enger
         void transitionImage(TextureHandle texHandle, vk::ImageLayout srcLayout, vk::ImageLayout dstLayout);
 
         void transitionImages(std::span<const TransitionImageInfo> infos);
+        // Make sure the ImageState gets update manually if this function is called
         void transitionImages(vk::DependencyInfo info);
 
         struct TransferTextureDesc
@@ -108,8 +109,8 @@ namespace enger
         void copyBufferToImage(BufferHandle buffer, TextureHandle image, vk::BufferImageCopy& region);
         void copyBufferToImage2(vk::CopyBufferToImageInfo2& info);
 
-        void setViewport(vk::Viewport& viewport);
-        void setScissor(vk::Rect2D& scissor);
+        void setViewport(vk::Viewport viewport);
+        void setScissor(vk::Rect2D scissor);
 
         void beginRendering(vk::RenderingInfo& renderingInfo);
         void endRendering();

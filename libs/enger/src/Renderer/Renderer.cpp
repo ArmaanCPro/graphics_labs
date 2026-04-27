@@ -29,44 +29,54 @@ namespace enger
         // Create grid pipeline
 
         m_GridPipelineLayout = m_Device.createPipelineLayout(PipelineLayoutDesc{
-            .descriptorLayouts = {{m_Device.bindlessDescriptorSetLayout()}},
-            .pushConstantRanges = {{
-                PushConstantsInfo{
-                .offset = 0, .size = sizeof(GridPushConstants), .stages = vk::ShaderStageFlagBits::eAllGraphics
-            }}}
-        }, &m_GraphicsQueue, "Grid Pipeline Layout");
+                                                                 .descriptorLayouts = {
+                                                                     {m_Device.bindlessDescriptorSetLayout()}
+                                                                 },
+                                                                 .pushConstantRanges = {
+                                                                     {
+                                                                         PushConstantsInfo{
+                                                                             .offset = 0,
+                                                                             .size = sizeof(GridPushConstants),
+                                                                             .stages =
+                                                                             vk::ShaderStageFlagBits::eAllGraphics
+                                                                         }
+                                                                     }
+                                                                 }
+                                                             }, &m_GraphicsQueue, "Grid Pipeline Layout");
         auto gridSpirv = loadSpirvFromFile("shaders/Grid.spv");
         EASSERT(gridSpirv.has_value());
         auto gridSM = m_Device.createShaderModule(std::move(gridSpirv.value()), &m_GraphicsQueue, "Grid Shader Module");
         m_GridPipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
-            .pipelineLayout = m_GridPipelineLayout,
-            .vertexShaderModule = gridSM,
-            .fragmentShaderModule = gridSM,
-            .depthTestEnable = true,
-            .depthWriteEnable = false,
-            .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
-            .colorAttachments = {
-                ColorAttachment{
-                    .format = m_Device.getImage(m_MsaaRenderTarget)->format_,
-                    .blendEnabled = true,
-                    .srcRgbBlendFactor = vk::BlendFactor::eSrcAlpha,
-                    .dstRgbBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
-                    .rgbBlendOp = vk::BlendOp::eAdd,
-                    .srcAlphaBlendFactor = vk::BlendFactor::eOne,
-                    .dstAlphaBlendFactor = vk::BlendFactor::eOne,
-                    .alphaBlendOp = vk::BlendOp::eAdd,
-                }
-            },
-            .depthFormat = m_Device.getImage(m_DepthBuffer)->format_,
+                                                             .pipelineLayout = m_GridPipelineLayout,
+                                                             .vertexShaderModule = gridSM,
+                                                             .fragmentShaderModule = gridSM,
+                                                             .depthTestEnable = true,
+                                                             .depthWriteEnable = false,
+                                                             .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
+                                                             .colorAttachments = {
+                                                                 ColorAttachment{
+                                                                     .format = m_Device.getImage(m_MsaaRenderTarget)->
+                                                                     format_,
+                                                                     .blendEnabled = true,
+                                                                     .srcRgbBlendFactor = vk::BlendFactor::eSrcAlpha,
+                                                                     .dstRgbBlendFactor =
+                                                                     vk::BlendFactor::eOneMinusSrcAlpha,
+                                                                     .rgbBlendOp = vk::BlendOp::eAdd,
+                                                                     .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                                                                     .dstAlphaBlendFactor = vk::BlendFactor::eOne,
+                                                                     .alphaBlendOp = vk::BlendOp::eAdd,
+                                                                 }
+                                                             },
+                                                             .depthFormat = m_Device.getImage(m_DepthBuffer)->format_,
 
-            .cullMode = vk::CullModeFlagBits::eNone,
+                                                             .cullMode = vk::CullModeFlagBits::eNone,
 
-            .sampleCount = m_MsaaSamples,
+                                                             .sampleCount = m_MsaaSamples,
 
 #ifndef NDEBUG
-            .enablePipelineRobustness = true,
+                                                             .enablePipelineRobustness = true,
 #endif
-        }, &m_GraphicsQueue, "Grid Pipeline");
+                                                         }, &m_GraphicsQueue, "Grid Pipeline");
 
 
         // Create tonemapping pipeline (could move to a frame graph later on)
@@ -107,7 +117,7 @@ namespace enger
                                                                            .format = m_SwapChain.swapChainFormat()
                                                                        }
                                                                    },
-            .cullMode = vk::CullModeFlagBits::eNone,
+                                                                   .cullMode = vk::CullModeFlagBits::eNone,
 
 #ifndef NDEBUG
                                                                    .enablePipelineRobustness = true,
@@ -130,261 +140,16 @@ namespace enger
         auto& cmd = fctx.cmd;
         auto start = std::chrono::high_resolution_clock::now();
 
-        auto drawExtent = m_Device.getImage(m_MsaaRenderTarget)->extent_;
-        vk::Rect2D scissor{0, 0, drawExtent.width, drawExtent.height};
-        std::vector<BufferHandle> allVertexBuffers;
-        std::vector<BufferHandle> allIndexBuffers; {
-            ENGER_PROFILE_ZONENC("Geometry Pass Frame", ENGER_PROFILE_COLOR_DRAW);
-            ENGER_PROFILE_GPU_ZONE("Geometry Pass", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-            cmd.transitionImages(std::array{
-                TransitionImageInfo{m_RenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral},
-                TransitionImageInfo{
-                    m_DepthBuffer, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal
-                },
-                TransitionImageInfo{
-                    m_MsaaRenderTarget, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal
-                }
-            });
+        m_FrameGraph.reset(m_Device, fctx.swapchainImageHandle);
 
-            vk::RenderingAttachmentInfo colorAttachmentInfo{
-                .imageView = m_Device.getImage(m_MsaaRenderTarget)->view_,
-                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-                .resolveMode = vk::ResolveModeFlagBits::eAverage,
-                .resolveImageView = m_Device.getImage(m_RenderTarget)->view_,
-                .resolveImageLayout = vk::ImageLayout::eGeneral,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eDontCare,
-            };
-            vk::RenderingAttachmentInfo depthAttachmentInfo{
-                .imageView = m_Device.getImage(m_DepthBuffer)->view_,
-                .imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eDontCare,
-                .clearValue = vk::ClearValue{vk::ClearDepthStencilValue{0.0f, 0}},
-            };
-            vk::RenderingInfo renderingInfo{
-                .renderArea = vk::Rect2D{0, 0, drawExtent.width, drawExtent.height},
-                .layerCount = 1,
-                .colorAttachmentCount = 1,
-                .pColorAttachments = &colorAttachmentInfo,
-                .pDepthAttachment = &depthAttachmentInfo,
-            };
-            cmd.beginRendering(renderingInfo);
+        m_FrameGraph.addPass(buildGeometryPass(dctx, stats));
+        if (drawGrid)
+            m_FrameGraph.addPass(buildGridPass(dctx, stats));
 
-            // dynamic state
-            vk::Viewport viewport{
-                0, static_cast<float>(drawExtent.height),
-                static_cast<float>(drawExtent.width), -1.0f * static_cast<float>(drawExtent.height),
-                0.0f, 1.0f
-            };
-            cmd.setViewport(viewport);
-            cmd.setScissor(scissor);
+        m_FrameGraph.addPass(buildTonemapperPass(fctx.swapchainImageHandle));
 
-            stats.drawCalls = 0;
-            stats.triangleCount = 0;
-
-
-            // Geometry Drawing
-            cmd.bindDescriptorSetsBindless(vk::PipelineBindPoint::eGraphics);
-
-            BufferHandle lastIndexBuffer;
-
-            auto draw = [&](const RenderObject& drawObj) {
-                if (drawObj.indexBuffer != lastIndexBuffer)
-                {
-                    lastIndexBuffer = drawObj.indexBuffer;
-                    cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
-                }
-
-                    GraphicsPushConstants pc{
-                        .worldMatrix = drawObj.transform,
-                        .vertexBufferDeviceAddress = m_Device.getBuffer(drawObj.vertexBuffer)->deviceAddress_,
-                        .sceneDataBDA = m_Device.getBuffer(dctx.sceneDataBuffer)->deviceAddress_,
-                        .materialBDA = m_Device.getBuffer(drawObj.material->resources.materialConstantsBuffer)->
-                        deviceAddress_,
-                        .colorTextureIndex = drawObj.material->resources.colorImage.index(),
-                        .metallicRoughnessTextureIndex = drawObj.material->resources.metallicRoughnessImage.index(),
-                        .samplerIndex = drawObj.material->resources.colorSampler.index(),
-                    };
-                    cmd.pushConstants(drawObj.material->pipeline->pipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0,
-                                      sizeof(pc), &pc);
-
-                    cmd.drawIndexed(drawObj.indexCount, 1, drawObj.firstIndex, 0, 0);
-
-                stats.drawCalls++;
-                stats.triangleCount += drawObj.indexCount / 3;
-            }; {
-                ENGER_PROFILE_ZONENC("Opaque Surfaces", ENGER_PROFILE_COLOR_DRAW);
-                ENGER_PROFILE_GPU_ZONE("Opaque Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-                if (!dctx.opaqueSurfaces.empty())
-                    cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
-                for (auto& r : dctx.opaqueSurfaces)
-                {
-                    if (m_IsFirstFrame)
-                    {
-                        if (m_Device.transferQueue().has_value())
-                        {
-                            allVertexBuffers.push_back(r.vertexBuffer);
-                            allIndexBuffers.push_back(r.indexBuffer);
-                        }
-                    }
-                    draw(r);
-                }
-            } {
-                ENGER_PROFILE_ZONENC("Opaque (Unlit) Surfaces", ENGER_PROFILE_COLOR_DRAW);
-                ENGER_PROFILE_GPU_ZONE("Opaque (Unlit) Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-                if (!dctx.unlitSurfaces.empty())
-                    cmd.bindGraphicsPipeline(dctx.unlitSurfaces[0].material->pipeline->pipeline);
-                for (auto& r : dctx.unlitSurfaces)
-                {
-                    if (m_IsFirstFrame)
-                    {
-                        if (m_Device.transferQueue().has_value())
-                        {
-                            allVertexBuffers.push_back(r.vertexBuffer);
-                            allIndexBuffers.push_back(r.indexBuffer);
-                        }
-                    }
-                    draw(r);
-                }
-            } {
-                ENGER_PROFILE_ZONENC("Additive (Unlit) Surfaces", ENGER_PROFILE_COLOR_DRAW);
-                ENGER_PROFILE_GPU_ZONE("Additive (Unlit) Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-                if (!dctx.additiveSurfaces.empty())
-                {
-                    ENGER_PROFILE_ZONENC("Pipeline Bind", ENGER_PROFILE_COLOR_DRAW);
-                    ENGER_PROFILE_GPU_ZONE("Pipeline Bind", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-                    cmd.bindGraphicsPipeline(dctx.additiveSurfaces[0].material->pipeline->pipeline);
-                }
-                {
-                    ENGER_PROFILE_ZONENC("Draw Call", ENGER_PROFILE_COLOR_DRAW);
-                    ENGER_PROFILE_GPU_ZONE("Draw Call", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-                    for (auto& r : dctx.additiveSurfaces)
-                    {
-                        if (m_IsFirstFrame)
-                        {
-                            if (m_Device.transferQueue().has_value())
-                            {
-                                allVertexBuffers.push_back(r.vertexBuffer);
-                                allIndexBuffers.push_back(r.indexBuffer);
-                            }
-                        }
-                        draw(r);
-                    }
-                }
-            } {
-                ENGER_PROFILE_ZONENC("Transparent Surfaces", ENGER_PROFILE_COLOR_DRAW);
-                ENGER_PROFILE_GPU_ZONE("Transparent Surfaces", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-                if (!dctx.transparentSurfaces.empty())
-                    cmd.bindGraphicsPipeline(dctx.transparentSurfaces[0].material->pipeline->pipeline);
-                for (const RenderObject& drawObj : dctx.transparentSurfaces)
-                {
-                    if (m_IsFirstFrame)
-                    {
-                        if (m_Device.transferQueue().has_value())
-                        {
-                            allVertexBuffers.push_back(drawObj.vertexBuffer);
-                            allIndexBuffers.push_back(drawObj.indexBuffer);
-                        }
-                    }
-                    draw(drawObj);
-                }
-            }
-
-
-            // Grid drawing
-
-            if (drawGrid)
-            {
-                cmd.bindGraphicsPipeline(m_GridPipeline);
-                GridPushConstants gpc{
-                    .mvp = dctx.viewProj,
-                    .camPos = glm::vec4(dctx.cameraPos, 1.0f),
-                    .origin = glm::vec4{0.0f},
-                };
-                cmd.pushConstants(m_GridPipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(gpc), &gpc);
-                cmd.draw(6, 1, 0, 0);
-                stats.drawCalls++;
-                stats.triangleCount += 2;
-            }
-
-            cmd.endRendering();
-        } {
-            ENGER_PROFILE_ZONENC("Tone Mapping Pass", ENGER_PROFILE_COLOR_DRAW);
-            ENGER_PROFILE_GPU_ZONE("Tone Mapping Pass", d, fctx.cmd.get(), ENGER_PROFILE_COLOR_DRAW);
-            cmd.transitionImages(std::array{
-                TransitionImageInfo{m_RenderTarget, vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal},
-                TransitionImageInfo{
-                    fctx.swapchainImageHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal
-                },
-            });
-
-            const TonemapperPushConstants tpc = {
-                .srcTexIndex = m_RenderTarget.index(),
-                .samplerIndex = m_Device.defaultNullSampler().index(), // create tonemapper sampler?
-            };
-            vk::RenderingAttachmentInfo tonemapperAttachmentInfo{
-                .imageView = m_SwapChain.swapChainImageView(fctx.swapchainImageIndex),
-                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eNone,
-                .clearValue = vk::ClearValue{vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f}},
-            };
-            vk::RenderingInfo tonemapperRenderingInfo{
-                .renderArea = vk::Rect2D{0, 0, fctx.swapchainExtent.width, fctx.swapchainExtent.height},
-                .layerCount = 1,
-                .colorAttachmentCount = 1,
-                .pColorAttachments = &tonemapperAttachmentInfo,
-            };
-            vk::Viewport tmViewport{
-                .x = 0.0f,
-                .y = 0.0f,
-                .width = static_cast<float>(fctx.swapchainExtent.width),
-                .height = static_cast<float>(fctx.swapchainExtent.height),
-                .minDepth = 0.0f,
-                .maxDepth = 1.0f,
-            };
-
-            cmd.beginRendering(tonemapperRenderingInfo);
-            cmd.setViewport(tmViewport);
-            cmd.setScissor(scissor);
-            cmd.bindGraphicsPipeline(m_TonemapperPipeline);
-            cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TonemapperPipelineLayout, 0,
-                                   {{m_Device.bindlessDescriptorSet()}});
-
-            cmd.pushConstants(m_TonemapperPipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(tpc), &tpc);
-            cmd.draw(3, 1, 0, 0);
-            cmd.endRendering();
-        }
-
-        if (m_IsFirstFrame && m_Device.transferQueue().has_value())
-        {
-            ENGER_PROFILE_ZONENC("Transfer Vert/Index Transfer Queue to Graphics Queue", ENGER_PROFILE_COLOR_BARRIER);
-            ENGER_PROFILE_GPU_ZONE("Transfer Vert/Index Transfer Queue to Graphics Queue", d, fctx.cmd.get(),
-                                   ENGER_PROFILE_COLOR_BARRIER);
-            auto sbv = cmd.bufferBarrier({
-                allVertexBuffers,
-                vk::AccessFlagBits2::eTransferWrite,
-                vk::AccessFlagBits2::eShaderStorageRead,
-                vk::PipelineStageFlagBits2::eTransfer,
-                vk::PipelineStageFlagBits2::eVertexShader,
-                m_Device.transferQueue().value(),
-                m_Device.graphicsQueue(),
-            });
-            allVertexBuffers.clear();
-            auto sbi = cmd.bufferBarrier({
-                allIndexBuffers,
-                vk::AccessFlagBits2::eTransferWrite,
-                vk::AccessFlagBits2::eIndexRead,
-                vk::PipelineStageFlagBits2::eTransfer,
-                vk::PipelineStageFlagBits2::eIndexInput,
-                m_Device.transferQueue().value(),
-                m_Device.graphicsQueue(),
-            });
-            fctx.desiredWaits.push_back(sbv);
-            fctx.desiredWaits.push_back(sbi);
-        }
-        m_IsFirstFrame = false;
+        m_FrameGraph.compile(m_Device);
+        m_FrameGraph.execute(cmd, m_Device);
 
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -432,6 +197,197 @@ namespace enger
             },
             &m_GraphicsQueue,
             "DepthBuffer"
+        );
+    }
+
+    fg::RenderPassDesc Renderer::buildGeometryPass(const DrawContext& dctx, EngineStats& stats)
+    {
+        vk::ClearValue clearColor{vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f}};
+        vk::ClearValue clearDepth{vk::ClearDepthStencilValue{0.0f, 0}};
+
+        return fg::RenderPassDesc{
+            .type = fg::PassType::Graphics,
+            .colorWrites = {m_MsaaRenderTarget, m_RenderTarget},
+            .depthWrite = m_DepthBuffer,
+
+            .colorAttachments = {
+                fg::AttachmentDesc{
+                    .texture = m_MsaaRenderTarget,
+                    .loadOp = vk::AttachmentLoadOp::eClear,
+                    .storeOp = vk::AttachmentStoreOp::eStore,
+                    .clearValue = clearColor,
+                    .resolveImage = m_RenderTarget,
+                    .resolveMode = vk::ResolveModeFlagBits::eAverage,
+                }
+            },
+            .depthAttachment = fg::AttachmentDesc{
+                .texture = m_DepthBuffer,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = clearDepth,
+            },
+
+            .execute = [&](CommandBuffer& cmd) {
+                cmd.bindDescriptorSetsBindless(vk::PipelineBindPoint::eGraphics);
+
+                auto drawExtent = m_Device.getImage(m_MsaaRenderTarget)->extent_;
+                vk::Viewport viewport{
+                    0, static_cast<float>(drawExtent.height),
+                    static_cast<float>(drawExtent.width), -1.0f * static_cast<float>(drawExtent.height),
+                    0.0f, 1.0f
+                };
+
+                cmd.setViewport(std::move(viewport));
+                cmd.setScissor(vk::Rect2D{0, 0, drawExtent.width, drawExtent.height});
+
+                stats.drawCalls = 0;
+                stats.triangleCount = 0;
+
+                BufferHandle lastIndexBuffer;
+
+                auto draw = [&](const RenderObject& drawObj) {
+                    if (drawObj.indexBuffer != lastIndexBuffer)
+                    {
+                        lastIndexBuffer = drawObj.indexBuffer;
+                        cmd.bindIndexBuffer(drawObj.indexBuffer, 0, vk::IndexType::eUint32);
+                    }
+
+                    GraphicsPushConstants pc{
+                        .worldMatrix = drawObj.transform,
+                        .vertexBufferDeviceAddress = m_Device.getBuffer(drawObj.vertexBuffer)->deviceAddress_,
+                        .sceneDataBDA = m_Device.getBuffer(dctx.sceneDataBuffer)->deviceAddress_,
+                        .materialBDA = m_Device.getBuffer(drawObj.material->resources.materialConstantsBuffer)->
+                        deviceAddress_,
+                        .colorTextureIndex = drawObj.material->resources.colorImage.index(),
+                        .metallicRoughnessTextureIndex = drawObj.material->resources.metallicRoughnessImage.index(),
+                        .samplerIndex = drawObj.material->resources.colorSampler.index(),
+                    };
+                    cmd.pushConstants(drawObj.material->pipeline->pipelineLayout, vk::ShaderStageFlagBits::eAllGraphics,
+                                      0,
+                                      sizeof(pc), &pc);
+
+                    cmd.drawIndexed(drawObj.indexCount, 1, drawObj.firstIndex, 0, 0);
+
+                    stats.drawCalls++;
+                    stats.triangleCount += drawObj.indexCount / 3;
+                };
+
+                auto* d = &m_Device;
+                {
+                    ENGER_PROFILE_ZONENC("Opaque Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                    ENGER_PROFILE_GPU_ZONE("Opaque Surfaces", d, cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                    if (!dctx.opaqueSurfaces.empty())
+                        cmd.bindGraphicsPipeline(dctx.opaqueSurfaces[0].material->pipeline->pipeline);
+                    for (auto& r : dctx.opaqueSurfaces)
+                    {
+                        draw(r);
+                    }
+                }
+                {
+                    ENGER_PROFILE_ZONENC("Opaque (Unlit) Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                    ENGER_PROFILE_GPU_ZONE("Opaque (Unlit) Surfaces", d, cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                    if (!dctx.unlitSurfaces.empty())
+                        cmd.bindGraphicsPipeline(dctx.unlitSurfaces[0].material->pipeline->pipeline);
+                    for (auto& r : dctx.unlitSurfaces)
+                    {
+                        draw(r);
+                    }
+                }
+                {
+                    ENGER_PROFILE_ZONENC("Additive (Unlit) Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                    ENGER_PROFILE_GPU_ZONE("Additive (Unlit) Surfaces", d, cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                    if (!dctx.additiveSurfaces.empty())
+                    {
+                        ENGER_PROFILE_ZONENC("Pipeline Bind", ENGER_PROFILE_COLOR_DRAW);
+                        ENGER_PROFILE_GPU_ZONE("Pipeline Bind", d, cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                        cmd.bindGraphicsPipeline(dctx.additiveSurfaces[0].material->pipeline->pipeline);
+                    }
+                    {
+                        ENGER_PROFILE_ZONENC("Draw Call", ENGER_PROFILE_COLOR_DRAW);
+                        ENGER_PROFILE_GPU_ZONE("Draw Call", d, cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                        for (auto& r : dctx.additiveSurfaces)
+                        {
+                            draw(r);
+                        }
+                    }
+                }
+                {
+                    ENGER_PROFILE_ZONENC("Transparent Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                    ENGER_PROFILE_GPU_ZONE("Transparent Surfaces", d, cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                    if (!dctx.transparentSurfaces.empty())
+                        cmd.bindGraphicsPipeline(dctx.transparentSurfaces[0].material->pipeline->pipeline);
+                    for (const RenderObject& drawObj : dctx.transparentSurfaces)
+                    {
+                        draw(drawObj);
+                    }
+                }
+            },
+
+            .name = "Geometry"
+        };
+    }
+
+    fg::RenderPassDesc Renderer::buildGridPass(const DrawContext& dctx, EngineStats& stats)
+    {
+        return fg::RenderPassDesc{
+            .type = fg::PassType::Graphics,
+
+            .colorWrites = {m_MsaaRenderTarget, m_RenderTarget},
+            .depthWrite = m_DepthBuffer,
+
+            .colorAttachments = {
+                fg::AttachmentDesc{
+                    .texture = m_MsaaRenderTarget,
+                    .loadOp = vk::AttachmentLoadOp::eLoad,
+                    .storeOp = vk::AttachmentStoreOp::eDontCare,
+                    .resolveImage = m_RenderTarget,
+                    .resolveMode = vk::ResolveModeFlagBits::eAverage,
+            }},
+            .depthAttachment = fg::AttachmentDesc{
+                .texture = m_DepthBuffer,
+                .loadOp = vk::AttachmentLoadOp::eLoad,
+                .storeOp = vk::AttachmentStoreOp::eDontCare,
+            },
+
+            .execute = [&](CommandBuffer& cmd) {
+                cmd.bindGraphicsPipeline(m_GridPipeline);
+                GridPushConstants gpc{
+                    .mvp = dctx.viewProj,
+                    .camPos = glm::vec4(dctx.cameraPos, 1.0f),
+                    .origin = glm::vec4{0.0f},
+                };
+                cmd.pushConstants(m_GridPipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(gpc), &gpc);
+                cmd.draw(6, 1, 0, 0);
+                stats.drawCalls++;
+                stats.triangleCount += 2;
+            },
+
+            .name = "Grid"
+        };
+    }
+
+    fg::RenderPassDesc Renderer::buildTonemapperPass(TextureHandle swapchainHandle)
+    {
+        TonemapperPushConstants tpc{
+            .srcTexIndex = m_RenderTarget.index(),
+            .samplerIndex = m_Device.defaultNullSampler().index(),
+        };
+
+        std::array<std::byte, 128> pc;
+        EASSERT(pc.size() >= sizeof(tpc));
+        std::memcpy(pc.data(), &tpc, sizeof(tpc));
+
+        return fg::MakePostProcessPass(
+            fg::PostProcessPassDesc{
+                .name = "Tonemap",
+                .input = m_RenderTarget,
+                .output = swapchainHandle,
+
+                .graphicsPipeline = m_TonemapperPipeline,
+                .pipelineLayout = m_TonemapperPipelineLayout,
+                .pushConstantsSize = sizeof(TonemapperPushConstants),
+                .pushConstantsData = std::move(pc),
+            }, m_Device
         );
     }
 }

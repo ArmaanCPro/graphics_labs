@@ -106,6 +106,12 @@ namespace enger
         auto [srcAccess, srcStage] = getTransitionAccessAndStage(srcLayout);
         auto [dstAccess, dstStage] = getTransitionAccessAndStage(dstLayout);
 
+        image->state_ = ImageState{
+            .layout = dstLayout,
+            .access = dstAccess,
+            .stage = dstStage,
+        };
+
         vk::ImageMemoryBarrier2 barrier{
             .srcStageMask = srcStage,
             .srcAccessMask = srcAccess,
@@ -144,11 +150,17 @@ namespace enger
         for (uint32_t i = 0; i < infos.size(); ++i)
         {
             const auto info = infos[i];
-            const auto* image = m_Device->getImage(info.texHandle);
+            auto* image = m_Device->getImage(info.texHandle);
             EASSERT(image != nullptr);
 
             auto [srcAccess, srcStage] = getTransitionAccessAndStage(info.srcLayout);
             auto [dstAccess, dstStage] = getTransitionAccessAndStage(info.dstLayout);
+
+            image->state_ = ImageState{
+                .layout = info.dstLayout,
+                .access = dstAccess,
+                .stage = dstStage,
+            };
 
             barriers[i] = vk::ImageMemoryBarrier2{
                 .srcStageMask = srcStage,
@@ -452,12 +464,12 @@ namespace enger
         m_CommandBuffer.copyBufferToImage2(info);
     }
 
-    void CommandBuffer::setViewport(vk::Viewport& viewport)
+    void CommandBuffer::setViewport(vk::Viewport viewport)
     {
         m_CommandBuffer.setViewport(0, 1, &viewport);
     }
 
-    void CommandBuffer::setScissor(vk::Rect2D& scissor)
+    void CommandBuffer::setScissor(vk::Rect2D scissor)
     {
         m_CommandBuffer.setScissor(0, 1, &scissor);
     }

@@ -66,6 +66,57 @@ namespace enger
         float maxLod = vk::LodClampNone;
     };
 
+    struct ImageState
+    {
+        vk::ImageLayout layout = vk::ImageLayout::eUndefined;
+        vk::AccessFlags2 access = vk::AccessFlagBits2::eMemoryWrite;
+        vk::PipelineStageFlags2 stage = vk::PipelineStageFlagBits2::eAllCommands;
+    };
+
+    // Helpers — derive required ImageState from usage
+
+    inline ImageState colorWriteState() {
+        return {
+            .layout = vk::ImageLayout::eColorAttachmentOptimal,
+            .access = vk::AccessFlagBits2::eColorAttachmentWrite,
+            .stage  = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        };
+    }
+
+    inline ImageState depthWriteState() {
+        return {
+            .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+                    | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+            .stage  = vk::PipelineStageFlagBits2::eEarlyFragmentTests
+                    | vk::PipelineStageFlagBits2::eLateFragmentTests,
+        };
+    }
+
+    inline ImageState shaderReadState() {
+        return {
+            .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .access = vk::AccessFlagBits2::eShaderRead,
+            .stage  = vk::PipelineStageFlagBits2::eFragmentShader,
+        };
+    }
+
+    inline ImageState transferSrcState() {
+        return {
+            .layout = vk::ImageLayout::eTransferSrcOptimal,
+            .access = vk::AccessFlagBits2::eTransferRead,
+            .stage  = vk::PipelineStageFlagBits2::eTransfer,
+        };
+    }
+
+    inline ImageState transferDstState() {
+        return {
+            .layout = vk::ImageLayout::eTransferDstOptimal,
+            .access = vk::AccessFlagBits2::eTransferWrite,
+            .stage  = vk::PipelineStageFlagBits2::eTransfer,
+        };
+    }
+
     struct VulkanImage final
     {
         // clang-format off
@@ -85,6 +136,7 @@ namespace enger
         vk::ImageUsageFlags usage_;
         vk::Format format_;
         vk::ImageAspectFlags aspectFlags_;
+        ImageState state_;
 
         void* mappedMemory_ = nullptr;
 

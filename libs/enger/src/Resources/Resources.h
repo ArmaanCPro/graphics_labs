@@ -299,3 +299,12 @@ namespace enger
         }
     };
 }
+
+template<typename T>
+struct std::hash<enger::Handle<T>>
+{
+    std::size_t operator()(const enger::Handle<T>& handle) const noexcept
+    {
+        return std::hash<uint32_t>{}(handle.index());
+    }
+};
