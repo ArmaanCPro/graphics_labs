@@ -25,7 +25,7 @@ namespace enger
         // This doesn't actually load the new scene, it just schedules the scene load to updateScene
         void loadScene(const std::filesystem::path& filePath);
 
-        [[nodiscard]] const DrawContext& updateScene(float width, float height, const Camera& camera,
+        [[nodiscard]] DrawContext& updateScene(float width, float height, const Camera& camera,
                                                      EngineStats& stats);
 
         [[nodiscard]] const DrawContext& drawContext() const { return m_DrawContext; }

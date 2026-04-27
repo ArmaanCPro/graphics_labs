@@ -16,13 +16,6 @@
 
 namespace enger
 {
-    struct GridPushConstants
-    {
-        alignas(4) glm::mat4 mvp;
-        alignas(4) glm::vec4 camPos;
-        alignas(4) glm::vec4 origin;
-    };
-
     struct TonemapperPushConstants
     {
         alignas(4) uint32_t srcTexIndex;
@@ -34,7 +27,7 @@ namespace enger
     public:
         Renderer(Device& device, SwapChain& swapchain);
 
-        void render(framing::FrameContext& frameContext, const DrawContext& dctx, EngineStats& stats, bool drawGrid = true);
+        void render(framing::FrameContext& frameContext, const DrawContext& dctx, EngineStats& stats);
 
         void onResize(uint32_t width, uint32_t height);
 
@@ -46,7 +39,6 @@ namespace enger
         void createRenderTextures(uint32_t width, uint32_t height);
 
         fg::RenderPassDesc buildGeometryPass(const DrawContext& dctx, EngineStats& stats);
-        fg::RenderPassDesc buildGridPass(const DrawContext& dctx, EngineStats& stats);
         fg::RenderPassDesc buildTonemapperPass(TextureHandle swapchainHandle);
 
         Device& m_Device;
@@ -60,9 +52,6 @@ namespace enger
         // This is an intermediate target that gets resolved to from the Msaa target and blitted to the swapchain. Required because image format and swapchain format are different.
         Holder<TextureHandle> m_RenderTarget;
         Holder<TextureHandle> m_DepthBuffer;
-
-        Holder<PipelineLayoutHandle> m_GridPipelineLayout;
-        Holder<GraphicsPipelineHandle> m_GridPipeline;
 
         Holder<PipelineLayoutHandle> m_TonemapperPipelineLayout;
         Holder<GraphicsPipelineHandle> m_TonemapperPipeline;

@@ -122,6 +122,8 @@ namespace enger
         // Helper function to automatically bind the descriptor sets for bindless.
         void bindDescriptorSetsBindless(vk::PipelineBindPoint bindPoint);
         void pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages, uint32_t offset, uint32_t size, const void* data);
+        void pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages, uint32_t size, const void* data);
+        void pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages, std::span<const std::byte> data);
         void bindIndexBuffer(BufferHandle buffer, uint32_t offset, vk::IndexType indexType);
 
         void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);

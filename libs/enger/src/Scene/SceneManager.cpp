@@ -159,7 +159,7 @@ namespace enger
         m_IsScenePending = true;
     }
 
-    const DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera, EngineStats& stats)
+    DrawContext& SceneManager::updateScene(float width, float height, const Camera& camera, EngineStats& stats)
     {
         ENGER_PROFILE_FUNCTION()
         auto start = std::chrono::high_resolution_clock::now();
@@ -180,6 +180,7 @@ namespace enger
         m_DrawContext.unlitSurfaces.clear();
         m_DrawContext.additiveSurfaces.clear();
         m_DrawContext.transparentSurfaces.clear();
+        m_DrawContext.proceduralSurfaces.clear();
 
         for (auto& scene : m_LoadedScenes | std::views::values)
         {

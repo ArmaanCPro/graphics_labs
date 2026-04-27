@@ -28,55 +28,6 @@ namespace enger
 
         // Create grid pipeline
 
-        m_GridPipelineLayout = m_Device.createPipelineLayout(PipelineLayoutDesc{
-                                                                 .descriptorLayouts = {
-                                                                     {m_Device.bindlessDescriptorSetLayout()}
-                                                                 },
-                                                                 .pushConstantRanges = {
-                                                                     {
-                                                                         PushConstantsInfo{
-                                                                             .offset = 0,
-                                                                             .size = sizeof(GridPushConstants),
-                                                                             .stages =
-                                                                             vk::ShaderStageFlagBits::eAllGraphics
-                                                                         }
-                                                                     }
-                                                                 }
-                                                             }, &m_GraphicsQueue, "Grid Pipeline Layout");
-        auto gridSpirv = loadSpirvFromFile("shaders/Grid.spv");
-        EASSERT(gridSpirv.has_value());
-        auto gridSM = m_Device.createShaderModule(std::move(gridSpirv.value()), &m_GraphicsQueue, "Grid Shader Module");
-        m_GridPipeline = m_Device.createGraphicsPipeline(GraphicsPipelineDesc{
-                                                             .pipelineLayout = m_GridPipelineLayout,
-                                                             .vertexShaderModule = gridSM,
-                                                             .fragmentShaderModule = gridSM,
-                                                             .depthTestEnable = true,
-                                                             .depthWriteEnable = false,
-                                                             .depthCompareOp = vk::CompareOp::eGreaterOrEqual,
-                                                             .colorAttachments = {
-                                                                 ColorAttachment{
-                                                                     .format = m_Device.getImage(m_MsaaRenderTarget)->
-                                                                     format_,
-                                                                     .blendEnabled = true,
-                                                                     .srcRgbBlendFactor = vk::BlendFactor::eSrcAlpha,
-                                                                     .dstRgbBlendFactor =
-                                                                     vk::BlendFactor::eOneMinusSrcAlpha,
-                                                                     .rgbBlendOp = vk::BlendOp::eAdd,
-                                                                     .srcAlphaBlendFactor = vk::BlendFactor::eOne,
-                                                                     .dstAlphaBlendFactor = vk::BlendFactor::eOne,
-                                                                     .alphaBlendOp = vk::BlendOp::eAdd,
-                                                                 }
-                                                             },
-                                                             .depthFormat = m_Device.getImage(m_DepthBuffer)->format_,
-
-                                                             .cullMode = vk::CullModeFlagBits::eNone,
-
-                                                             .sampleCount = m_MsaaSamples,
-
-#ifndef NDEBUG
-                                                             .enablePipelineRobustness = true,
-#endif
-                                                         }, &m_GraphicsQueue, "Grid Pipeline");
 
 
         // Create tonemapping pipeline (could move to a frame graph later on)
@@ -125,7 +76,7 @@ namespace enger
                                                                }, &m_GraphicsQueue, "Tonemapper Pipeline");
     }
 
-    void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx, EngineStats& stats, bool drawGrid)
+    void Renderer::render(framing::FrameContext& fctx, const DrawContext& dctx, EngineStats& stats)
     {
         ENGER_PROFILE_FUNCTION();
         auto* d = &m_Device;
@@ -143,8 +94,6 @@ namespace enger
         m_FrameGraph.reset(m_Device, fctx.swapchainImageHandle);
 
         m_FrameGraph.addPass(buildGeometryPass(dctx, stats));
-        if (drawGrid)
-            m_FrameGraph.addPass(buildGridPass(dctx, stats));
 
         m_FrameGraph.addPass(buildTonemapperPass(fctx.swapchainImageHandle));
 
@@ -321,48 +270,22 @@ namespace enger
                         draw(drawObj);
                     }
                 }
+                {
+                    ENGER_PROFILE_ZONENC("Procedural Surfaces", ENGER_PROFILE_COLOR_DRAW);
+                    ENGER_PROFILE_GPU_ZONE("Procedural Surfaces", d, cmd.get(), ENGER_PROFILE_COLOR_DRAW);
+                    for (const auto& pr : dctx.proceduralSurfaces)
+                    {
+                        cmd.bindGraphicsPipeline(pr.pipeline);
+                        cmd.pushConstants(pr.pipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, pr.pushConstantsSize, pr.pushConstantsData.data());
+                        cmd.draw(pr.vertexCount, 1, 0, 0);
+
+                        stats.drawCalls++;
+                        stats.triangleCount += pr.vertexCount / 3;
+                    }
+                }
             },
 
             .name = "Geometry"
-        };
-    }
-
-    fg::RenderPassDesc Renderer::buildGridPass(const DrawContext& dctx, EngineStats& stats)
-    {
-        return fg::RenderPassDesc{
-            .type = fg::PassType::Graphics,
-
-            .colorWrites = {m_MsaaRenderTarget, m_RenderTarget},
-            .depthWrite = m_DepthBuffer,
-
-            .colorAttachments = {
-                fg::AttachmentDesc{
-                    .texture = m_MsaaRenderTarget,
-                    .loadOp = vk::AttachmentLoadOp::eLoad,
-                    .storeOp = vk::AttachmentStoreOp::eDontCare,
-                    .resolveImage = m_RenderTarget,
-                    .resolveMode = vk::ResolveModeFlagBits::eAverage,
-            }},
-            .depthAttachment = fg::AttachmentDesc{
-                .texture = m_DepthBuffer,
-                .loadOp = vk::AttachmentLoadOp::eLoad,
-                .storeOp = vk::AttachmentStoreOp::eDontCare,
-            },
-
-            .execute = [&](CommandBuffer& cmd) {
-                cmd.bindGraphicsPipeline(m_GridPipeline);
-                GridPushConstants gpc{
-                    .mvp = dctx.viewProj,
-                    .camPos = glm::vec4(dctx.cameraPos, 1.0f),
-                    .origin = glm::vec4{0.0f},
-                };
-                cmd.pushConstants(m_GridPipelineLayout, vk::ShaderStageFlagBits::eAllGraphics, 0, sizeof(gpc), &gpc);
-                cmd.draw(6, 1, 0, 0);
-                stats.drawCalls++;
-                stats.triangleCount += 2;
-            },
-
-            .name = "Grid"
         };
     }
 

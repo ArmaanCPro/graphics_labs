@@ -117,30 +117,25 @@ namespace enger
             m_Data.fill(value);
         }
 
-        // I would use an initializer_list constructor here... but doesn't work in constexpr contexts.
-        template<typename ...Args>
-        constexpr InplaceVector(Args&&... args) noexcept
-            : m_Data{std::forward<Args>(args)...}, m_Size(sizeof...(args))
-        {
-            if consteval
-            {
-                static_assert(Capacity >= sizeof...(args));
-            }
-            else
-            {
-                EASSERT(Capacity >= sizeof...(args));
-            }
-        }
-
         constexpr InplaceVector(std::vector<T> vector) noexcept
-            : m_Data(vector.data(), vector.data() + vector.size()), m_Size(vector.size())
-        {}
+            : m_Size(vector.size())
+        {
+            EASSERT(Capacity >= vector.size());
+            std::copy(vector.begin(), vector.end(), m_Data.begin());
+        }
         constexpr InplaceVector(const std::array<T, Capacity>& array) noexcept
             : m_Data(array), m_Size(Capacity)
         {}
         constexpr InplaceVector(std::array<T, Capacity>&& array) noexcept
             : m_Data(std::move(array)), m_Size(Capacity)
         {}
+
+        constexpr InplaceVector(std::initializer_list<T> list) noexcept
+            : m_Size(list.size())
+        {
+            EASSERT(Capacity >= list.size());
+            std::copy(list.begin(), list.end(), m_Data.begin());
+        }
 
         [[nodiscard]] constexpr T& operator[](std::size_t index) noexcept { return m_Data[index]; }
         [[nodiscard]] constexpr const T& operator[](std::size_t index) const noexcept { return m_Data[index]; }

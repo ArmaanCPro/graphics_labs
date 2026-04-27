@@ -544,6 +544,18 @@ namespace enger
         m_CommandBuffer.pushConstants(layout->layout, stages, offset, size, data);
     }
 
+    void CommandBuffer::pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages, uint32_t size,
+        const void* data)
+    {
+        pushConstants(pipelineLayout, stages, 0, size, data);
+    }
+
+    void CommandBuffer::pushConstants(PipelineLayoutHandle pipelineLayout, vk::ShaderStageFlags stages,
+        std::span<const std::byte> data)
+    {
+        pushConstants(pipelineLayout, stages, 0, static_cast<uint32_t>(data.size()), data.data());
+    }
+
     void CommandBuffer::bindIndexBuffer(BufferHandle buffer, uint32_t offset, vk::IndexType indexType)
     {
         EASSERT(m_Device != nullptr);

@@ -7,6 +7,7 @@
 
 #include "Resources/Resources.h"
 #include "Profiling/Profiler.h"
+#include "Utils/InplaceVector.h"
 
 namespace enger
 {
@@ -86,12 +87,23 @@ namespace enger
         glm::mat4 transform = glm::mat4(1.0f);
     };
 
+    // Used for geometry without any GPU buffers (i.e. Infinite Grid)
+    struct ProceduralDrawObject
+    {
+        GraphicsPipelineHandle pipeline;
+        PipelineLayoutHandle pipelineLayout;
+        uint32_t vertexCount = 6; // 6 for a simple quad
+        uint32_t pushConstantsSize = 0;
+        InplaceVector<std::byte, 128> pushConstantsData;
+    };
+
     struct DrawContext
     {
         std::vector<RenderObject> opaqueSurfaces;
         std::vector<RenderObject> unlitSurfaces;
         std::vector<RenderObject> additiveSurfaces; // Additive Blending
         std::vector<RenderObject> transparentSurfaces; // Alpha Blending
+        std::vector<ProceduralDrawObject> proceduralSurfaces; // Procedural geometry rendering
         BufferHandle sceneDataBuffer;
         glm::mat4 viewProj;
         glm::vec3 cameraPos{0};

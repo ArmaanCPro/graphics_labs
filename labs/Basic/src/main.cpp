@@ -28,6 +28,7 @@
 
 #include <Renderer/Imgui.h>
 
+#include "InfiniteGrid.h"
 #include "Utils/Uuid.h"
 
 constexpr auto WIDTH = 800;
@@ -91,6 +92,8 @@ int main()
 
     EngineStats stats{};
 
+    InfiniteGrid grid{device, renderer.msaaSamples(), renderer.renderFormat(), renderer.depthFormat()};
+
     bool shouldRender = true;
 
     while (!window.shouldClose())
@@ -122,7 +125,7 @@ int main()
         }
 
         camera.update();
-        const auto& dctx = sceneManager.updateScene(static_cast<float>(swapchain.swapChainExtent().width),
+        auto& dctx = sceneManager.updateScene(static_cast<float>(swapchain.swapChainExtent().width),
                                                     static_cast<float>(swapchain.swapChainExtent().height), camera, stats);
 
         if (!shouldRender)
@@ -132,11 +135,13 @@ int main()
         }
 
         static bool drawGrid = true;
+        if (drawGrid)
+            dctx.proceduralSurfaces.push_back(grid.draw(dctx));
 
         auto fctx = frameOrchestrator.beginFrame();
         if (fctx.has_value())
         {
-            renderer.render(fctx.value(), dctx, stats, drawGrid);
+            renderer.render(fctx.value(), dctx, stats);
 
             imguiLayer.beginFrame();
             if (!ImGui::GetCurrentContext())
